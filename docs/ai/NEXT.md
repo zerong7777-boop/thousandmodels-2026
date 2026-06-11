@@ -2,18 +2,21 @@
 
 ## Recommended Next Step
 
-Review v0.6 Chinese and English screenshots, then decide whether to start optional Qwen/QwenPaw workflow planning for route wording, recovery explanations, public notices, and review prose.
+Review the v0.7 narrative package, then choose one next track:
 
-## Next Candidate Work
+1. Start a narrow Qwen/QwenPaw advisory spike for recovery explanations, public notices, and review prose.
+2. Convert the v0.7 storyboard into a final presentation deck.
+3. Regenerate exact v0.7 screenshots if the reused v0.5/v0.6 screenshots are not strong enough for final judging.
 
-- Optional Qwen/QwenPaw planning for wording assistance only.
-- Keep deterministic rules as the required local demo path.
-- Consider one focused copy-edit pass if Macau Traditional Chinese wording needs human review.
-- Consider a small mobile screenshot refinement to avoid fixed bottom navigation appearing in full-page captures.
+Recommended order:
+
+```text
+review v0.7 materials -> narrow Qwen/QwenPaw advisory spike -> final deck
+```
 
 ## Do Not Do Yet
 
 - Do not make model APIs required for the demo.
-- Do not let model output directly mutate approvals, inventory, publication state, or plan persistence.
-- Do not add real merchants, hardware, payment, POS, map, or traffic prediction integrations.
-- Do not do another broad UI shell redesign before judging the v0.6 screenshots.
+- Do not let model output mutate approval, inventory, route publication, or plan persistence directly.
+- Do not add real merchants, hardware, POS, payment, map API, or real traffic prediction.
+- Do not claim full QwenPaw orchestration until it is actually implemented and verified.

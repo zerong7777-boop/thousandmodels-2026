@@ -98,3 +98,44 @@ v0.5 UI polish Task 1-12 is verified. The deterministic demo remains runnable wi
 ## Conclusion
 
 v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOPE_API_KEY`, and the frontend now defaults to Simplified Chinese, supports Traditional Chinese, keeps English fallback, and preserves backend-backed auth and role routing.
+
+## v0.7 Documentation Verification
+
+| Check | Result |
+| --- | --- |
+| Required v0.7 proposal documents exist | pass |
+| Required v0.7 research documents exist | pass |
+| Screenshot walkthrough directory exists | pass |
+| Placeholder scan | pass |
+| Unsupported Qwen/real-integration claim scan | pass |
+| Product runtime source diff check | pass |
+
+### v0.7 Artifacts
+
+| Artifact | Path |
+| --- | --- |
+| Spec | `docs/proposal/v0.7-demo-narrative-spec.md` |
+| Implementation plan | `docs/proposal/v0.7-demo-narrative-implementation-plan.md` |
+| Demo narrative | `docs/research/v0.7-demo-narrative.md` |
+| Vision-to-MVP gap | `docs/research/v0.7-vision-to-mvp-gap.md` |
+| Screenshot walkthrough | `docs/research/v0.7-screenshot-walkthrough.md` |
+| Competition brief | `docs/research/v0.7-competition-brief.md` |
+| Presentation storyboard | `docs/research/v0.7-presentation-storyboard.md` |
+| Screenshot evidence | `docs/research/assets/v0.7-demo-walkthrough/` |
+
+### v0.7 Verification Commands
+
+| Command | Working directory | Result |
+| --- | --- | --- |
+| `Test-Path ...` required v0.7 docs and screenshot directory | project root | pass; all returned `True` |
+| `Get-ChildItem docs\research\assets\v0.7-demo-walkthrough` | project root | pass; 9 PNG screenshots listed |
+| `rg -n "T[O]DO\|T[B]D\|待[补]\|占[位]" ...` | project root | pass; no matches |
+| `rg -n "already uses Qwen[P]aw\|..." docs\research -g "v0.7-*.md"` | project root | pass; no unsupported implementation claims |
+| `git diff --name-only -- apps\api apps\web\src data` | project root | pass; no runtime product source changes |
+
+### v0.7 Boundary Notes
+
+- No backend workflow, frontend runtime, database schema, auth, or demo data changes were made.
+- No v0.7 Playwright screenshot spec was created; the walkthrough reuses verified v0.5/v0.6 screenshot evidence.
+- The v0.7 screenshot walkthrough marks exact sold-out and approved-v2 moments as documented replacements.
+- Qwen/QwenPaw is positioned only as a future advisory layer.

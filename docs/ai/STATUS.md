@@ -47,6 +47,16 @@ shadcn/ui-inspired local component layer
 - No backend core workflow changes were required.
 - Qwen/QwenPaw remains outside the required deterministic demo path.
 
+## v0.7 Demo Narrative State
+
+- v0.7 is a documentation and evidence-packaging phase, not a product feature phase.
+- The v0.7 spec and implementation plan are under `docs/proposal/`.
+- Demo narrative, vision-to-MVP gap review, screenshot walkthrough, competition brief, and presentation storyboard are under `docs/research/`.
+- The recommended competition story is: planning -> merchant runtime signal -> incident -> organizer recovery approval -> public H5 update -> metric-backed review.
+- Screenshot evidence is collected under `docs/research/assets/v0.7-demo-walkthrough/`.
+- Two walkthrough screenshots are documented replacements for exact sold-out and approved-v2 moments; regenerate those before final slide production if stronger evidence is needed.
+- Qwen/QwenPaw remains a future advisory layer and is not required for the current deterministic demo.
+
 ## Demo Accounts
 
 - organizer: `organizer.demo`
