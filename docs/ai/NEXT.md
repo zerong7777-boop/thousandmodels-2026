@@ -2,19 +2,20 @@
 
 ## Recommended Next Step
 
-Review `docs/proposal/v0.8-agent-capability-spec.md`, then write the backend-first implementation plan:
+Review `docs/proposal/v0.8-agent-capability-implementation-plan.md`, then execute v0.8 P0 backend Agent capability tasks:
 
 ```text
-docs/proposal/v0.8-agent-capability-implementation-plan.md
+Tasks 1-7 + Task 9
 ```
 
 Recommended order:
 
 ```text
-review v0.8 agent capability spec
--> write v0.8 backend-first implementation plan
+review v0.8 implementation plan
+-> implement Agent contracts and store persistence
 -> implement deterministic Agent runtime and tool-call evidence
--> add optional Qwen draft path only after deterministic Agent tests pass
+-> connect planning, incident recovery, and review Agent flows
+-> verify backend pytest and update handoff docs
 ```
 
 The next implementation phase should focus on real Agent capability rather than additional UI polish:
@@ -23,6 +24,7 @@ The next implementation phase should focus on real Agent capability rather than 
 2. build deterministic specialist agents around planning, incident recovery, public notices, and review
 3. prove sold-out incident recovery creates auditable Agent evidence before organizer approval
 4. keep Qwen/QwenPaw optional and non-blocking
+5. do not execute the optional Qwen draft backend task until P0 passes and the user explicitly approves it
 
 ## Do Not Do Yet
 
