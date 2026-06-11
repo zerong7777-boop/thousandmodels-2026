@@ -2,26 +2,30 @@
 
 ## Recommended Next Step
 
-Review the v0.5 screenshots and decide whether the product UI is strong enough to start planning optional Qwen/QwenPaw workflow integration.
+Review `docs/proposal/v0.6-i18n-spec.md` and decide whether to proceed with a v0.6 implementation plan.
 
-Primary review artifacts:
+Recommended v0.6 direction:
 
 ```text
-docs/research/v0.5-visual-smoke.md
-docs/research/assets/v0.5-verification/
+Default locale: zh-Hans
+Optional locale: zh-Hant
+Fallback locale: en
+Implementation: lightweight owned frontend i18n layer
+Scope: translate active v0.5 product surfaces without UI redesign or backend workflow changes
 ```
 
 ## Next Candidate Work
 
-- Optional Qwen/QwenPaw planning for cultural route wording, recovery explanation, public notice wording, and review prose.
+- Write `docs/proposal/v0.6-implementation-plan.md` after the spec is approved.
+- Implement a local `I18nProvider`, locale dictionaries, and language switcher.
+- Translate login, shells, organizer, merchant, tourist, and public H5 surfaces.
+- Add v0.6 screenshot evidence for Simplified Chinese, Traditional Chinese, and English fallback.
 - Keep deterministic rules as the required local demo path.
-- Consider one focused visual pass only if the v0.5 screenshots still look too generic.
-- If doing another UI pass, focus on Macau old-district atmosphere, mobile route storytelling, and stronger merchant task ergonomics rather than another shell/layout rewrite.
 
 ## Do Not Do Yet
 
-- Do not make model APIs required for the demo.
-- Do not let model output directly mutate approvals, inventory, publication state, or plan persistence.
+- Do not start v0.6 source implementation before the implementation plan exists.
+- Do not make model APIs required for translation.
+- Do not let model output mutate approvals, inventory, publication state, or plan persistence.
 - Do not add real merchants, hardware, payment, POS, map, or traffic prediction integrations.
-- Do not build public registration or a full SaaS tenant/user-management system.
-- Do not revive the v0.4 Playwright visual spec as an active acceptance suite; it is now a historical baseline and v0.5 visual smoke is the active suite.
+- Do not do another broad visual redesign as part of v0.6.
