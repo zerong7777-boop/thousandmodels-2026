@@ -274,3 +274,53 @@ test("organizer exception center shows recovery Agent drafts and approval bounda
   expect(await screen.findByText("recovery.build_recovery_proposal")).toBeInTheDocument();
   expect(screen.getAllByText("Controlled draft, not published state").length).toBeGreaterThan(0);
 });
+
+test("organizer review center shows review Agent draft evidence", async () => {
+  const reviewRun = {
+    ...planningRun,
+    run_id: "run_demo-night-tour_review",
+    trigger: "review_generation",
+    final_output_ref: "draft:draft_review_001"
+  };
+  const reviewDrafts = [
+    {
+      draft_id: "draft_review_001",
+      event_id: "demo-night-tour",
+      source_run_id: reviewRun.run_id,
+      draft_type: "review_summary",
+      locale: "mixed",
+      content: "Evidence: metrics=h5_visits, incidents=inc_inventory_m001. Recommendation: add backup stop.",
+      structured_payload: {
+        metrics: ["h5_visits", "checkins"],
+        incidents: ["inc_inventory_m001"],
+        public_notices: ["notice-v2"],
+        recovery_proposals: ["proposal-inc_inventory_m001"]
+      },
+      status: "draft",
+      reviewed_by: null,
+      reviewed_at: null,
+      created_at: "2026-06-12T10:00:01Z"
+    }
+  ];
+  localStorage.setItem("zhiyin.locale", "en");
+  vi.stubGlobal(
+    "fetch",
+    mockAppFetch("organizer", (url) => {
+      if (url.includes("/api/events/demo-night-tour/review-report")) return reviewReport;
+      if (url.includes("/api/events/demo-night-tour/agent-runs")) {
+        if (url.includes("/tool-calls")) return [];
+        return [reviewRun];
+      }
+      if (url.includes("/api/events/demo-night-tour/agent-drafts")) return reviewDrafts;
+      return {};
+    })
+  );
+  window.history.pushState({}, "", "/organizer/events/demo-night-tour/review");
+  render(<App />);
+
+  expect(await screen.findByText("Review Agent evidence")).toBeInTheDocument();
+  expect(await screen.findByText("Review generation")).toBeInTheDocument();
+  expect(screen.getByText("Review summary draft")).toBeInTheDocument();
+  expect(screen.getByText(/metrics=h5_visits/)).toBeInTheDocument();
+  expect(screen.getByText(/recovery_proposals/)).toBeInTheDocument();
+});

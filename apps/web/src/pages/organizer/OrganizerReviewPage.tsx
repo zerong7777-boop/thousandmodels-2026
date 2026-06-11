@@ -1,4 +1,5 @@
 import { api } from "../../api";
+import { AgentEvidencePanel, latestRunForTrigger } from "../../components/agent";
 import { MetricTile, ProductPageHeader } from "../../components/product";
 import { localizedDemoList, localizedDemoText, useI18n } from "../../i18n";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
@@ -7,6 +8,9 @@ import { asArray, useAsyncData } from "../productUtils";
 export function OrganizerReviewPage({ eventId = "demo-night-tour" }: { eventId?: string }) {
   const { t } = useI18n();
   const { data: report } = useAsyncData(() => api.getReviewReport(eventId), null);
+  const { data: agentRuns } = useAsyncData(() => api.getAgentRuns(eventId), [], [eventId]);
+  const reviewRun = latestRunForTrigger(asArray(agentRuns), "review_generation");
+  const { data: reviewDrafts } = useAsyncData(() => api.getAgentDrafts(eventId, "review_summary"), [], [eventId]);
   const recommendations = localizedDemoList(asArray(report?.next_event_recommendations), t);
   const lessons = localizedDemoList(asArray(report?.lessons_learned), t);
 
@@ -31,6 +35,15 @@ export function OrganizerReviewPage({ eventId = "demo-night-tour" }: { eventId?:
         <MetricTile label={t("organizer.review.queuePressure")} value={t("organizer.review.queuePressureValue")} detail={t("organizer.review.queuePressureDetail")} tone="warning" />
         <MetricTile label={t("organizer.review.budgetUsed")} value="82%" detail={t("organizer.review.budgetUsedDetail")} tone="success" />
       </div>
+      <AgentEvidencePanel
+        title={t("organizer.agentEvidence.reviewTitle")}
+        description={t("organizer.agentEvidence.reviewDescription")}
+        runs={reviewRun ? [reviewRun] : []}
+        steps={[]}
+        toolCalls={[]}
+        drafts={asArray(reviewDrafts).filter((draft) => draft.source_run_id === reviewRun?.run_id)}
+        emptyMessage={t("organizer.agentEvidence.emptyReview")}
+      />
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
