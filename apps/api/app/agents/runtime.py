@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
+from app.agents.drafts import build_public_notice_draft, build_recovery_explanation_draft
+from app.agents.guards import evaluate_public_copy
 from app.agents.tool_recorder import ToolRecorder
 from app.schemas import (
     AgentDraft,
@@ -10,9 +12,12 @@ from app.schemas import (
     AgentStep,
     AgentToolCall,
     EventBrief,
+    Incident,
     MerchantProfile,
+    MerchantRuntimeState,
     PlanVersion,
 )
+from app.services.recovery import build_recovery_proposal
 from app.tools.budget import split_budget
 from app.tools.merchant import select_night_merchants
 from app.tools.route import build_static_route
@@ -181,4 +186,85 @@ class AgentRuntime:
             drafts=[],
             model_calls=[],
             evaluations=[],
+        )
+
+    def run_incident_recovery_preview(
+        self,
+        event_id: str,
+        incident: Incident,
+        state: MerchantRuntimeState | None,
+    ) -> AgentRuntimeResult:
+        started_at = utc_now()
+        run_id = f"run_{event_id}_incident_{incident.incident_id}"
+        recorder = ToolRecorder(run_id=run_id)
+        proposal_payload = recorder.call(
+            step_id="step_recovery",
+            tool_name="recovery.build_recovery_proposal",
+            input_payload={"incident_id": incident.incident_id, "type": incident.type},
+            fn=lambda: build_recovery_proposal(incident).model_dump(),
+        )
+        recovery_draft = build_recovery_explanation_draft(run_id, incident, proposal_payload)
+        notice_draft = build_public_notice_draft(run_id, incident, proposal_payload)
+        evaluation = evaluate_public_copy(
+            run_id=run_id,
+            content=notice_draft.content,
+            human_approval_required=True,
+            fallback_used=False,
+        )
+        runtime_ref = f"runtime_state:{state.merchant_id}" if state else "runtime_state:none"
+        steps = [
+            AgentStep(
+                step_id="step_recovery",
+                run_id=run_id,
+                agent_name="RiskRecoveryAgent",
+                objective="Build a recovery candidate from the incident without committing state.",
+                input_refs=[f"incident:{incident.incident_id}", runtime_ref],
+                tool_calls=[call.model_dump() for call in recorder.calls],
+                tool_call_refs=[call.tool_call_id for call in recorder.calls],
+                structured_output=proposal_payload,
+                decision_reason="The merchant signal affects route guidance and needs organizer approval.",
+                confidence=0.86,
+                requires_human_approval=True,
+                schema_name="RecoveryProposal",
+                validation_status="passed",
+            ),
+            AgentStep(
+                step_id="step_public_notice",
+                run_id=run_id,
+                agent_name="PublicNoticeAgent",
+                objective="Draft visitor-safe notice copy.",
+                input_refs=[f"incident:{incident.incident_id}", f"draft:{recovery_draft.draft_id}"],
+                tool_calls=[],
+                tool_call_refs=[],
+                structured_output={
+                    "draft_id": notice_draft.draft_id,
+                    "public_copy_ready": evaluation.public_copy_ready,
+                },
+                decision_reason="Visitors need action guidance without internal operational terms.",
+                confidence=0.84,
+                requires_human_approval=True,
+                schema_name="AgentDraft",
+                validation_status="passed" if evaluation.public_copy_ready else "failed",
+            ),
+        ]
+        run = AgentRun(
+            run_id=run_id,
+            event_id=event_id,
+            trigger="incident_recovery",
+            mode="deterministic",
+            status="completed",
+            started_at=started_at,
+            completed_at=utc_now(),
+            fallback_used=False,
+            fallback_reason=None,
+            final_output_ref=f"draft:{notice_draft.draft_id}",
+            error_summary=None,
+        )
+        return AgentRuntimeResult(
+            run=run,
+            steps=steps,
+            tool_calls=recorder.calls,
+            drafts=[recovery_draft, notice_draft],
+            model_calls=[],
+            evaluations=[evaluation],
         )

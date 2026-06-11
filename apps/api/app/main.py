@@ -353,14 +353,23 @@ def update_runtime_state(
     next_state = MerchantRuntimeState.model_validate(next_payload)
     STORE.save_runtime_state(next_state)
     incident = incident_from_runtime_state("demo-night-tour", next_state)
+    runtime_result = None
     if incident:
         STORE.save_incident(incident)
+        runtime_result = AgentRuntime(mode="deterministic").run_incident_recovery_preview(
+            event_id="demo-night-tour",
+            incident=incident,
+            state=next_state,
+        )
+        persist_agent_runtime_result(runtime_result)
         audit("demo-night-tour", "system", "incident-detector", "create_incident", incident.trigger_detail)
     audit_user("demo-night-tour", user, "update_runtime_state", "merchant runtime state updated")
     return {
         **next_state.model_dump(),
         "runtime_state": next_state,
         "incident": incident,
+        "agent_run": runtime_result.run if runtime_result else None,
+        "agent_drafts": runtime_result.drafts if runtime_result else [],
     }
 
 
