@@ -6,7 +6,7 @@ Project root:
 
 `<PROJECT_ROOT>`
 
-As of 2026-06-12, v0.5 UI polish Task 1-12 is complete. The project has a deterministic FastAPI backend loop plus a role-separated React/Vite frontend with backend-backed demo login and screenshot-backed product UI.
+As of 2026-06-12, v0.6 i18n is complete. The project has a deterministic FastAPI backend loop plus a role-separated React/Vite frontend with backend-backed demo login, screenshot-backed product UI, and a lightweight owned multilingual frontend layer.
 
 Current product direction:
 
@@ -30,6 +30,23 @@ shadcn/ui-inspired local component layer
 - No backend core orchestration changes were required.
 - Deterministic local demo remains runnable without `DASHSCOPE_API_KEY`.
 
+## v0.6 i18n State
+
+- Added a lightweight owned frontend i18n layer under `apps/web/src/i18n/`.
+- Supported locales are exactly `zh-Hans`, `zh-Hant`, and `en`.
+- Default locale is `zh-Hans`; English is the fallback.
+- Locale preference persists under `zhiyin.locale`.
+- Login, organizer shell, merchant shell, tourist shell, and public H5 expose language switching.
+- Active v0.5 product surfaces use dictionary-backed product copy without a broad UI redesign.
+- Known demo event route content needed for screenshots is localized on the frontend without backend schema changes.
+- Public H5 remains unauthenticated.
+- Locale switching does not replace backend-backed demo auth or role routing.
+- Merchant sold-out quick action still sends the runtime update and requests organizer review.
+- Added v0.6 screenshot evidence in `docs/research/assets/v0.6-i18n-verification/`.
+- Added visual smoke index in `docs/research/v0.6-i18n-smoke.md`.
+- No backend core workflow changes were required.
+- Qwen/QwenPaw remains outside the required deterministic demo path.
+
 ## Demo Accounts
 
 - organizer: `organizer.demo`
@@ -39,6 +56,6 @@ shadcn/ui-inspired local component layer
 
 ## Current Boundary
 
-This is a stronger productized MVP, not a final commercial UI. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview.
+This is a stronger productized multilingual MVP, not a final commercial UI. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview.
 
 Do not continue into Qwen/QwenPaw integration, real merchant connections, hardware, real traffic prediction, model training, payment/POS integrations, open registration, real map APIs, or a marketing landing page without a new plan.

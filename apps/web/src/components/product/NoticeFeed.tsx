@@ -1,7 +1,8 @@
 import { cn } from "../../ui/utils";
+import { useI18n } from "../../i18n";
 
 export function NoticeFeed({
-  title = "Live update",
+  title,
   notices,
   className
 }: {
@@ -9,9 +10,11 @@ export function NoticeFeed({
   notices: string[];
   className?: string;
 }) {
+  const { t } = useI18n();
+
   return (
     <section className={cn("rounded-lg border border-blue-100 bg-blue-50 p-4 shadow-sm", className)}>
-      <h2 className="text-base font-semibold text-ink">{title}</h2>
+      <h2 className="text-base font-semibold text-ink">{title ?? t("noticeFeed.defaultTitle")}</h2>
       <div className="mt-3 space-y-2">
         {notices.length ? (
           notices.map((notice) => (
@@ -20,7 +23,7 @@ export function NoticeFeed({
             </p>
           ))
         ) : (
-          <p className="text-sm leading-5 text-slate-600">No updates right now.</p>
+          <p className="text-sm leading-5 text-slate-600">{t("noticeFeed.empty")}</p>
         )}
       </div>
     </section>

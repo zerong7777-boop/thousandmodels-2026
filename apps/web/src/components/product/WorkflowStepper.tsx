@@ -1,4 +1,5 @@
 import { cn } from "../../ui/utils";
+import { useI18n } from "../../i18n";
 import { StatusPill } from "./StatusPill";
 
 type WorkflowStep = {
@@ -8,6 +9,13 @@ type WorkflowStep = {
 };
 
 export function WorkflowStepper({ steps, className }: { steps: WorkflowStep[]; className?: string }) {
+  const { t } = useI18n();
+  const stateLabel = (state: WorkflowStep["state"]) => {
+    if (state === "done") return t("common.status.completed");
+    if (state === "current") return t("common.status.current");
+    return t("common.status.pending");
+  };
+
   return (
     <div className={cn("grid gap-3 md:grid-cols-3", className)}>
       {steps.map((step, index) => (
@@ -17,7 +25,7 @@ export function WorkflowStepper({ steps, className }: { steps: WorkflowStep[]; c
               {index + 1}
             </span>
             <StatusPill tone={step.state === "done" ? "success" : step.state === "current" ? "info" : "neutral"}>
-              {step.state ?? "pending"}
+              {stateLabel(step.state)}
             </StatusPill>
           </div>
           <p className="mt-3 font-semibold text-ink">{step.label}</p>

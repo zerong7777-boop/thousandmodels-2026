@@ -4,9 +4,11 @@ import type { Incident, RecoveryProposal } from "../../types";
 import { Button } from "../../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
 import { ApprovalPanel, ProductPageHeader, RecoveryDiff, StatusPill } from "../../components/product";
+import { localizedDemoText, localizedStatus, useI18n } from "../../i18n";
 import { asArray, useAsyncData } from "../productUtils";
 
 export function OrganizerExceptionCenterPage({ eventId = "demo-night-tour" }: { eventId?: string }) {
+  const { t } = useI18n();
   const { data: exceptions } = useAsyncData(() => api.getIncidents(eventId), []);
   const incidents = asArray(exceptions) as Incident[];
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
@@ -18,16 +20,18 @@ export function OrganizerExceptionCenterPage({ eventId = "demo-night-tour" }: { 
   );
 
   const fallbackChanges = [
-    "Pause the sold-out merchant stop.",
-    "Move visitors to the next available indoor story point.",
-    "Publish a visitor-safe notice once the organizer confirms."
+    t("organizer.exceptions.after1"),
+    t("organizer.exceptions.after2"),
+    t("organizer.exceptions.after3")
   ];
   const before = [
-    "Visitors continue toward the sold-out first snack stop.",
-    "Merchant m001 remains assigned as an active arrival point.",
-    "Public H5 still shows the original stop order."
+    t("organizer.exceptions.before1"),
+    t("organizer.exceptions.before2"),
+    t("organizer.exceptions.before3")
   ];
-  const after = proposal?.recommended_changes?.length ? proposal.recommended_changes : fallbackChanges;
+  const after = proposal?.recommended_changes?.length
+    ? proposal.recommended_changes.map((item) => localizedDemoText(item, t))
+    : fallbackChanges;
 
   const prepareProposal = async (incident: Incident) => {
     const nextProposal = await api.createRecoveryProposal(eventId, incident.incident_id);
@@ -38,28 +42,28 @@ export function OrganizerExceptionCenterPage({ eventId = "demo-night-tour" }: { 
 
   const confirmRecovery = async () => {
     if (!proposal?.proposal_id) {
-      setConfirmationMessage("Recovery update prepared. Generate a proposal before approval when running against the live API.");
+      setConfirmationMessage(t("organizer.exceptions.proposalRequired"));
       return;
     }
     await api.approveRecoveryProposal(eventId, proposal.proposal_id);
-    setConfirmationMessage("Recovery update confirmed. Public notice and route v2 are ready.");
+    setConfirmationMessage(t("organizer.exceptions.confirmedMessage"));
   };
 
   return (
     <div className="space-y-4">
       <ProductPageHeader
-        eyebrow="Live exception center"
-        title="Recovery suggestions"
-        description="Review affected stops, merchant impact, route changes, and visitor release consequences for approval."
-        meta={["Decision workflow", "Route update", "Visitor release"]}
+        eyebrow={t("organizer.exceptions.eyebrow")}
+        title={t("organizer.exceptions.title")}
+        description={t("organizer.exceptions.description")}
+        meta={[t("organizer.exceptions.metaDecision"), t("organizer.exceptions.metaRoute"), t("organizer.exceptions.metaRelease")]}
         status={selectedIncident?.status ?? "open"}
       />
 
       <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)_360px]">
         <Card>
           <CardHeader>
-            <CardTitle>Exception queue</CardTitle>
-            <CardDescription>Items that need an operator decision.</CardDescription>
+            <CardTitle>{t("organizer.exceptions.queueTitle")}</CardTitle>
+            <CardDescription>{t("organizer.exceptions.queueDescription")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {incidents.map((item) => (
@@ -74,18 +78,22 @@ export function OrganizerExceptionCenterPage({ eventId = "demo-night-tour" }: { 
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="font-medium text-ink">{item.trigger_detail ?? "Merchant status changed"}</div>
+                    <div className="font-medium text-ink">
+                      {localizedDemoText(item.trigger_detail ?? t("organizer.exceptions.merchantStatusChanged"), t)}
+                    </div>
                     <div className="mt-1 text-sm text-slate-600">
-                      Affected merchant: {asArray(item.affected_merchants).join(", ") || "m001"}
+                      {t("organizer.exceptions.affectedMerchant")}: {asArray(item.affected_merchants).join(", ") || "m001"}
                     </div>
                   </div>
-                  <StatusPill tone={item.severity === "high" ? "danger" : "warning"}>{item.status ?? "open"}</StatusPill>
+                  <StatusPill tone={item.severity === "high" ? "danger" : "warning"}>
+                    {localizedStatus(item.status ?? "open", t)}
+                  </StatusPill>
                 </div>
               </button>
             ))}
             {!incidents.length ? (
               <div className="rounded-md border border-dashed border-slate-200 p-4 text-sm text-slate-500">
-                No live exceptions are waiting for review.
+                {t("organizer.exceptions.emptyQueue")}
               </div>
             ) : null}
           </CardContent>
@@ -94,27 +102,27 @@ export function OrganizerExceptionCenterPage({ eventId = "demo-night-tour" }: { 
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Impact scope</CardTitle>
-              <CardDescription>Who and which stop are affected by the runtime exception.</CardDescription>
+              <CardTitle>{t("organizer.exceptions.impactScope")}</CardTitle>
+              <CardDescription>{t("organizer.exceptions.impactDescription")}</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3 md:grid-cols-2">
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs font-semibold uppercase tracking-normal text-slate-500">Affected merchant</div>
+                <div className="text-xs font-semibold uppercase tracking-normal text-slate-500">
+                  {t("organizer.exceptions.affectedMerchant")}
+                </div>
                 <div className="mt-2 text-lg font-semibold text-ink">
                   {asArray(selectedIncident?.affected_merchants).join(", ") || "m001"}
                 </div>
-                <p className="mt-2 text-sm leading-5 text-slate-600">
-                  Inventory status blocks new visitor arrivals until the route is recovered.
-                </p>
+                <p className="mt-2 text-sm leading-5 text-slate-600">{t("organizer.exceptions.merchantImpactDetail")}</p>
               </div>
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <div className="text-xs font-semibold uppercase tracking-normal text-slate-500">Affected stop</div>
+                <div className="text-xs font-semibold uppercase tracking-normal text-slate-500">
+                  {t("organizer.exceptions.affectedStop")}
+                </div>
                 <div className="mt-2 text-lg font-semibold text-ink">
                   {asArray(selectedIncident?.affected_route_points).join(", ") || "rp001"}
                 </div>
-                <p className="mt-2 text-sm leading-5 text-slate-600">
-                  The first story stop should stop receiving public traffic once approval is complete.
-                </p>
+                <p className="mt-2 text-sm leading-5 text-slate-600">{t("organizer.exceptions.stopImpactDetail")}</p>
               </div>
             </CardContent>
           </Card>
@@ -124,27 +132,29 @@ export function OrganizerExceptionCenterPage({ eventId = "demo-night-tour" }: { 
 
         <div className="space-y-4">
           <ApprovalPanel
-            actionLabel="Confirm recovery update"
-            consequence="Approving this recovery creates route v2, updates merchant execution guidance, and releases the visitor-safe public notice."
-            description="The suggestion keeps visitors moving while removing the sold-out merchant from the active arrival path."
+            actionLabel={t("organizer.exceptions.confirmAction")}
+            consequence={t("organizer.exceptions.confirmConsequence")}
+            description={t("organizer.exceptions.confirmDescription")}
             onApprove={() => void confirmRecovery()}
-            title="Recovery confirmation"
+            title={t("organizer.exceptions.confirmTitle")}
           >
             {selectedIncident ? (
               <Button size="sm" variant="secondary" onClick={() => void prepareProposal(selectedIncident)}>
-                Prepare recovery suggestion
+                {t("organizer.exceptions.prepareSuggestion")}
               </Button>
             ) : null}
           </ApprovalPanel>
 
           <Card>
             <CardHeader>
-              <CardTitle>Public notice preview</CardTitle>
-              <CardDescription>Copy released to the visitor H5 once the organizer approves.</CardDescription>
+              <CardTitle>{t("organizer.exceptions.publicNoticePreview")}</CardTitle>
+              <CardDescription>{t("organizer.exceptions.publicNoticeDescription")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm leading-5 text-blue-900">
-                {proposal?.public_notice_patch ?? "Please continue to the indoor tea stop. Your route has been updated."}
+                {proposal?.public_notice_patch
+                  ? localizedDemoText(proposal.public_notice_patch, t)
+                  : t("organizer.exceptions.fallbackNotice")}
               </div>
               {confirmationMessage ? <StatusPill tone="success">{confirmationMessage}</StatusPill> : null}
             </CardContent>

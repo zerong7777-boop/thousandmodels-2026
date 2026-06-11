@@ -1,5 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import App from "../src/App";
+import { zhHans as zh } from "../src/i18n/dictionaries/zh-Hans";
+import { authUsers, mockAppFetch } from "./authTestUtils";
 
 const organizer = {
   user: {
@@ -32,10 +34,10 @@ test("demo quick fill does not authenticate until submit", async () => {
 
   render(<App />);
 
-  fireEvent.click(await screen.findByRole("button", { name: /organizer demo/i }));
+  fireEvent.click(await screen.findByRole("button", { name: new RegExp(zh["auth.organizerDemo"]) }));
 
-  expect(screen.getByLabelText(/username/i)).toHaveValue("organizer.demo");
-  expect(screen.getByLabelText(/password/i)).toHaveValue("demo1234");
+  expect(screen.getByLabelText(zh["auth.username"])).toHaveValue("organizer.demo");
+  expect(screen.getByLabelText(zh["auth.password"])).toHaveValue("demo1234");
   expect(window.location.pathname).toBe("/login");
   expect(localStorage.getItem("zhiyin.demo.session")).toBeNull();
 });
@@ -68,11 +70,36 @@ test("login submits credentials to backend and redirects by returned role", asyn
 
   render(<App />);
 
-  fireEvent.change(await screen.findByLabelText(/username/i), { target: { value: "organizer.demo" } });
-  fireEvent.change(screen.getByLabelText(/password/i), { target: { value: "demo1234" } });
-  fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+  fireEvent.change(await screen.findByLabelText(zh["auth.username"]), { target: { value: "organizer.demo" } });
+  fireEvent.change(screen.getByLabelText(zh["auth.password"]), { target: { value: "demo1234" } });
+  fireEvent.click(screen.getByRole("button", { name: /登\s*录/ }));
 
   await waitFor(() => expect(window.location.pathname).toBe("/organizer/dashboard"));
+  expect(localStorage.getItem("zhiyin.demo.session")).toBeNull();
+});
+
+test("language choice persists after login without changing returned role", async () => {
+  vi.stubGlobal(
+    "fetch",
+    mockAppFetch(null, (url) => {
+      if (url.endsWith("/api/auth/login")) {
+        return { user: authUsers.organizer };
+      }
+      return [];
+    })
+  );
+
+  render(<App />);
+
+  fireEvent.click(await screen.findByRole("button", { name: /English/i }));
+  expect(localStorage.getItem("zhiyin.locale")).toBe("en");
+
+  fireEvent.click(screen.getByRole("button", { name: /Organizer demo/i }));
+  fireEvent.click(screen.getByRole("button", { name: /Sign in/i }));
+
+  await waitFor(() => expect(window.location.pathname).toBe("/organizer/dashboard"));
+  expect(localStorage.getItem("zhiyin.locale")).toBe("en");
+  expect(await screen.findByTestId("organizer-shell")).toBeInTheDocument();
   expect(localStorage.getItem("zhiyin.demo.session")).toBeNull();
 });
 

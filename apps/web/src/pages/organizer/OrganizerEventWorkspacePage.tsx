@@ -2,10 +2,12 @@ import { api } from "../../api";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
+import { localizedDemoList, localizedDemoText, localizedStatus, useI18n } from "../../i18n";
 import { MetricTile, ProductPageHeader, WorkflowStepper } from "../../components/product";
 import { asArray, useAsyncData } from "../productUtils";
 
 export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { eventId?: string }) {
+  const { t } = useI18n();
   const { data: plans } = useAsyncData(() => api.getPlanVersions(eventId), []);
   const { data: traces } = useAsyncData(() => api.getAgentTraces(eventId), []);
   const { data: tasks } = useAsyncData(() => api.getMerchantTasks(eventId), []);
@@ -14,24 +16,27 @@ export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { e
   const taskList = asArray(tasks);
   const currentPlan = planList.find((plan) => plan.status === "approved") ?? planList[0];
   const readinessCount = taskList.filter((task) => task.task_status === "active").length;
+  const currentStatus = currentPlan?.status ?? "draft";
+  const approvalState =
+    currentPlan?.status === "approved" ? t("common.status.confirmed") : t("organizer.workspace.needsConfirmation");
 
   return (
     <div className="space-y-4">
       <ProductPageHeader
-        eyebrow="Event workspace"
-        title="Route plan and execution readiness"
-        description="Build the route plan, inspect the evidence trail, review merchant readiness, and confirm the operating plan."
+        eyebrow={t("organizer.workspace.eyebrow")}
+        title={t("organizer.workspace.title")}
+        description={t("organizer.workspace.description")}
         meta={[
-          `Route plan status ${currentPlan?.status ?? "draft"}`,
-          `Merchant readiness ${readinessCount}/${taskList.length || 1}`,
-          `Approval state ${currentPlan?.status === "approved" ? "confirmed" : "needs confirmation"}`
+          t("organizer.workspace.planStatusMeta", { status: localizedStatus(currentStatus, t) }),
+          t("organizer.workspace.readinessMeta", { ready: readinessCount, total: taskList.length || 1 }),
+          t("organizer.workspace.approvalMeta", { state: approvalState })
         ]}
-        status={currentPlan?.status ?? "draft"}
+        status={currentStatus}
         actions={
           <>
-            <Button onClick={() => void api.generatePlan(eventId)}>Build route plan</Button>
+            <Button onClick={() => void api.generatePlan(eventId)}>{t("organizer.workspace.buildPlan")}</Button>
             <Button variant="secondary" onClick={() => void api.approvePlanVersion(eventId, currentPlan?.version ?? 1)}>
-              Confirm plan
+              {t("organizer.workspace.confirmPlan")}
             </Button>
           </>
         }
@@ -40,31 +45,61 @@ export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { e
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-ink">Workflow stepper</h2>
-            <p className="mt-1 text-sm text-slate-600">Operator-visible flow from route building to public release.</p>
+            <h2 className="text-base font-semibold text-ink">{t("organizer.workspace.stepperTitle")}</h2>
+            <p className="mt-1 text-sm text-slate-600">{t("organizer.workspace.stepperDescription")}</p>
           </div>
         </div>
         <WorkflowStepper
           className="mt-4"
           steps={[
-            { label: "Build route plan", detail: "Create the first operating route.", state: currentPlan ? "done" : "current" },
-            { label: "Review evidence trail", detail: `${traceList[0]?.steps?.length ?? 0} evidence steps available.`, state: traceList.length ? "done" : "pending" },
-            { label: "Approval state", detail: currentPlan?.status === "approved" ? "Confirmed for operations." : "Awaiting organizer confirmation.", state: currentPlan?.status === "approved" ? "done" : "current" }
+            {
+              label: t("organizer.workspace.stepBuild"),
+              detail: t("organizer.workspace.stepBuildDetail"),
+              state: currentPlan ? "done" : "current"
+            },
+            {
+              label: t("organizer.workspace.stepEvidence"),
+              detail: t("organizer.workspace.stepEvidenceDetail", { count: traceList[0]?.steps?.length ?? 0 }),
+              state: traceList.length ? "done" : "pending"
+            },
+            {
+              label: t("organizer.workspace.stepApproval"),
+              detail:
+                currentPlan?.status === "approved"
+                  ? t("organizer.workspace.stepApprovalConfirmed")
+                  : t("organizer.workspace.stepApprovalWaiting"),
+              state: currentPlan?.status === "approved" ? "done" : "current"
+            }
           ]}
         />
       </section>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <MetricTile label="Route plan status" value={currentPlan ? `v${currentPlan.version}` : "draft"} detail={currentPlan?.created_reason ?? "No route plan has been created yet."} tone={currentPlan?.status === "approved" ? "success" : "warning"} />
-        <MetricTile label="Merchant readiness" value={`${readinessCount}/${taskList.length || 1}`} detail="Active merchant tasks ready for tonight." tone="info" />
-        <MetricTile label="Approval state" value={currentPlan?.status === "approved" ? "confirmed" : "pending"} detail="Human confirmation remains the release gate." tone={currentPlan?.status === "approved" ? "success" : "warning"} />
+        <MetricTile
+          label={t("organizer.workspace.planStatus")}
+          value={currentPlan ? `v${currentPlan.version}` : localizedStatus("draft", t)}
+          detail={currentPlan?.created_reason ? localizedDemoText(currentPlan.created_reason, t) : t("organizer.workspace.noPlan")}
+          tone={currentPlan?.status === "approved" ? "success" : "warning"}
+        />
+        <MetricTile
+          label={t("organizer.dashboard.merchantReadiness")}
+          value={`${readinessCount}/${taskList.length || 1}`}
+          detail={t("organizer.workspace.readinessDetail")}
+          tone="info"
+        />
+        <MetricTile
+          label={t("organizer.workspace.stepApproval")}
+          value={approvalState}
+          detail={t("organizer.workspace.approvalDetail")}
+          tone={currentPlan?.status === "approved" ? "success" : "warning"}
+        />
       </div>
 
       <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap gap-3">
-          <Button onClick={() => void api.generatePlan(eventId)}>Build route plan</Button>
+          <Button onClick={() => void api.generatePlan(eventId)}>{t("organizer.workspace.buildPlan")}</Button>
           <Button variant="secondary" onClick={() => void api.approvePlanVersion(eventId, currentPlan?.version ?? 1)}>
-            Confirm plan
+            {t("organizer.workspace.confirmPlan")}
           </Button>
         </div>
       </div>
@@ -72,55 +107,57 @@ export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { e
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Route plans</CardTitle>
-            <CardDescription>Versioned operating plans with visible differences.</CardDescription>
+            <CardTitle>{t("organizer.workspace.routePlans")}</CardTitle>
+            <CardDescription>{t("organizer.workspace.routePlansDescription")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {planList.slice(0, 3).map((plan, index) => (
               <div key={plan.plan_id ?? `${plan.event_id}-${plan.version}`} className="rounded-md border border-slate-200 p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium">Plan v{plan.version ?? "1"}</span>
-                  <Badge variant={plan.status === "approved" ? "success" : "neutral"}>{plan.status ?? "draft"}</Badge>
+                  <span className="font-medium">{t("organizer.workspace.planVersion", { version: plan.version ?? "1" })}</span>
+                  <Badge variant={plan.status === "approved" ? "success" : "neutral"}>{localizedStatus(plan.status ?? "draft", t)}</Badge>
                 </div>
                 <ul className="mt-2 list-disc pl-5 text-sm text-slate-600">
-                  {asArray(plan.diff_from_previous).slice(0, 3).map((item, itemIndex) => (
+                  {localizedDemoList(asArray(plan.diff_from_previous).slice(0, 3), t).map((item, itemIndex) => (
                     <li key={`${index}-${itemIndex}-${item}`}>{item}</li>
                   ))}
                 </ul>
               </div>
             ))}
-            {!planList.length ? <p className="text-sm text-slate-500">No route plan has been created yet.</p> : null}
+            {!planList.length ? <p className="text-sm text-slate-500">{t("organizer.workspace.noPlan")}</p> : null}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Evidence trail</CardTitle>
-            <CardDescription>Why the route and recovery choices were recommended.</CardDescription>
+            <CardTitle>{t("organizer.workspace.evidenceTrail")}</CardTitle>
+            <CardDescription>{t("organizer.workspace.evidenceDescription")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {traceList.slice(0, 2).map((trace) => (
               <div key={trace.trace_id} className="rounded-md border border-slate-200 p-3">
-                <div className="font-medium">{trace.trigger}</div>
-                <div className="text-sm text-slate-600">{asArray(trace.steps).length} reasoning steps recorded.</div>
+                <div className="font-medium">{localizedDemoText(trace.trigger, t)}</div>
+                <div className="text-sm text-slate-600">
+                  {t("organizer.workspace.reasoningSteps", { count: asArray(trace.steps).length })}
+                </div>
               </div>
             ))}
-            {!traceList.length ? <p className="text-sm text-slate-500">Evidence will appear after route planning.</p> : null}
+            {!traceList.length ? <p className="text-sm text-slate-500">{t("organizer.workspace.evidenceEmpty")}</p> : null}
           </CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Merchant tasks</CardTitle>
-          <CardDescription>Execution packs sent to participating stores.</CardDescription>
+          <CardTitle>{t("organizer.workspace.merchantTasks")}</CardTitle>
+          <CardDescription>{t("organizer.workspace.merchantTasksDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
           {taskList.slice(0, 4).map((task) => (
             <div key={task.task_id} className="rounded-md border border-slate-200 p-3">
-              <div className="font-medium">{task.role}</div>
+              <div className="font-medium">{localizedDemoText(task.role, t)}</div>
               <div className="text-sm text-slate-600">{task.time_slot}</div>
-              <div className="mt-2 text-sm">{task.visitor_task}</div>
+              <div className="mt-2 text-sm">{localizedDemoText(task.visitor_task, t)}</div>
             </div>
           ))}
         </CardContent>

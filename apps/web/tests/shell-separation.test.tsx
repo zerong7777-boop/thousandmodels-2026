@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import App from "../src/App";
+import { zhHans as zh } from "../src/i18n/dictionaries/zh-Hans";
 import { mockAppFetch } from "./authTestUtils";
 
 const emptyPayload = (url: string) => {
@@ -43,7 +44,7 @@ test("organizer shell does not render merchant status controls or tourist H5", a
   window.history.pushState({}, "", "/organizer/dashboard");
   render(<App />);
   expect(await screen.findByTestId("organizer-shell")).toBeInTheDocument();
-  expect(screen.queryByText(/report sold out/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(zh["merchant.status.reportSoldOut"])).not.toBeInTheDocument();
   expect(screen.queryByText(/^Tourist H5$/i)).not.toBeInTheDocument();
 });
 
@@ -52,7 +53,7 @@ test("merchant shell does not render organizer exception navigation or AgentTrac
   window.history.pushState({}, "", "/merchant/dashboard");
   render(<App />);
   expect(await screen.findByTestId("merchant-shell")).toBeInTheDocument();
-  expect(screen.queryByText(/exception center/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(zh["shell.nav.exceptions"])).not.toBeInTheDocument();
   expect(screen.queryByText(/agenttrace/i)).not.toBeInTheDocument();
 });
 
@@ -61,7 +62,7 @@ test("user shell does not render organizer navigation or internal object names",
   window.history.pushState({}, "", "/user/events/demo-night-tour");
   render(<App />);
   expect(await screen.findByTestId("user-shell")).toBeInTheDocument();
-  expect(screen.queryByText(/activity workspace/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(zh["shell.nav.workspace"])).not.toBeInTheDocument();
   expect(screen.queryByText(/incident/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/recoveryproposal/i)).not.toBeInTheDocument();
 });
@@ -71,6 +72,6 @@ test("protected organizer route without backend session redirects to login", asy
   window.history.pushState({}, "", "/organizer/dashboard");
   render(<App />);
   await waitFor(() => expect(window.location.pathname).toBe("/login"));
-  expect(screen.getByRole("heading", { name: /zhiyin haojiang/i })).toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: /product access/i })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: zh["common.brand"] })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: zh["auth.productAccess"] })).toBeInTheDocument();
 });

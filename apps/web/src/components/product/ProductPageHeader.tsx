@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { StatusPill } from "./StatusPill";
+import { localizedStatus, useI18n } from "../../i18n";
 import { cn } from "../../ui/utils";
 
 export function ProductPageHeader({
@@ -21,6 +22,8 @@ export function ProductPageHeader({
   tone?: "organizer" | "merchant" | "visitor" | "info";
   className?: string;
 }) {
+  const { t } = useI18n();
+
   return (
     <section
       className={cn(
@@ -35,7 +38,9 @@ export function ProductPageHeader({
         <div className="min-w-0 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             {eyebrow ? <p className="text-xs font-semibold uppercase tracking-normal text-slate-500">{eyebrow}</p> : null}
-            {status ? <StatusPill tone={tone === "info" ? "info" : tone}>{status}</StatusPill> : null}
+            {status ? (
+              <StatusPill tone={tone === "info" ? "info" : tone}>{localizedStatus(status, t)}</StatusPill>
+            ) : null}
           </div>
           <div>
             <h1 className="text-2xl font-semibold text-ink md:text-3xl">{title}</h1>

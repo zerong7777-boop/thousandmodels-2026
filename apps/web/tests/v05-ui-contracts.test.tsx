@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import App from "../src/App";
+import { zhHans as zh } from "../src/i18n/dictionaries/zh-Hans";
 import { mockAppFetch } from "./authTestUtils";
 
 const eventSummary = {
@@ -189,10 +190,10 @@ test("login presents product entry with compact role options", async () => {
   window.history.pushState({}, "", "/login");
   render(<App />);
 
-  expect(await screen.findByRole("heading", { name: /zhiyin haojiang/i })).toBeInTheDocument();
-  expect(screen.getByText(/organizer workspace/i)).toBeInTheDocument();
-  expect(screen.getByText(/merchant workbench/i)).toBeInTheDocument();
-  expect(screen.getByText(/visitor route/i)).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: zh["common.brand"] })).toBeInTheDocument();
+  expect(screen.getByText(zh["auth.organizerWorkspace"])).toBeInTheDocument();
+  expect(screen.getByText(zh["auth.merchantWorkbench"])).toBeInTheDocument();
+  expect(screen.getByText(zh["auth.visitorRoute"])).toBeInTheDocument();
   expect(screen.queryByText(/choose demo identity/i)).not.toBeInTheDocument();
 });
 
@@ -201,11 +202,11 @@ test("organizer dashboard has attention queue metrics and activity timeline", as
   window.history.pushState({}, "", "/organizer/dashboard");
   render(<App />);
 
-  expect(await screen.findByText(/needs attention/i)).toBeInTheDocument();
-  expect(screen.getByText(/merchant readiness/i)).toBeInTheDocument();
-  expect(screen.getByText(/live exceptions/i)).toBeInTheDocument();
-  expect(screen.getByText(/activity timeline/i)).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /enter event workspace/i })).toBeInTheDocument();
+  expect(await screen.findByText(zh["organizer.dashboard.needsAttention"])).toBeInTheDocument();
+  expect(screen.getByText(zh["organizer.dashboard.merchantReadiness"])).toBeInTheDocument();
+  expect(screen.getByText(zh["organizer.dashboard.liveExceptions"])).toBeInTheDocument();
+  expect(screen.getByText(zh["organizer.dashboard.timelineTitle"])).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: zh["organizer.dashboard.enterWorkspace"] })).toBeInTheDocument();
 });
 
 test("organizer exception center presents impact diff and confirmation consequence", async () => {
@@ -213,12 +214,12 @@ test("organizer exception center presents impact diff and confirmation consequen
   window.history.pushState({}, "", "/organizer/events/demo-night-tour/exceptions");
   render(<App />);
 
-  expect(await screen.findByText(/exception queue/i)).toBeInTheDocument();
-  expect(screen.getByText(/impact scope/i)).toBeInTheDocument();
-  expect(screen.getByText(/before/i)).toBeInTheDocument();
-  expect(screen.getByText(/after/i)).toBeInTheDocument();
-  expect(screen.getByText(/public notice preview/i)).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /confirm recovery update/i })).toBeInTheDocument();
+  expect(await screen.findByText(zh["organizer.exceptions.queueTitle"])).toBeInTheDocument();
+  expect(screen.getByText(zh["organizer.exceptions.impactScope"])).toBeInTheDocument();
+  expect(screen.getByText(zh["common.before"])).toBeInTheDocument();
+  expect(screen.getByText(zh["common.after"])).toBeInTheDocument();
+  expect(screen.getByText(zh["organizer.exceptions.publicNoticePreview"])).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: zh["organizer.exceptions.confirmAction"] })).toBeInTheDocument();
 });
 
 test("merchant status uses quick actions and sold-out still requests organizer review", async () => {
@@ -226,11 +227,11 @@ test("merchant status uses quick actions and sold-out still requests organizer r
   window.history.pushState({}, "", "/merchant/events/demo-night-tour/status");
   render(<App />);
 
-  expect(await screen.findByRole("button", { name: /accept visitors/i })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /pause visitors/i })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /report low stock/i })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: /report sold out/i }));
-  await waitFor(() => expect(screen.getByText(/organizer review requested/i)).toBeInTheDocument());
+  expect(await screen.findByRole("button", { name: new RegExp(`^${zh["merchant.status.acceptVisitors"]}`) })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: new RegExp(`^${zh["merchant.status.pauseVisitors"]}`) })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: new RegExp(`^${zh["merchant.status.reportLowStock"]}`) })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${zh["merchant.status.reportSoldOut"]}`) }));
+  await waitFor(() => expect(screen.getByText(zh["merchant.status.organizerReviewRequested"])).toBeInTheDocument());
 });
 
 test("public H5 reads like a visitor route with live updates and progress", async () => {
@@ -238,9 +239,9 @@ test("public H5 reads like a visitor route with live updates and progress", asyn
   window.history.pushState({}, "", "/public/events/demo-night-tour");
   render(<App />);
 
-  expect(await screen.findByText(/tonight's route/i)).toBeInTheDocument();
-  expect(screen.getByText(/live update/i)).toBeInTheDocument();
-  expect(screen.getByText(/route progress/i)).toBeInTheDocument();
-  expect(screen.getByText(/Stop 1/i)).toBeInTheDocument();
+  expect(await screen.findByText(zh["public.event.tonightsRoute"])).toBeInTheDocument();
+  expect(screen.getByText(zh["public.event.liveUpdate"])).toBeInTheDocument();
+  expect(screen.getByText(zh["public.event.routeProgress"])).toBeInTheDocument();
+  expect(screen.getByText(zh["routeStop.stop"].replace("{index}", "1"))).toBeInTheDocument();
   expect(screen.queryByText(/PlanVersion/i)).not.toBeInTheDocument();
 });

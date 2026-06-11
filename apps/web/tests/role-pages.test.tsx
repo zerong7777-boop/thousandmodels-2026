@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import App from "../src/App";
+import { zhHans as zh } from "../src/i18n/dictionaries/zh-Hans";
 import { mockAppFetch } from "./authTestUtils";
 
 const publicPayload = {
@@ -131,72 +132,72 @@ test("merchant task status and notification routes render different content", as
   stubRole("merchant");
   window.history.pushState({}, "", "/merchant/dashboard");
   const dashboard = render(<App />);
-  expect((await screen.findAllByText(/today/i)).length).toBeGreaterThan(0);
-  expect(screen.getByText(/next required action/i)).toBeInTheDocument();
-  expect(screen.getAllByText(/before visitors arrive/i).length).toBeGreaterThan(0);
+  expect((await screen.findAllByText(zh["merchant.dashboard.eyebrow"])).length).toBeGreaterThan(0);
+  expect(screen.getByText(zh["merchant.dashboard.nextAction"])).toBeInTheDocument();
+  expect(screen.getAllByText(zh["merchant.dashboard.beforeVisitors"]).length).toBeGreaterThan(0);
   dashboard.unmount();
 
   window.history.pushState({}, "", "/merchant/events/demo-night-tour/tasks");
   const first = render(<App />);
-  expect(await screen.findByText(/assigned tasks/i)).toBeInTheDocument();
-  expect(screen.getAllByText(/assigned task/i).length).toBeGreaterThan(0);
-  expect(screen.getAllByText(/before visitors arrive/i).length).toBeGreaterThan(0);
+  expect(await screen.findByText(zh["merchant.tasks.eyebrow"])).toBeInTheDocument();
+  expect((await screen.findAllByText(zh["merchant.tasks.preparation"])).length).toBeGreaterThan(0);
+  expect(await screen.findByText(/Prepare tasting set/i)).toBeInTheDocument();
   first.unmount();
 
   window.history.pushState({}, "", "/merchant/events/demo-night-tour/status");
   const second = render(<App />);
-  expect(await screen.findByText(/report live status/i)).toBeInTheDocument();
+  expect(await screen.findByText(zh["merchant.status.eyebrow"])).toBeInTheDocument();
   second.unmount();
 
   window.history.pushState({}, "", "/merchant/notifications");
   render(<App />);
-  expect((await screen.findAllByText(/organizer notices/i)).length).toBeGreaterThan(0);
-  expect(screen.getAllByText(/recovery notice/i).length).toBeGreaterThan(0);
+  expect((await screen.findAllByText(zh["merchant.notices.eyebrow"])).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(zh["merchant.notices.recoveryNotice"]).length).toBeGreaterThan(0);
 });
 
 test("tourist logged-in route is not the same surface as public route", async () => {
   stubRole("tourist");
   window.history.pushState({}, "", "/user/events/demo-night-tour");
   const loggedIn = render(<App />);
-  expect(await screen.findByText(/my route/i)).toBeInTheDocument();
-  expect(screen.getAllByText(/route progress/i).length).toBeGreaterThan(0);
-  expect(screen.getByText(/logout/i)).toBeInTheDocument();
+  expect(await screen.findByText(zh["tourist.event.eyebrow"])).toBeInTheDocument();
+  expect(screen.getAllByText(zh["routeProgress.title"]).length).toBeGreaterThan(0);
+  expect(screen.getByText(zh["common.logout"])).toBeInTheDocument();
   loggedIn.unmount();
 
   window.history.pushState({}, "", "/user/events/demo-night-tour/route");
   const route = render(<App />);
-  expect(await screen.findByText(/story stops/i)).toBeInTheDocument();
-  expect(screen.getAllByText(/visitor task/i).length).toBeGreaterThan(0);
-  expect(screen.getAllByText(/route progress/i).length).toBeGreaterThan(0);
+  expect(await screen.findByText(zh["tourist.route.title"])).toBeInTheDocument();
+  expect((await screen.findAllByText(zh["routeStop.visitorTask"])).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(zh["routeProgress.title"]).length).toBeGreaterThan(0);
   route.unmount();
 
   window.history.pushState({}, "", "/user/events/demo-night-tour/points/rp001");
   const point = render(<App />);
-  expect((await screen.findAllByText(/visitor task/i)).length).toBeGreaterThan(0);
-  expect(screen.getAllByText(/next stop/i).length).toBeGreaterThan(0);
+  expect((await screen.findAllByText(zh["tourist.event.visitorTask"])).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(zh["tourist.point.eyebrow"]).length).toBeGreaterThan(0);
   point.unmount();
 
   window.history.pushState({}, "", "/user/events/demo-night-tour/notices");
   const notices = render(<App />);
-  expect((await screen.findAllByText(/live update/i)).length).toBeGreaterThan(0);
+  expect((await screen.findAllByText(zh["tourist.notices.latest"])).length).toBeGreaterThan(0);
   notices.unmount();
 
   stubRole(null);
   window.history.pushState({}, "", "/public/events/demo-night-tour");
   render(<App />);
-  expect(await screen.findByText(/visitor route/i)).toBeInTheDocument();
-  expect(screen.queryByText(/logout/i)).not.toBeInTheDocument();
+  expect(await screen.findByText(zh["public.event.visitorRoute"])).toBeInTheDocument();
+  expect(screen.queryByText(zh["common.logout"])).not.toBeInTheDocument();
 });
 
 test("organizer workspace uses product language for internal evidence", async () => {
   stubRole("organizer");
   window.history.pushState({}, "", "/organizer/events/demo-night-tour");
   render(<App />);
-  expect(await screen.findByText(/workflow stepper/i)).toBeInTheDocument();
-  expect(screen.getAllByText(/route plan status/i).length).toBeGreaterThan(0);
-  expect((await screen.findAllByText(/evidence trail/i)).length).toBeGreaterThan(0);
-  expect(screen.getAllByText(/merchant readiness/i).length).toBeGreaterThan(0);
-  expect(screen.getAllByText(/approval state/i).length).toBeGreaterThan(0);
+  expect(await screen.findByText(zh["organizer.workspace.stepperTitle"])).toBeInTheDocument();
+  expect(screen.getAllByText(zh["organizer.workspace.planStatus"]).length).toBeGreaterThan(0);
+  expect((await screen.findAllByText(zh["organizer.workspace.evidenceTrail"])).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(new RegExp(zh["organizer.dashboard.merchantReadiness"])).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(zh["organizer.workspace.stepApproval"]).length).toBeGreaterThan(0);
   expect(screen.queryByText(/AgentTrace/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/PlanVersion/i)).not.toBeInTheDocument();
 });

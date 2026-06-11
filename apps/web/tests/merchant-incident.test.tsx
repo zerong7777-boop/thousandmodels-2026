@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import App from "../src/App";
+import { zhHans as zh } from "../src/i18n/dictionaries/zh-Hans";
 import { mockAppFetch } from "./authTestUtils";
 
 afterEach(() => {
@@ -27,7 +28,14 @@ test("merchant status page exposes runtime update controls", async () => {
   window.history.pushState({}, "", "/merchant/events/demo-night-tour/status");
   render(<App />);
   expect(await screen.findByTestId("merchant-shell")).toBeInTheDocument();
-  expect(await screen.findByRole("button", { name: /sold out/i })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: /sold out/i }));
-  await waitFor(() => expect(fetch).toHaveBeenCalled());
+  expect(await screen.findByRole("button", { name: new RegExp(`^${zh["merchant.status.reportSoldOut"]}`) })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${zh["merchant.status.reportSoldOut"]}`) }));
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/merchants/m001/runtime-state"),
+      expect.objectContaining({
+        body: expect.stringContaining("\"inventory_status\":\"sold_out\"")
+      })
+    )
+  );
 });

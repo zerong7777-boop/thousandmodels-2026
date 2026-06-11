@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import App from "../src/App";
+import { zhHans as zh } from "../src/i18n/dictionaries/zh-Hans";
 import { mockAppFetch } from "./authTestUtils";
 
 const eventSummary = {
@@ -48,7 +49,7 @@ test("public route renders visitor route without login", async () => {
   vi.stubGlobal("fetch", mockAppFetch(null, routePayload));
   window.history.pushState({}, "", "/public/events/demo-night-tour");
   render(<App />);
-  expect(await screen.findByText(/visitor route/i)).toBeInTheDocument();
+  expect(await screen.findByText(zh["public.event.visitorRoute"])).toBeInTheDocument();
 });
 
 test("review compatibility route is organizer owned", async () => {

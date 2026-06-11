@@ -7,7 +7,7 @@ type DemoRole = "organizer" | "merchant" | "tourist" | null;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const screenshotDir = path.resolve(__dirname, "../../../../docs/research/assets/v0.5-verification");
+const screenshotDir = path.resolve(__dirname, "../../../../docs/research/assets/v0.6-i18n-verification");
 
 const users = {
   organizer: {
@@ -286,88 +286,95 @@ async function snap(page: Page, fileName: string) {
   await page.screenshot({ path: path.join(screenshotDir, fileName), fullPage: true });
 }
 
-async function useEnglish(page: Page) {
-  await page.addInitScript(() => window.localStorage.setItem("zhiyin.locale", "en"));
+async function switchLocale(page: Page, label: RegExp) {
+  await page.getByRole("button", { name: label }).first().click();
 }
 
-test("v0.5 login product entry screenshot", async ({ page }) => {
+async function expectNoPublicBackendTerms(page: Page) {
+  await expect(page.getByText(/PlanVersion|AgentTrace|RecoveryProposal|runtime_state|current_plan_version/i)).toHaveCount(0);
+}
+
+test("v0.6 Simplified Chinese login screenshot", async ({ page }) => {
   await mockApi(page, null);
-  await useEnglish(page);
   await page.goto("/login");
-  await expect(page.getByRole("heading", { name: /Zhiyin Haojiang/i })).toBeVisible();
-  await expect(page.getByText("Organizer workspace")).toBeVisible();
-  await expect(page.getByText("Merchant workbench")).toBeVisible();
-  await expect(page.getByText("Visitor route")).toBeVisible();
-  await snap(page, "01-login.png");
+  await expect(page.getByRole("heading", { name: "产品入口" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "智引濠江" })).toBeVisible();
+  await snap(page, "01-login-zh-Hans.png");
 });
 
-test("v0.5 organizer P0 screenshots", async ({ page }) => {
+test("v0.6 Simplified Chinese organizer dashboard screenshot", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await mockApi(page, "organizer");
-  await useEnglish(page);
-
   await page.goto("/organizer/dashboard");
-  await expect(page.getByText("Needs attention")).toBeVisible();
-  await expect(page.getByText("Merchant readiness")).toBeVisible();
-  await expect(page.getByText("Activity timeline")).toBeVisible();
-  await snap(page, "02-organizer-dashboard.png");
-
-  await page.goto("/organizer/events/demo-night-tour");
-  await expect(page.getByText("Workflow stepper")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Evidence trail" })).toBeVisible();
-  await expect(page.getByText("Approval state").first()).toBeVisible();
-  await snap(page, "03-organizer-workspace.png");
-
-  await page.goto("/organizer/events/demo-night-tour/exceptions");
-  await expect(page.getByText("Impact scope")).toBeVisible();
-  await expect(page.getByText("Public notice preview")).toBeVisible();
-  await expect(page.getByRole("button", { name: /Confirm recovery update/i })).toBeVisible();
-  await snap(page, "04-organizer-exceptions.png");
-
-  await page.goto("/organizer/events/demo-night-tour/review");
-  await expect(page.getByText("Metric-backed review report")).toBeVisible();
-  await expect(page.getByText("Queue pressure")).toBeVisible();
-  await expect(page.getByText("Recommendations")).toBeVisible();
-  await snap(page, "05-organizer-review.png");
+  await expect(page.getByText("需要关注")).toBeVisible();
+  await expect(page.getByText("商户准备度")).toBeVisible();
+  await snap(page, "02-organizer-dashboard-zh-Hans.png");
 });
 
-test("v0.5 merchant mobile screenshots", async ({ page }) => {
+test("v0.6 Simplified Chinese merchant status screenshot", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await mockApi(page, "merchant");
-  await useEnglish(page);
-
-  await page.goto("/merchant/dashboard");
-  await expect(page.getByText("Today").first()).toBeVisible();
-  await expect(page.getByText("Next required action")).toBeVisible();
-  await expect(page.getByText("Before visitors arrive").first()).toBeVisible();
-  await snap(page, "06-merchant-dashboard-mobile.png");
-
   await page.goto("/merchant/events/demo-night-tour/status");
-  await expect(page.getByRole("button", { name: /^Accept visitors/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^Report low stock/ })).toBeVisible();
-  await page.getByRole("button", { name: /^Report sold out/ }).click();
-  await expect(page.getByText(/Organizer review requested/i)).toBeVisible();
-  await snap(page, "07-merchant-status-mobile.png");
+  await expect(page.getByRole("button", { name: /^上报售罄/ })).toBeVisible();
+  await page.getByRole("button", { name: /^上报售罄/ }).click();
+  await expect(page.getByText("已请求主办方复核。")).toBeVisible();
+  await snap(page, "03-merchant-status-zh-Hans-mobile.png");
 });
 
-test("v0.5 tourist route mobile screenshot", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await mockApi(page, "tourist");
-  await useEnglish(page);
-  await page.goto("/user/events/demo-night-tour/route");
-  await expect(page.getByText("Story stops")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Route progress" })).toBeVisible();
-  await expect(page.getByText("Collect the red facade stamp.")).toBeVisible();
-  await snap(page, "08-tourist-route-mobile.png");
-});
-
-test("v0.5 public H5 mobile screenshot", async ({ page }) => {
+test("v0.6 Simplified Chinese public H5 screenshot", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await mockApi(page, null);
-  await useEnglish(page);
   await page.goto("/public/events/demo-night-tour");
-  await expect(page.getByText("Tonight's route")).toBeVisible();
-  await expect(page.getByText("Route progress").first()).toBeVisible();
-  await expect(page.getByText("Live update")).toBeVisible();
-  await snap(page, "09-public-h5-mobile.png");
+  await expect(page.getByText("今晚路线")).toBeVisible();
+  await expect(page.getByText("实时更新")).toBeVisible();
+  await expectNoPublicBackendTerms(page);
+  await snap(page, "04-public-h5-zh-Hans-mobile.png");
+});
+
+test("v0.6 Traditional Chinese login screenshot", async ({ page }) => {
+  await mockApi(page, null);
+  await page.goto("/login");
+  await switchLocale(page, /繁體中文/);
+  await expect(page.getByRole("heading", { name: "產品入口" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "智引濠江" })).toBeVisible();
+  await snap(page, "05-login-zh-Hant.png");
+});
+
+test("v0.6 Traditional Chinese organizer dashboard screenshot", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await mockApi(page, "organizer");
+  await page.goto("/organizer/dashboard");
+  await switchLocale(page, /繁體中文/);
+  await expect(page.getByText("需要關注")).toBeVisible();
+  await expect(page.getByText("商戶準備度")).toBeVisible();
+  await snap(page, "06-organizer-dashboard-zh-Hant.png");
+});
+
+test("v0.6 Traditional Chinese merchant status screenshot", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockApi(page, "merchant");
+  await page.goto("/merchant/events/demo-night-tour/status");
+  await switchLocale(page, /繁體中文/);
+  await expect(page.getByRole("button", { name: /^上報售罄/ })).toBeVisible();
+  await snap(page, "07-merchant-status-zh-Hant-mobile.png");
+});
+
+test("v0.6 Traditional Chinese public H5 screenshot", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockApi(page, null);
+  await page.goto("/public/events/demo-night-tour");
+  await switchLocale(page, /繁體中文/);
+  await expect(page.getByText("今晚路線")).toBeVisible();
+  await expect(page.getByText("即時更新")).toBeVisible();
+  await expectNoPublicBackendTerms(page);
+  await snap(page, "08-public-h5-zh-Hant-mobile.png");
+});
+
+test("v0.6 English fallback login screenshot", async ({ page }) => {
+  await mockApi(page, null);
+  await page.goto("/login");
+  await switchLocale(page, /English/);
+  await expect(page.getByRole("heading", { name: "Product access" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Zhiyin Haojiang" })).toBeVisible();
+  await snap(page, "09-login-en.png");
 });

@@ -1,100 +1,103 @@
 import { AlertTriangle, CheckCircle2, Route, Store } from "lucide-react";
 import { api } from "../../api";
+import { localizedDemoText, localizedStatus, useI18n } from "../../i18n";
 import { Button } from "../../ui/button";
 import { ActivityTimeline, AttentionQueue, MetricTile, ProductPageHeader } from "../../components/product";
 import { useAsyncData } from "../productUtils";
 
 export function OrganizerDashboardPage() {
+  const { t } = useI18n();
   const { data: events } = useAsyncData(() => api.getEvents(), []);
   const current = events[0];
-  const eventTitle = current?.title ?? "Historic District Night Tour";
-  const eventArea = current?.area ?? "Rua da Felicidade";
+  const eventTitle = localizedDemoText(current?.title ?? "Historic District Night Tour", t);
+  const eventArea = localizedDemoText(current?.area ?? "Rua da Felicidade", t);
   const eventWindow = current?.time_window ?? "18:00-21:30";
   const eventDate = current?.date ?? "2026-07-18";
   const planVersion = current?.current_plan_version ?? 2;
   const releaseState = current?.public_release_status ?? "published";
+  const displayReleaseState = localizedStatus(releaseState, t);
 
   return (
     <div className="space-y-4">
       <ProductPageHeader
-        eyebrow="Operations overview"
+        eyebrow={t("organizer.dashboard.eyebrow")}
         title={eventTitle}
-        description="Monitor approvals, live exception workload, public release state, and review evidence from one operations home."
-        meta={[eventArea, eventDate, eventWindow, `Current route plan v${planVersion}`]}
+        description={t("organizer.dashboard.description")}
+        meta={[eventArea, eventDate, eventWindow, t("organizer.dashboard.currentPlanMeta", { version: planVersion })]}
         status={releaseState}
         actions={
           <>
             <Button asChild>
-              <a href="/organizer/events/demo-night-tour">Enter event workspace</a>
+              <a href="/organizer/events/demo-night-tour">{t("organizer.dashboard.enterWorkspace")}</a>
             </Button>
             <Button asChild variant="secondary">
-              <a href="/organizer/events/demo-night-tour/exceptions">Open exception center</a>
+              <a href="/organizer/events/demo-night-tour/exceptions">{t("organizer.dashboard.openExceptions")}</a>
             </Button>
           </>
         }
       />
 
       <div className="grid gap-4 md:grid-cols-4">
-        <MetricTile icon={<Route size={18} />} label="Current plan" value={`v${planVersion}`} detail="Approved route visible to operations." tone="success" />
-        <MetricTile icon={<AlertTriangle size={18} />} label="Live exceptions" value="1" detail="Inventory exception needs recovery review." tone="warning" />
-        <MetricTile icon={<Store size={18} />} label="Merchant readiness" value="7/8" detail="One merchant is waiting for a route update." tone="info" />
-        <MetricTile icon={<CheckCircle2 size={18} />} label="Public notice state" value={releaseState} detail="Visitor H5 has the latest route update." tone="success" />
+        <MetricTile icon={<Route size={18} />} label={t("organizer.dashboard.currentPlan")} value={`v${planVersion}`} detail={t("organizer.dashboard.currentPlanDetail")} tone="success" />
+        <MetricTile icon={<AlertTriangle size={18} />} label={t("organizer.dashboard.liveExceptions")} value="1" detail={t("organizer.dashboard.liveExceptionsDetail")} tone="warning" />
+        <MetricTile icon={<Store size={18} />} label={t("organizer.dashboard.merchantReadiness")} value="7/8" detail={t("organizer.dashboard.merchantReadinessDetail")} tone="info" />
+        <MetricTile icon={<CheckCircle2 size={18} />} label={t("organizer.dashboard.publicNoticeState")} value={displayReleaseState} detail={t("organizer.dashboard.publicNoticeDetail")} tone="success" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)]">
         <AttentionQueue
-          title="Needs attention"
+          title={t("organizer.dashboard.needsAttention")}
           items={[
             {
-              title: "Recovery suggestion ready",
-              detail: "Merchant m001 inventory exception has a deterministic recovery suggestion waiting for confirmation.",
-              badge: "decision",
+              title: t("organizer.dashboard.recoveryReady"),
+              detail: t("organizer.dashboard.recoveryReadyDetail"),
+              badge: t("organizer.dashboard.badgeDecision"),
               tone: "warning",
               action: (
                 <Button asChild size="sm" variant="secondary">
-                  <a href="/organizer/events/demo-night-tour/exceptions">Review</a>
+                  <a href="/organizer/events/demo-night-tour/exceptions">{t("organizer.dashboard.review")}</a>
                 </Button>
               )
             },
             {
-              title: "Merchant m001 inventory exception",
-              detail: "Sold-out status affects the first story stop and visitor arrival guidance.",
-              badge: "high",
+              title: t("organizer.dashboard.inventoryException"),
+              detail: t("organizer.dashboard.inventoryExceptionDetail"),
+              badge: t("organizer.dashboard.badgeHigh"),
               tone: "danger"
             },
             {
-              title: "Public notice published after confirmation",
-              detail: "Visitor-facing copy is ready once the organizer approves the recovery update.",
-              badge: "release"
+              title: t("organizer.dashboard.publicNoticePublished"),
+              detail: t("organizer.dashboard.publicNoticePublishedDetail"),
+              badge: t("organizer.dashboard.badgeRelease")
             }
           ]}
         />
 
         <ActivityTimeline
-          title="Activity timeline"
+          title={t("organizer.dashboard.timelineTitle")}
           items={[
             {
               time: "18:02",
-              title: "Route plan approved",
-              detail: "Initial route plan moved into event operations.",
+              title: t("organizer.dashboard.timelinePlanApproved"),
+              detail: t("organizer.dashboard.timelinePlanApprovedDetail"),
               tone: "success"
             },
             {
               time: "18:44",
-              title: "Merchant reported status",
-              detail: "Merchant m001 reported inventory pressure from the workbench.",
+              title: t("organizer.dashboard.timelineMerchantStatus"),
+              detail: t("organizer.dashboard.timelineMerchantStatusDetail"),
               tone: "warning"
             },
             {
               time: "18:46",
-              title: "Recovery suggestion prepared",
-              detail: "Rule-based evidence created a safer indoor stop sequence.",
+              title: t("organizer.dashboard.timelineRecoveryPrepared"),
+              detail: t("organizer.dashboard.timelineRecoveryPreparedDetail"),
               tone: "info"
             },
             {
               time: "18:51",
-              title: "Visitor route updated",
-              detail: "Public notice and route order are ready for the H5 surface.",
+              title: t("organizer.dashboard.timelineVisitorUpdated"),
+              detail: t("organizer.dashboard.timelineVisitorUpdatedDetail"),
               tone: "success"
             }
           ]}

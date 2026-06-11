@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CheckCircle2, PauseCircle, PackageMinus, PackageX, Users } from "lucide-react";
 import { api } from "../../api";
 import type { MerchantRuntimeState } from "../../types";
+import { localizedDemoText, localizedStatus, useI18n } from "../../i18n";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
@@ -13,6 +14,7 @@ type Inventory = MerchantRuntimeState["inventory_status"];
 type Queue = MerchantRuntimeState["queue_status"];
 
 export function MerchantStatusPage({ merchantId = "m001" }: { merchantId?: string }) {
+  const { t } = useI18n();
   const { data: workbench } = useAsyncData(() => api.getMerchantWorkbench(merchantId), { tasks: [] });
   const runtime = workbench.runtime_state;
   const [inventoryStatus, setInventoryStatus] = useState<Inventory>("normal");
@@ -20,6 +22,8 @@ export function MerchantStatusPage({ merchantId = "m001" }: { merchantId?: strin
   const [availableForVisitors, setAvailableForVisitors] = useState(true);
   const [temporaryNote, setTemporaryNote] = useState("");
   const [lastResult, setLastResult] = useState<string | null>(null);
+  const taskCount = workbench.tasks?.length ?? 0;
+  const taskCountKey = taskCount === 1 ? "merchant.status.assignedTask" : "merchant.status.assignedTasks";
 
   const submitStatus = async (override?: Partial<MerchantRuntimeState>) => {
     const payload = {
@@ -29,13 +33,21 @@ export function MerchantStatusPage({ merchantId = "m001" }: { merchantId?: strin
       temporary_note: override?.temporary_note ?? temporaryNote
     };
     const result = await api.updateRuntimeState(merchantId, payload);
-    setLastResult(result.incident || payload.inventory_status === "sold_out" ? "Organizer review requested." : "Status updated.");
+    setLastResult(
+      result.incident || payload.inventory_status === "sold_out"
+        ? t("merchant.status.organizerReviewRequested")
+        : t("merchant.status.statusUpdated")
+    );
   };
 
   const reportSoldOut = async () => {
     setInventoryStatus("sold_out");
     setAvailableForVisitors(false);
-    await submitStatus({ inventory_status: "sold_out", available_for_visitors: false, temporary_note: "Sold out" });
+    await submitStatus({
+      inventory_status: "sold_out",
+      available_for_visitors: false,
+      temporary_note: t("merchant.status.soldOutNote")
+    });
   };
 
   const quickUpdate = async (override: Partial<MerchantRuntimeState>) => {
@@ -49,23 +61,27 @@ export function MerchantStatusPage({ merchantId = "m001" }: { merchantId?: strin
   return (
     <div className="space-y-4">
       <ProductPageHeader
-        eyebrow="Report live status"
-        title="Visitor readiness"
-        description="Tap the current operating state first. The organizer sees high-risk updates immediately and can recover the route."
-        meta={[workbench.merchant?.name ?? "Merchant m001", `${workbench.tasks?.length ?? 0} assigned task`, "Local demo account"]}
+        eyebrow={t("merchant.status.eyebrow")}
+        title={t("merchant.status.title")}
+        description={t("merchant.status.description")}
+        meta={[
+          localizedDemoText(workbench.merchant?.name ?? "Merchant m001", t),
+          t(taskCountKey, { count: taskCount }),
+          t("merchant.status.localDemo")
+        ]}
         status={runtime?.available_for_visitors === false ? "paused" : "open"}
         tone="merchant"
       />
 
       <Card>
         <CardHeader>
-          <CardTitle>Current status</CardTitle>
-          <CardDescription>Last known state from the event runtime.</CardDescription>
+          <CardTitle>{t("merchant.status.currentStatus")}</CardTitle>
+          <CardDescription>{t("merchant.status.currentStatusDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-3">
-          <StatusItem label="Inventory" value={runtime?.inventory_status ?? "normal"} />
-          <StatusItem label="Queue" value={runtime?.queue_status ?? "normal"} />
-          <StatusItem label="Visitors" value={runtime?.available_for_visitors === false ? "paused" : "open"} />
+          <StatusItem label={t("merchant.status.inventory")} value={runtime?.inventory_status ?? "normal"} />
+          <StatusItem label={t("merchant.status.queue")} value={runtime?.queue_status ?? "normal"} />
+          <StatusItem label={t("merchant.status.visitors")} value={runtime?.available_for_visitors === false ? "paused" : "open"} />
         </CardContent>
       </Card>
 
@@ -73,17 +89,17 @@ export function MerchantStatusPage({ merchantId = "m001" }: { merchantId?: strin
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <CardTitle>Quick actions</CardTitle>
-              <CardDescription>Use these during service. Each action sends a real runtime update.</CardDescription>
+              <CardTitle>{t("merchant.status.quickActions")}</CardTitle>
+              <CardDescription>{t("merchant.status.quickActionsDescription")}</CardDescription>
             </div>
-            {lastResult ? <StatusPill tone={lastResult.includes("review") ? "warning" : "success"}>{lastResult}</StatusPill> : null}
+            {lastResult ? <StatusPill tone={lastResult.includes("复核") || lastResult.includes("review") ? "warning" : "success"}>{lastResult}</StatusPill> : null}
           </div>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <MerchantQuickAction
-            detail="Stock normal, queue normal, visitors may continue."
+            detail={t("merchant.status.acceptVisitorsDetail")}
             icon={<CheckCircle2 size={18} />}
-            label="Accept visitors"
+            label={t("merchant.status.acceptVisitors")}
             onClick={() =>
               void quickUpdate({
                 inventory_status: "normal",
@@ -95,31 +111,33 @@ export function MerchantStatusPage({ merchantId = "m001" }: { merchantId?: strin
             tone="accept"
           />
           <MerchantQuickAction
-            detail="Temporarily stop new arrivals while keeping the task active."
+            detail={t("merchant.status.pauseVisitorsDetail")}
             icon={<PauseCircle size={18} />}
-            label="Pause visitors"
-            onClick={() => void quickUpdate({ available_for_visitors: false, temporary_note: "Paused by merchant" })}
+            label={t("merchant.status.pauseVisitors")}
+            onClick={() =>
+              void quickUpdate({ available_for_visitors: false, temporary_note: t("merchant.status.pausedByMerchant") })
+            }
             tone="pause"
           />
           <MerchantQuickAction
-            detail="Warn the organizer before inventory runs out."
+            detail={t("merchant.status.reportLowStockDetail")}
             icon={<PackageMinus size={18} />}
-            label="Report low stock"
-            onClick={() => void quickUpdate({ inventory_status: "low", temporary_note: "Low stock" })}
+            label={t("merchant.status.reportLowStock")}
+            onClick={() => void quickUpdate({ inventory_status: "low", temporary_note: t("merchant.status.lowStockNote") })}
             tone="warning"
           />
           <MerchantQuickAction
-            detail="Trigger organizer recovery review for this stop."
+            detail={t("merchant.status.reportSoldOutDetail")}
             icon={<PackageX size={18} />}
-            label="Report sold out"
+            label={t("merchant.status.reportSoldOut")}
             onClick={() => void reportSoldOut()}
             tone="danger"
           />
           <MerchantQuickAction
-            detail="Mark queue pressure high while still serving visitors."
+            detail={t("merchant.status.queueBusyDetail")}
             icon={<Users size={18} />}
-            label="Queue busy"
-            onClick={() => void quickUpdate({ queue_status: "busy", temporary_note: "Queue busy" })}
+            label={t("merchant.status.queueBusy")}
+            onClick={() => void quickUpdate({ queue_status: "busy", temporary_note: t("merchant.status.queueBusyNote") })}
             tone="warning"
           />
         </CardContent>
@@ -127,33 +145,33 @@ export function MerchantStatusPage({ merchantId = "m001" }: { merchantId?: strin
 
       <Card>
         <CardHeader>
-          <CardTitle>Advanced report</CardTitle>
-          <CardDescription>Fine tune the state if a quick action does not match the situation.</CardDescription>
+          <CardTitle>{t("merchant.status.advancedReport")}</CardTitle>
+          <CardDescription>{t("merchant.status.advancedReportDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 md:grid-cols-3">
             <label className="space-y-1 text-sm">
-              <span className="font-medium">Inventory</span>
+              <span className="font-medium">{t("merchant.status.inventory")}</span>
               <select
                 className="h-10 w-full rounded-md border border-slate-200 bg-white px-3"
                 value={inventoryStatus}
                 onChange={(event) => setInventoryStatus(event.target.value as Inventory)}
               >
-                <option value="normal">Normal</option>
-                <option value="low">Low</option>
-                <option value="sold_out">Sold out</option>
+                <option value="normal">{t("merchant.status.normal")}</option>
+                <option value="low">{t("merchant.status.low")}</option>
+                <option value="sold_out">{t("merchant.status.soldOut")}</option>
               </select>
             </label>
             <label className="space-y-1 text-sm">
-              <span className="font-medium">Queue</span>
+              <span className="font-medium">{t("merchant.status.queue")}</span>
               <select
                 className="h-10 w-full rounded-md border border-slate-200 bg-white px-3"
                 value={queueStatus}
                 onChange={(event) => setQueueStatus(event.target.value as Queue)}
               >
-                <option value="normal">Normal</option>
-                <option value="busy">Busy</option>
-                <option value="overloaded">Overloaded</option>
+                <option value="normal">{t("merchant.status.normal")}</option>
+                <option value="busy">{t("merchant.status.busy")}</option>
+                <option value="overloaded">{t("merchant.status.overloaded")}</option>
               </select>
             </label>
             <label className="flex items-center gap-2 pt-7 text-sm">
@@ -162,15 +180,15 @@ export function MerchantStatusPage({ merchantId = "m001" }: { merchantId?: strin
                 checked={availableForVisitors}
                 onChange={(event) => setAvailableForVisitors(event.target.checked)}
               />
-              Accept visitors
+              {t("merchant.status.acceptVisitors")}
             </label>
           </div>
           <label className="space-y-1 text-sm">
-            <span className="font-medium">Temporary note</span>
+            <span className="font-medium">{t("merchant.status.temporaryNote")}</span>
             <Input value={temporaryNote} onChange={(event) => setTemporaryNote(event.target.value)} />
           </label>
           <div className="flex flex-wrap gap-3">
-            <Button onClick={() => void submitStatus()}>Submit status</Button>
+            <Button onClick={() => void submitStatus()}>{t("merchant.status.submitStatus")}</Button>
           </div>
         </CardContent>
       </Card>
@@ -179,10 +197,13 @@ export function MerchantStatusPage({ merchantId = "m001" }: { merchantId?: strin
 }
 
 function StatusItem({ label, value }: { label: string; value: string }) {
+  const { t } = useI18n();
   return (
     <div>
       <div className="text-xs text-slate-500">{label}</div>
-      <Badge variant={value === "sold_out" || value === "paused" ? "warning" : "success"}>{value}</Badge>
+      <Badge variant={value === "sold_out" || value === "paused" ? "warning" : "success"}>
+        {localizedStatus(value, t)}
+      </Badge>
     </div>
   );
 }

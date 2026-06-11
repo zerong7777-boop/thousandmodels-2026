@@ -13,11 +13,24 @@ const p0Files = {
 
 test("P0 pages contain product workflow language, not only shell changes", () => {
   const expectations: Record<string, string[]> = {
-    login: ["Organizer workspace", "Merchant workbench", "Visitor route"],
-    dashboard: ["Needs attention", "Merchant readiness", "Activity timeline"],
-    exceptions: ["Impact scope", "Public notice preview", "Confirm recovery update"],
-    merchantStatus: ["Accept visitors", "Pause visitors", "Report low stock", "Queue busy"],
-    publicH5: ["Tonight's route", "Route progress", "Live update"]
+    login: ["auth.organizerWorkspace", "auth.merchantWorkbench", "auth.visitorRoute"],
+    dashboard: [
+      "organizer.dashboard.needsAttention",
+      "organizer.dashboard.merchantReadiness",
+      "organizer.dashboard.timelineTitle"
+    ],
+    exceptions: [
+      "organizer.exceptions.impactScope",
+      "organizer.exceptions.publicNoticePreview",
+      "organizer.exceptions.confirmAction"
+    ],
+    merchantStatus: [
+      "merchant.status.acceptVisitors",
+      "merchant.status.pauseVisitors",
+      "merchant.status.reportLowStock",
+      "merchant.status.queueBusy"
+    ],
+    publicH5: ["public.event.tonightsRoute", "public.event.routeProgress", "public.event.liveUpdate"]
   };
 
   for (const [key, file] of Object.entries(p0Files)) {

@@ -2,18 +2,20 @@ import { api } from "../../api";
 import { Badge } from "../../ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
 import { ProductPageHeader, StatusPill } from "../../components/product";
+import { localizedDemoList, localizedDemoText, localizedStatus, useI18n } from "../../i18n";
 import { asArray, useAsyncData } from "../productUtils";
 
 export function MerchantTasksPage({ merchantId = "m001" }: { merchantId?: string }) {
+  const { t } = useI18n();
   const { data: workbench } = useAsyncData(() => api.getMerchantWorkbench(merchantId), { tasks: [] });
 
   return (
     <div className="space-y-4">
       <ProductPageHeader
-        eyebrow="Assigned tasks"
-        title="Tonight's work pack"
-        description="Preparation items, visitor task, and fallback instruction for staff before visitors arrive."
-        meta={["Before visitors arrive", "Recovery notice included", "Staff checklist"]}
+        eyebrow={t("merchant.tasks.eyebrow")}
+        title={t("merchant.tasks.title")}
+        description={t("merchant.tasks.description")}
+        meta={[t("merchant.dashboard.beforeVisitors"), t("merchant.tasks.recoveryNoticeIncluded"), t("merchant.tasks.staffChecklist")]}
         status="active"
         tone="merchant"
       />
@@ -24,39 +26,39 @@ export function MerchantTasksPage({ merchantId = "m001" }: { merchantId?: string
             <CardHeader>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <CardTitle>{task.role}</CardTitle>
+                  <CardTitle>{localizedDemoText(task.role, t)}</CardTitle>
                   <CardDescription>{task.time_slot}</CardDescription>
                 </div>
-                <Badge variant={task.task_status === "active" ? "success" : "neutral"}>{task.task_status}</Badge>
+                <Badge variant={task.task_status === "active" ? "success" : "neutral"}>{localizedStatus(task.task_status, t)}</Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex flex-wrap gap-2">
-                <StatusPill tone="merchant">Before visitors arrive</StatusPill>
-                <StatusPill tone="warning">Recovery notice</StatusPill>
+                <StatusPill tone="merchant">{t("merchant.dashboard.beforeVisitors")}</StatusPill>
+                <StatusPill tone="warning">{t("merchant.tasks.recoveryNotice")}</StatusPill>
               </div>
               <div>
-                <div className="text-xs text-slate-500">Visitor task</div>
-                <div className="text-sm">{task.visitor_task}</div>
+                <div className="text-xs text-slate-500">{t("merchant.tasks.visitorTask")}</div>
+                <div className="text-sm">{localizedDemoText(task.visitor_task, t)}</div>
               </div>
               <div>
-                <div className="text-xs text-slate-500">Preparation</div>
+                <div className="text-xs text-slate-500">{t("merchant.tasks.preparation")}</div>
                 <ul className="list-disc pl-5 text-sm text-slate-700">
-                  {asArray(task.preparation_items).map((item) => (
+                  {localizedDemoList(asArray(task.preparation_items), t).map((item) => (
                     <li key={item}>{item}</li>
                   ))}
                 </ul>
               </div>
               <div>
-                <div className="text-xs text-slate-500">Fallback instruction</div>
-                <div className="text-sm text-slate-700">{task.fallback_instruction}</div>
+                <div className="text-xs text-slate-500">{t("merchant.tasks.fallbackInstruction")}</div>
+                <div className="text-sm text-slate-700">{localizedDemoText(task.fallback_instruction, t)}</div>
               </div>
             </CardContent>
           </Card>
         ))}
         {!asArray(workbench.tasks).length ? (
           <Card>
-            <CardContent className="pt-5 text-sm text-slate-500">No assigned tasks are available yet.</CardContent>
+            <CardContent className="pt-5 text-sm text-slate-500">{t("merchant.tasks.empty")}</CardContent>
           </Card>
         ) : null}
       </div>

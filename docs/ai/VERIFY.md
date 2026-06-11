@@ -52,6 +52,49 @@
 - Known warning: Vite reports the main JS chunk is larger than 500 kB after minification.
 - Known warning: backend tests emit existing FastAPI/Starlette deprecation warnings.
 
-## Conclusion
+## v0.5 Conclusion
 
 v0.5 UI polish Task 1-12 is verified. The deterministic demo remains runnable without `DASHSCOPE_API_KEY`, and the frontend now has role-separated product pages, active v0.5 Playwright visual smoke, and screenshot evidence.
+
+## v0.6 Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `npm.cmd run test` | `apps/web` | 0 | 17 test files passed, 57 tests passed. |
+| `npm.cmd run build` | `apps/web` | 0 | `tsc -b && vite build` passed; 3206 modules transformed; Vite emitted a large chunk warning for `assets/index-DnDdwqZa.js` at 765.53 kB. |
+| `npm.cmd exec playwright test tests/e2e/v06-i18n.spec.ts` | `apps/web` | 0 | 9 v0.6 i18n visual tests passed and generated 9 screenshots. |
+| `npm.cmd exec playwright test` | `apps/web` | 0 | 14 active visual tests passed; 4 v0.4 historical baseline tests skipped. |
+| `python -m pytest -q` | `apps/api` | 0 | 34 backend tests passed; 3 existing FastAPI/Starlette deprecation warnings. |
+
+### Screenshot Evidence
+
+| Route | Locale | Viewport | Screenshot | Manual inspection |
+| --- | --- | --- | --- | --- |
+| `/login` | `zh-Hans` | 1280x720 | `docs/research/assets/v0.6-i18n-verification/01-login-zh-Hans.png` | Nonblank; Simplified Chinese product entry and demo accounts visible. |
+| `/organizer/dashboard` | `zh-Hans` | 1440x900 | `docs/research/assets/v0.6-i18n-verification/02-organizer-dashboard-zh-Hans.png` | Nonblank; organizer dashboard labels localized. |
+| `/merchant/events/demo-night-tour/status` | `zh-Hans` | 390x844 | `docs/research/assets/v0.6-i18n-verification/03-merchant-status-zh-Hans-mobile.png` | Nonblank; quick actions remain usable and sold-out feedback is localized. |
+| `/public/events/demo-night-tour` | `zh-Hans` | 390x844 | `docs/research/assets/v0.6-i18n-verification/04-public-h5-zh-Hans-mobile.png` | Nonblank; public H5 is visitor-facing and localized. |
+| `/login` | `zh-Hant` | 1280x720 | `docs/research/assets/v0.6-i18n-verification/05-login-zh-Hant.png` | Nonblank; Traditional Chinese product entry visible. |
+| `/organizer/dashboard` | `zh-Hant` | 1440x900 | `docs/research/assets/v0.6-i18n-verification/06-organizer-dashboard-zh-Hant.png` | Nonblank; organizer dashboard and navigation localized. |
+| `/merchant/events/demo-night-tour/status` | `zh-Hant` | 390x844 | `docs/research/assets/v0.6-i18n-verification/07-merchant-status-zh-Hant-mobile.png` | Nonblank; merchant quick actions fit mobile width. |
+| `/public/events/demo-night-tour` | `zh-Hant` | 390x844 | `docs/research/assets/v0.6-i18n-verification/08-public-h5-zh-Hant-mobile.png` | Nonblank; public H5 remains visitor-facing. |
+| `/login` | `en` | 1280x720 | `docs/research/assets/v0.6-i18n-verification/09-login-en.png` | Nonblank; English fallback works. |
+
+### Boundary Notes
+
+- Locale preference is stored as `zhiyin.locale`.
+- Locale switching does not replace backend-backed demo auth.
+- Public H5 language switching works without login.
+- Merchant sold-out quick action still sends `inventory_status: "sold_out"` and `available_for_visitors: false`.
+- Tourist/public source gates reject raw backend object names.
+- Public H5 screenshots do not expose `PlanVersion`, `AgentTrace`, `RecoveryProposal`, `runtime_state`, or `current_plan_version`.
+- No model API is required for translation.
+- Known warning: mobile full-page screenshots still show the fixed bottom navigation overlaying long captures. This is inherited from v0.5 visual smoke and does not show unresolved translated-text overflow.
+- Known warning: Vite reports the main JS chunk is larger than 500 kB after minification.
+- Known warning: backend tests emit existing FastAPI/Starlette deprecation warnings.
+
+## Conclusion
+
+v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOPE_API_KEY`, and the frontend now defaults to Simplified Chinese, supports Traditional Chinese, keeps English fallback, and preserves backend-backed auth and role routing.
