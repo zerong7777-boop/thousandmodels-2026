@@ -291,7 +291,7 @@ export const en: TranslationDictionary = {
   "merchant.tasks.recoveryNotice": "Recovery notice",
   "merchant.tasks.visitorTask": "Visitor task",
   "merchant.tasks.preparation": "Preparation",
-  "merchant.tasks.fallbackInstruction": "Fallback instruction",
+  "merchant.tasks.contingencyInstruction": "Contingency instruction",
   "merchant.tasks.empty": "No assigned tasks are available yet.",
 
   "merchant.status.eyebrow": "Report live status",

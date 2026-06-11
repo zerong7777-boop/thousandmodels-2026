@@ -2,6 +2,7 @@ import { api } from "../../api";
 import { Badge } from "../../ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
 import { ProductPageHeader, StatusPill } from "../../components/product";
+import { merchantContingencyInstruction } from "../../design/merchantTaskPresentation";
 import { localizedDemoList, localizedDemoText, localizedStatus, useI18n } from "../../i18n";
 import { asArray, useAsyncData } from "../productUtils";
 
@@ -50,8 +51,8 @@ export function MerchantTasksPage({ merchantId = "m001" }: { merchantId?: string
                 </ul>
               </div>
               <div>
-                <div className="text-xs text-slate-500">{t("merchant.tasks.fallbackInstruction")}</div>
-                <div className="text-sm text-slate-700">{localizedDemoText(task.fallback_instruction, t)}</div>
+                <div className="text-xs text-slate-500">{t("merchant.tasks.contingencyInstruction")}</div>
+                <div className="text-sm text-slate-700">{localizedDemoText(merchantContingencyInstruction(task), t)}</div>
               </div>
             </CardContent>
           </Card>

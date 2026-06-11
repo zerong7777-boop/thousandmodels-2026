@@ -279,7 +279,7 @@ export const zhHans: TranslationDictionary = {
   "merchant.tasks.recoveryNotice": "恢复通知",
   "merchant.tasks.visitorTask": "游客任务",
   "merchant.tasks.preparation": "准备事项",
-  "merchant.tasks.fallbackInstruction": "备用指引",
+  "merchant.tasks.contingencyInstruction": "备用指引",
   "merchant.tasks.empty": "暂无分配任务。",
 
   "merchant.status.eyebrow": "上报实时状态",

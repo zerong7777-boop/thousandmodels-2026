@@ -181,6 +181,7 @@ export const zhHant: TranslationDictionary = {
   "merchant.tasks.description": "遊客到達前的準備項、遊客任務和備用指引。",
   "merchant.tasks.staffChecklist": "員工檢查清單",
   "merchant.tasks.visitorTask": "遊客任務",
+  "merchant.tasks.contingencyInstruction": "備用指引",
   "merchant.tasks.empty": "暫無分配任務。",
 
   "merchant.status.description": "先點擊當前營運狀態。高風險更新會立即進入主辦方視圖並觸發路線恢復。",
