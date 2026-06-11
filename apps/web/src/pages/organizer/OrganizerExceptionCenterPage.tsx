@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { api } from "../../api";
-import type { Incident, RecoveryProposal } from "../../types";
+import type { AgentToolCall, Incident, RecoveryProposal } from "../../types";
 import { Button } from "../../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
+import { AgentEvidencePanel, latestRunForTrigger, toolCallsForRun } from "../../components/agent";
 import { ApprovalPanel, ProductPageHeader, RecoveryDiff, StatusPill } from "../../components/product";
 import { localizedDemoText, localizedStatus, useI18n } from "../../i18n";
 import { asArray, useAsyncData } from "../productUtils";
@@ -10,6 +11,14 @@ import { asArray, useAsyncData } from "../productUtils";
 export function OrganizerExceptionCenterPage({ eventId = "demo-night-tour" }: { eventId?: string }) {
   const { t } = useI18n();
   const { data: exceptions } = useAsyncData(() => api.getIncidents(eventId), []);
+  const { data: agentRuns } = useAsyncData(() => api.getAgentRuns(eventId), [], [eventId]);
+  const recoveryRun = latestRunForTrigger(asArray(agentRuns), "incident_recovery");
+  const { data: recoveryDrafts } = useAsyncData(() => api.getAgentDrafts(eventId), [], [eventId]);
+  const { data: recoveryToolCalls } = useAsyncData<AgentToolCall[]>(
+    () => (recoveryRun ? api.getAgentToolCalls(eventId, recoveryRun.run_id) : Promise.resolve([])),
+    [],
+    [eventId, recoveryRun?.run_id]
+  );
   const incidents = asArray(exceptions) as Incident[];
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
   const [proposal, setProposal] = useState<RecoveryProposal | null>(null);
@@ -57,6 +66,20 @@ export function OrganizerExceptionCenterPage({ eventId = "demo-night-tour" }: { 
         description={t("organizer.exceptions.description")}
         meta={[t("organizer.exceptions.metaDecision"), t("organizer.exceptions.metaRoute"), t("organizer.exceptions.metaRelease")]}
         status={selectedIncident?.status ?? "open"}
+      />
+
+      <AgentEvidencePanel
+        title={t("organizer.agentEvidence.recoveryTitle")}
+        description={t("organizer.agentEvidence.recoveryDescription")}
+        runs={recoveryRun ? [recoveryRun] : []}
+        steps={[]}
+        toolCalls={toolCallsForRun(asArray(recoveryToolCalls), recoveryRun?.run_id)}
+        drafts={asArray(recoveryDrafts).filter(
+          (draft) =>
+            draft.source_run_id === recoveryRun?.run_id &&
+            (draft.draft_type === "recovery_explanation" || draft.draft_type === "public_notice")
+        )}
+        emptyMessage={t("organizer.agentEvidence.emptyRecovery")}
       />
 
       <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)_360px]">

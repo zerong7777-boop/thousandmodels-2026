@@ -187,3 +187,90 @@ test("organizer workspace shows planning Agent evidence and tool calls", async (
   expect(screen.getByText("merchant.select_night_merchants")).toBeInTheDocument();
   expect(screen.getByText("Human approval remains required for release actions.")).toBeInTheDocument();
 });
+
+test("organizer exception center shows recovery Agent drafts and approval boundary", async () => {
+  const recoveryRun = {
+    ...planningRun,
+    run_id: "run_demo-night-tour_recovery",
+    trigger: "incident_recovery",
+    final_output_ref: "draft:draft_notice_001"
+  };
+  const recoveryDrafts = [
+    {
+      draft_id: "draft_recovery_001",
+      event_id: "demo-night-tour",
+      source_run_id: recoveryRun.run_id,
+      draft_type: "recovery_explanation",
+      locale: "zh-Hans",
+      content: "Pause the sold-out merchant stop and guide visitors to the indoor tea stop.",
+      structured_payload: { affected_merchants: ["m001"], requires_organizer_approval: true },
+      status: "draft",
+      reviewed_by: null,
+      reviewed_at: null,
+      created_at: "2026-06-12T10:00:01Z"
+    },
+    {
+      draft_id: "draft_notice_001",
+      event_id: "demo-night-tour",
+      source_run_id: recoveryRun.run_id,
+      draft_type: "public_notice",
+      locale: "zh-Hans",
+      content: "Please continue to the indoor tea stop. Your route has been updated.",
+      structured_payload: { public_copy_ready: true, requires_organizer_approval: true },
+      status: "draft",
+      reviewed_by: null,
+      reviewed_at: null,
+      created_at: "2026-06-12T10:00:01Z"
+    }
+  ];
+  const recoveryToolCalls = [
+    {
+      tool_call_id: "tool_recovery_001",
+      run_id: recoveryRun.run_id,
+      step_id: "step_recovery",
+      tool_name: "recovery.build_recovery_proposal",
+      input_payload: { incident_id: "inc_inventory_m001" },
+      output_payload: { recommended_changes: ["Pause sold-out stop"] },
+      status: "success",
+      latency_ms: 0,
+      error_summary: null
+    }
+  ];
+  localStorage.setItem("zhiyin.locale", "en");
+  vi.stubGlobal(
+    "fetch",
+    mockAppFetch("organizer", (url) => {
+      if (url.includes("/api/events/demo-night-tour/incidents")) {
+        return [
+          {
+            incident_id: "inc_inventory_m001",
+            event_id: "demo-night-tour",
+            type: "inventory",
+            severity: "high",
+            source: "merchant",
+            trigger_detail: "Merchant m001 reported sold out.",
+            affected_route_points: ["rp001"],
+            affected_merchants: ["m001"],
+            status: "proposal_ready",
+            created_at: "2026-06-12T10:00:01Z"
+          }
+        ];
+      }
+      if (url.includes("/api/events/demo-night-tour/agent-runs")) {
+        if (url.includes("/tool-calls")) return recoveryToolCalls;
+        return [recoveryRun];
+      }
+      if (url.includes("/api/events/demo-night-tour/agent-drafts")) return recoveryDrafts;
+      return {};
+    })
+  );
+  window.history.pushState({}, "", "/organizer/events/demo-night-tour/exceptions");
+  render(<App />);
+
+  expect(await screen.findByText("Recovery Agent evidence")).toBeInTheDocument();
+  expect(await screen.findByText("Incident recovery")).toBeInTheDocument();
+  expect(screen.getByText("Recovery explanation draft")).toBeInTheDocument();
+  expect(screen.getByText("Public notice draft")).toBeInTheDocument();
+  expect(await screen.findByText("recovery.build_recovery_proposal")).toBeInTheDocument();
+  expect(screen.getAllByText("Controlled draft, not published state").length).toBeGreaterThan(0);
+});
