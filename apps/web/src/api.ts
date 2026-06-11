@@ -1,6 +1,10 @@
 import type {
   AuditLog,
+  AgentDraft,
+  AgentDraftType,
+  AgentRun,
   AgentTrace,
+  AgentToolCall,
   ApproveRecoveryResponse,
   EventPlan,
   EventSummary,
@@ -64,6 +68,18 @@ export const api = {
     json<PlanVersion[]>(fetch(`${API_BASE}/api/events/${eventId}/plans`, READ_OPTIONS)),
   getAgentTraces: (eventId: string) =>
     json<AgentTrace[]>(fetch(`${API_BASE}/api/events/${eventId}/agent-traces`, READ_OPTIONS)),
+  getAgentRuns: (eventId: string) =>
+    json<AgentRun[]>(fetch(`${API_BASE}/api/events/${eventId}/agent-runs`, READ_OPTIONS)),
+  getAgentDrafts: (eventId: string, draftType?: AgentDraftType) => {
+    const query = draftType ? `?draft_type=${encodeURIComponent(draftType)}` : "";
+    return json<AgentDraft[]>(
+      fetch(`${API_BASE}/api/events/${eventId}/agent-drafts${query}`, READ_OPTIONS)
+    );
+  },
+  getAgentToolCalls: (eventId: string, runId: string) =>
+    json<AgentToolCall[]>(
+      fetch(`${API_BASE}/api/events/${eventId}/agent-runs/${runId}/tool-calls`, READ_OPTIONS)
+    ),
   getMerchantTasks: (eventId: string) =>
     json<MerchantTask[]>(fetch(`${API_BASE}/api/events/${eventId}/merchant-tasks`, READ_OPTIONS)),
   getPacks: (eventId = "demo-night-tour") =>

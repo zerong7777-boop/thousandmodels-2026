@@ -208,6 +208,98 @@ export interface PublicNotice {
   published_at?: string | null;
 }
 
+export type AgentRunTrigger =
+  | "planning_generation"
+  | "incident_recovery"
+  | "public_notice_draft"
+  | "review_generation";
+
+export type AgentRunMode = "deterministic" | "qwen_draft" | "qwenpaw_workflow";
+export type AgentRunStatus = "running" | "completed" | "failed" | "fallback_completed";
+export type AgentValidationStatus = "passed" | "failed" | "fallback";
+export type AgentToolStatus = "success" | "failed";
+export type AgentDraftType =
+  | "plan_candidate"
+  | "route_story"
+  | "recovery_explanation"
+  | "public_notice"
+  | "review_summary";
+export type AgentDraftStatus = "draft" | "accepted" | "rejected" | "superseded";
+export type AgentDraftLocale = "zh-Hans" | "zh-Hant" | "en" | "mixed";
+export type AgentModelProvider = "deterministic" | "dashscope";
+export type AgentModelResponseStatus =
+  | "skipped"
+  | "success"
+  | "invalid_json"
+  | "schema_failed"
+  | "provider_error";
+
+export interface AgentRun {
+  run_id: string;
+  event_id: string;
+  trigger: AgentRunTrigger;
+  mode: AgentRunMode;
+  status: AgentRunStatus;
+  started_at: string;
+  completed_at?: string | null;
+  fallback_used: boolean;
+  fallback_reason?: string | null;
+  final_output_ref?: string | null;
+  error_summary?: string | null;
+}
+
+export interface AgentToolCall {
+  tool_call_id: string;
+  run_id: string;
+  step_id: string;
+  tool_name: string;
+  input_payload: Record<string, unknown>;
+  output_payload: Record<string, unknown>;
+  status: AgentToolStatus;
+  latency_ms?: number | null;
+  error_summary?: string | null;
+}
+
+export interface AgentDraft {
+  draft_id: string;
+  event_id: string;
+  source_run_id: string;
+  draft_type: AgentDraftType;
+  locale: AgentDraftLocale;
+  content: string;
+  structured_payload: Record<string, unknown>;
+  status: AgentDraftStatus;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  created_at: string;
+}
+
+export interface AgentModelCall {
+  model_call_id: string;
+  run_id: string;
+  provider: AgentModelProvider;
+  model: string;
+  prompt_template_id: string;
+  input_refs: string[];
+  response_status: AgentModelResponseStatus;
+  parsed_output?: Record<string, unknown> | null;
+  fallback_used: boolean;
+  error_summary?: string | null;
+  created_at: string;
+}
+
+export interface AgentEvaluation {
+  evaluation_id: string;
+  run_id: string;
+  schema_pass: boolean;
+  fallback_used: boolean;
+  unsafe_mutation_attempted: boolean;
+  human_approval_required: boolean;
+  forbidden_public_terms_present: boolean;
+  public_copy_ready: boolean;
+  notes: string[];
+}
+
 export interface AgentStep {
   agent_name: string;
   input_refs: string[];
@@ -216,6 +308,13 @@ export interface AgentStep {
   decision_reason: string;
   confidence: number;
   requires_human_approval: boolean;
+  step_id?: string | null;
+  run_id?: string | null;
+  objective?: string | null;
+  tool_call_refs?: string[];
+  model_call_ref?: string | null;
+  schema_name?: string | null;
+  validation_status?: AgentValidationStatus;
 }
 
 export interface AgentTrace {
