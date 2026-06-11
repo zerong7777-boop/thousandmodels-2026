@@ -588,9 +588,17 @@ def review_report(
         audit_logs=STORE.list_audit_logs(event_id),
         metrics=STORE.list_operational_metrics(event_id),
     )
+    runtime_result = AgentRuntime(mode="deterministic").run_review_generation(
+        event_id=event_id,
+        metrics=STORE.list_operational_metrics(event_id),
+        incidents=STORE.list_incidents(event_id),
+        notices=STORE.list_public_notices(event_id),
+        proposals=STORE.list_recovery_proposals(event_id),
+    )
+    persist_agent_runtime_result(runtime_result)
     STORE.save_report(report)
     audit(event_id, "agent", "review", "generate_review_report", "生成活动复盘报告")
-    return report
+    return {**report.model_dump(), "agent_run": runtime_result.run, "agent_drafts": runtime_result.drafts}
 
 
 @app.get("/api/events/{event_id}/review-report")

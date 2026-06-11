@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from app.schemas import AgentDraft, Incident
+from app.schemas import AgentDraft, Incident, OperationalMetric, PublicNotice, RecoveryProposal
 
 
 def now_iso() -> str:
@@ -56,6 +56,40 @@ def build_public_notice_draft(
             "affected_merchants": incident.affected_merchants,
             "affected_route_points": incident.affected_route_points,
             "requires_organizer_approval": True,
+        },
+        status="draft",
+        reviewed_by=None,
+        reviewed_at=None,
+        created_at=now_iso(),
+    )
+
+
+def build_review_summary_draft(
+    run_id: str,
+    event_id: str,
+    metrics: list[OperationalMetric],
+    incidents: list[Incident],
+    notices: list[PublicNotice],
+    proposals: list[RecoveryProposal],
+) -> AgentDraft:
+    metric_names = [metric.name for metric in metrics]
+    return AgentDraft(
+        draft_id=f"draft_{run_id}_review_summary",
+        event_id=event_id,
+        source_run_id=run_id,
+        draft_type="review_summary",
+        locale="mixed",
+        content=(
+            f"Evidence: metrics={','.join(metric_names)}; "
+            f"incidents={len(incidents)}; notices={len(notices)}. "
+            "Recommendation: keep backup merchant thresholds visible before the next event."
+        ),
+        structured_payload={
+            "metrics": metric_names,
+            "incident_ids": [incident.incident_id for incident in incidents],
+            "notice_ids": [notice.notice_id for notice in notices],
+            "proposal_ids": [proposal.proposal_id for proposal in proposals],
+            "evidence_backed": True,
         },
         status="draft",
         reviewed_by=None,

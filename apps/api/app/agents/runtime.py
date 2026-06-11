@@ -1,7 +1,11 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from app.agents.drafts import build_public_notice_draft, build_recovery_explanation_draft
+from app.agents.drafts import (
+    build_public_notice_draft,
+    build_recovery_explanation_draft,
+    build_review_summary_draft,
+)
 from app.agents.guards import evaluate_public_copy
 from app.agents.tool_recorder import ToolRecorder
 from app.schemas import (
@@ -15,7 +19,10 @@ from app.schemas import (
     Incident,
     MerchantProfile,
     MerchantRuntimeState,
+    OperationalMetric,
     PlanVersion,
+    PublicNotice,
+    RecoveryProposal,
 )
 from app.services.recovery import build_recovery_proposal
 from app.tools.budget import split_budget
@@ -267,4 +274,59 @@ class AgentRuntime:
             drafts=[recovery_draft, notice_draft],
             model_calls=[],
             evaluations=[evaluation],
+        )
+
+    def run_review_generation(
+        self,
+        event_id: str,
+        metrics: list[OperationalMetric],
+        incidents: list[Incident],
+        notices: list[PublicNotice],
+        proposals: list[RecoveryProposal],
+    ) -> AgentRuntimeResult:
+        started_at = utc_now()
+        run_id = f"run_{event_id}_review"
+        draft = build_review_summary_draft(
+            run_id=run_id,
+            event_id=event_id,
+            metrics=metrics,
+            incidents=incidents,
+            notices=notices,
+            proposals=proposals,
+        )
+        step = AgentStep(
+            step_id="step_review",
+            run_id=run_id,
+            agent_name="ReviewAgent",
+            objective="Draft evidence-backed review summary from operational records.",
+            input_refs=["metrics", "incidents", "public_notices", "recovery_proposals"],
+            tool_calls=[],
+            tool_call_refs=[],
+            structured_output=draft.structured_payload,
+            decision_reason="Review should separate evidence from recommendations.",
+            confidence=0.86,
+            requires_human_approval=False,
+            schema_name="AgentDraft",
+            validation_status="passed",
+        )
+        run = AgentRun(
+            run_id=run_id,
+            event_id=event_id,
+            trigger="review_generation",
+            mode="deterministic",
+            status="completed",
+            started_at=started_at,
+            completed_at=utc_now(),
+            fallback_used=False,
+            fallback_reason=None,
+            final_output_ref=f"draft:{draft.draft_id}",
+            error_summary=None,
+        )
+        return AgentRuntimeResult(
+            run=run,
+            steps=[step],
+            tool_calls=[],
+            drafts=[draft],
+            model_calls=[],
+            evaluations=[],
         )
