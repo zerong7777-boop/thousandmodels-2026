@@ -139,3 +139,26 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 - No v0.7 Playwright screenshot spec was created; the walkthrough reuses verified v0.5/v0.6 screenshot evidence.
 - The v0.7 screenshot walkthrough marks exact sold-out and approved-v2 moments as documented replacements.
 - Qwen/QwenPaw is positioned only as a future advisory layer.
+
+## v0.8 Agent Capability Verification
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python -m pytest tests/test_v08_agent_contracts.py tests/test_v08_agent_runtime.py tests/test_v08_planning_agent.py tests/test_v08_recovery_agent.py tests/test_v08_review_agent.py -q` | `apps/api` | 0 | 8 v0.8 P0 tests passed; 3 existing FastAPI/Starlette warnings. |
+| `python -m pytest -q` | `apps/api` | 0 | 42 backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `rg -n "DASHSCOPE_API_KEY|required|must provide" apps\api docs\ai docs\proposal\v0.8-agent-capability-implementation-plan.md` | project root | 0 | Matches describe optional/non-required model API behavior or existing optional adapter paths; no route requires the key. |
+| `git diff --name-only -- apps\web\src apps\web\tests package.json apps\web\package.json` | project root | 0 | No frontend source, test, or package files changed in v0.8 P0. |
+
+### v0.8 Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Deterministic Agent runtime runs without `DASHSCOPE_API_KEY` | pass |
+| Planning run records `AgentRun`, enriched `AgentStep`, and `AgentToolCall` evidence | pass |
+| Merchant sold-out creates `Incident` plus Agent drafts | pass |
+| Agent drafts do not create `PlanVersion` v2 before organizer approval | pass |
+| Recovery approval remains the v2/public-notice publication gate | pass |
+| Public notice draft avoids backend/model terms checked by v0.8 recovery tests | pass |
+| Review draft references metrics/incidents/proposals/notices | pass |
+| Qwen/QwenPaw remains optional | pass |
+| Frontend regression not rerun | not run; no frontend files changed |

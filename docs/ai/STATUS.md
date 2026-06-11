@@ -57,6 +57,18 @@ shadcn/ui-inspired local component layer
 - Two walkthrough screenshots are documented replacements for exact sold-out and approved-v2 moments; regenerate those before final slide production if stronger evidence is needed.
 - Qwen/QwenPaw remains a future advisory layer and is not required for the current deterministic demo.
 
+## v0.8 Agent Capability State
+
+- v0.8 P0 shifts the project from demo packaging toward concrete backend Agent capability.
+- Backend Agent contracts now cover `AgentRun`, enriched `AgentStep`, `AgentToolCall`, `AgentDraft`, `AgentModelCall`, and `AgentEvaluation`.
+- The deterministic Agent runtime records specialist Agent steps and tool-call evidence for planning, incident recovery, and review.
+- Planning generation now persists an `AgentRun`, a backward-compatible `AgentTrace`, and deterministic tool calls for route, merchant selection, and budget split.
+- Merchant sold-out updates create `Incident` plus recovery/public-notice Agent drafts without approving recovery or publishing public notices.
+- Organizer recovery approval remains the only path that creates `PlanVersion` v2 and a published `PublicNotice`.
+- Review generation creates an evidence-backed review summary draft tied to metrics, incidents, notices, and proposals.
+- Optional Qwen draft backend was not executed in v0.8 P0.
+- Qwen/QwenPaw remains optional and non-required for the deterministic demo.
+
 ## Demo Accounts
 
 - organizer: `organizer.demo`
