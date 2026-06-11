@@ -8,6 +8,11 @@ from typing import TypeVar
 from pydantic import BaseModel
 
 from app.schemas import (
+    AgentDraft,
+    AgentEvaluation,
+    AgentModelCall,
+    AgentRun,
+    AgentToolCall,
     AgentTrace,
     AuthSessionRecord,
     AuthUserRecord,
@@ -201,6 +206,11 @@ class MVPStore:
             "incidents",
             "recovery_proposals",
             "public_notices",
+            "agent_runs",
+            "agent_tool_calls",
+            "agent_drafts",
+            "agent_model_calls",
+            "agent_evaluations",
             "agent_traces",
             "operational_metrics",
             "reports",
@@ -210,6 +220,11 @@ class MVPStore:
         for collection in collections:
             if collection in {"merchants", "runtime_states"}:
                 self.conn.execute("DELETE FROM records WHERE collection = ?", (collection,))
+            elif collection in {"agent_tool_calls", "agent_model_calls", "agent_evaluations"}:
+                self.conn.execute(
+                    "DELETE FROM records WHERE collection = ? AND item_key LIKE ?",
+                    (collection, f"%{event_id}%"),
+                )
             else:
                 self.conn.execute(
                     "DELETE FROM records WHERE collection = ? AND item_key LIKE ?",
@@ -422,6 +437,59 @@ class MVPStore:
 
     def list_agent_traces(self, event_id: str) -> list[AgentTrace]:
         return self.list_models("agent_traces", AgentTrace, prefix=f"{event_id}:")
+
+    def save_agent_run(self, run: AgentRun) -> None:
+        self.upsert_model("agent_runs", f"{run.event_id}:{run.run_id}", run)
+
+    def get_agent_run(self, run_id: str) -> AgentRun | None:
+        rows = self.conn.execute(
+            "SELECT payload FROM records WHERE collection = ? AND item_key LIKE ?",
+            ("agent_runs", f"%:{run_id}"),
+        ).fetchall()
+        if not rows:
+            return None
+        return AgentRun.model_validate(json.loads(rows[0]["payload"]))
+
+    def list_agent_runs(self, event_id: str) -> list[AgentRun]:
+        return self.list_models("agent_runs", AgentRun, prefix=f"{event_id}:")
+
+    def save_agent_tool_call(self, call: AgentToolCall) -> None:
+        self.upsert_model("agent_tool_calls", f"{call.run_id}:{call.tool_call_id}", call)
+
+    def list_agent_tool_calls(self, run_id: str | None = None) -> list[AgentToolCall]:
+        prefix = f"{run_id}:" if run_id else ""
+        return self.list_models("agent_tool_calls", AgentToolCall, prefix=prefix)
+
+    def save_agent_draft(self, draft: AgentDraft) -> None:
+        self.upsert_model("agent_drafts", f"{draft.event_id}:{draft.draft_id}", draft)
+
+    def list_agent_drafts(
+        self, event_id: str, draft_type: str | None = None
+    ) -> list[AgentDraft]:
+        drafts = self.list_models("agent_drafts", AgentDraft, prefix=f"{event_id}:")
+        if draft_type:
+            return [draft for draft in drafts if draft.draft_type == draft_type]
+        return drafts
+
+    def save_agent_model_call(self, call: AgentModelCall) -> None:
+        self.upsert_model("agent_model_calls", f"{call.run_id}:{call.model_call_id}", call)
+
+    def list_agent_model_calls(self, run_id: str | None = None) -> list[AgentModelCall]:
+        prefix = f"{run_id}:" if run_id else ""
+        return self.list_models("agent_model_calls", AgentModelCall, prefix=prefix)
+
+    def save_agent_evaluation(self, evaluation: AgentEvaluation) -> None:
+        self.upsert_model(
+            "agent_evaluations",
+            f"{evaluation.run_id}:{evaluation.evaluation_id}",
+            evaluation,
+        )
+
+    def list_agent_evaluations(
+        self, run_id: str | None = None
+    ) -> list[AgentEvaluation]:
+        prefix = f"{run_id}:" if run_id else ""
+        return self.list_models("agent_evaluations", AgentEvaluation, prefix=prefix)
 
     def save_operational_metric(self, metric: OperationalMetric) -> None:
         self.upsert_model(

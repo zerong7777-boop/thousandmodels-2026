@@ -244,6 +244,101 @@ class PublicNotice(BaseModel):
     published_at: str | None = None
 
 
+AgentTrigger = Literal[
+    "planning_generation",
+    "incident_recovery",
+    "public_notice_draft",
+    "review_generation",
+]
+AgentMode = Literal["deterministic", "qwen_draft", "qwenpaw_workflow"]
+AgentRunStatus = Literal["running", "completed", "failed", "fallback_completed"]
+AgentValidationStatus = Literal["passed", "failed", "fallback"]
+AgentToolStatus = Literal["success", "failed"]
+AgentDraftType = Literal[
+    "plan_candidate",
+    "route_story",
+    "recovery_explanation",
+    "public_notice",
+    "review_summary",
+]
+AgentDraftStatus = Literal["draft", "accepted", "rejected", "superseded"]
+AgentDraftLocale = Literal["zh-Hans", "zh-Hant", "en", "mixed"]
+AgentModelProvider = Literal["deterministic", "dashscope"]
+AgentModelResponseStatus = Literal[
+    "skipped",
+    "success",
+    "invalid_json",
+    "schema_failed",
+    "provider_error",
+]
+
+
+class AgentRun(BaseModel):
+    run_id: str
+    event_id: str
+    trigger: AgentTrigger
+    mode: AgentMode
+    status: AgentRunStatus
+    started_at: str
+    completed_at: str | None = None
+    fallback_used: bool = False
+    fallback_reason: str | None = None
+    final_output_ref: str | None = None
+    error_summary: str | None = None
+
+
+class AgentToolCall(BaseModel):
+    tool_call_id: str
+    run_id: str
+    step_id: str
+    tool_name: str
+    input_payload: dict
+    output_payload: dict
+    status: AgentToolStatus
+    latency_ms: int | None = None
+    error_summary: str | None = None
+
+
+class AgentDraft(BaseModel):
+    draft_id: str
+    event_id: str
+    source_run_id: str
+    draft_type: AgentDraftType
+    locale: AgentDraftLocale
+    content: str
+    structured_payload: dict
+    status: AgentDraftStatus = "draft"
+    reviewed_by: str | None = None
+    reviewed_at: str | None = None
+    created_at: str
+
+
+class AgentModelCall(BaseModel):
+    model_call_id: str
+    run_id: str
+    provider: AgentModelProvider
+    model: str
+    prompt_template_id: str
+    input_refs: list[str]
+    response_status: AgentModelResponseStatus
+    parsed_output: dict | None = None
+    fallback_used: bool = False
+    error_summary: str | None = None
+    created_at: str
+
+
+class AgentEvaluation(BaseModel):
+    evaluation_id: str
+    run_id: str
+    schema_pass: bool
+    fallback_used: bool
+    unsafe_mutation_attempted: bool
+    human_approval_required: bool
+    forbidden_public_terms_present: bool
+    public_copy_ready: bool
+    notes: list[str] = Field(default_factory=list)
+
+
 class AgentStep(BaseModel):
     agent_name: str
     input_refs: list[str]
@@ -252,6 +347,13 @@ class AgentStep(BaseModel):
     decision_reason: str
     confidence: float = Field(ge=0, le=1)
     requires_human_approval: bool
+    step_id: str | None = None
+    run_id: str | None = None
+    objective: str | None = None
+    tool_call_refs: list[str] = Field(default_factory=list)
+    model_call_ref: str | None = None
+    schema_name: str | None = None
+    validation_status: AgentValidationStatus = "passed"
 
 
 class AgentTrace(BaseModel):
