@@ -6,6 +6,7 @@ import type { DemoSession } from "./auth/session";
 import { MerchantProductShell } from "./layout/MerchantProductShell";
 import { OrganizerProductShell } from "./layout/OrganizerProductShell";
 import { TouristProductShell } from "./layout/TouristProductShell";
+import { I18nProvider, useI18n } from "./i18n";
 import { resolveRoute } from "./routes/routeConfig";
 import { appTheme } from "./theme";
 import type { AuthUser } from "./types";
@@ -13,9 +14,11 @@ import type { AuthUser } from "./types";
 export default function App() {
   return (
     <ConfigProvider theme={appTheme}>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
+      <I18nProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </I18nProvider>
     </ConfigProvider>
   );
 }
@@ -31,6 +34,7 @@ function sessionFromUser(user: AuthUser): DemoSession {
 
 function AppContent() {
   const { status, user, logout } = useAuth();
+  const { t } = useI18n();
   const [pathname, setPathname] = useState(window.location.pathname);
 
   const navigate = useCallback((path: string) => {
@@ -70,7 +74,7 @@ function AppContent() {
   }, [effectivePath, pathname]);
 
   if (waitingForProtectedSession) {
-    return <main className="auth-loading">Loading session...</main>;
+    return <main className="auth-loading">{t("common.loadingSession")}</main>;
   }
 
   return route.shell === "login" || !session || !user ? (

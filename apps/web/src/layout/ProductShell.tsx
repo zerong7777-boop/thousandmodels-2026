@@ -1,5 +1,6 @@
 import { Bell, LogOut } from "lucide-react";
 import type { ReactNode } from "react";
+import { LanguageSwitcher, useI18n } from "../i18n";
 import type { AuthUser } from "../types";
 import { Avatar } from "../ui/avatar";
 import { Badge } from "../ui/badge";
@@ -36,6 +37,7 @@ export function ProductShell({
   testId,
   accent = "harbor"
 }: ProductShellProps) {
+  const { t } = useI18n();
   const accentClass =
     accent === "lotus" ? "text-lotus" : accent === "amber" ? "text-amberline" : "text-harbor";
   const activeNav = nav.find((item) => pathname === item.href || pathname.startsWith(item.href));
@@ -49,8 +51,9 @@ export function ProductShell({
             <div className="truncate text-lg font-semibold">Zhiyin Haojiang</div>
             <div className="truncate text-sm text-slate-500">{subtitle}</div>
           </div>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" aria-label="Notifications">
+          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+            <LanguageSwitcher compact={compact} />
+            <Button variant="ghost" size="sm" aria-label={t("common.notifications")}>
               <Bell size={16} />
             </Button>
             <div className="hidden items-center gap-2 sm:flex">
@@ -62,7 +65,7 @@ export function ProductShell({
             </div>
             <Button variant="secondary" size="sm" onClick={onLogout}>
               <LogOut size={14} className="mr-2" />
-              Logout
+              {t("common.logout")}
             </Button>
           </div>
         </div>
@@ -79,10 +82,10 @@ export function ProductShell({
             <Sidebar items={nav} pathname={pathname} onNavigate={onNavigate} />
             <Separator className="my-3" />
             <div className="px-2 pb-2 text-xs text-slate-500">
-              Current area
+              {t("common.currentArea")}
               <div className="mt-1">
                 <Badge variant={accent === "lotus" ? "lotus" : accent === "amber" ? "warning" : "success"}>
-                  {activeNav?.label ?? "Workspace"}
+                  {activeNav?.label ?? t("shell.nav.workspace")}
                 </Badge>
               </div>
             </div>

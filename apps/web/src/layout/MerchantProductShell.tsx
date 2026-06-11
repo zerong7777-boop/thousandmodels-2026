@@ -1,5 +1,6 @@
 import { Bell, ClipboardList, Store, ToggleLeft } from "lucide-react";
 import type { ReactNode } from "react";
+import { useI18n } from "../i18n";
 import type { AuthUser } from "../types";
 import { ProductShell } from "./ProductShell";
 
@@ -16,11 +17,13 @@ export function MerchantProductShell({
   onLogout: () => void;
   children: ReactNode;
 }) {
+  const { t } = useI18n();
+
   return (
     <ProductShell
       user={user}
-      label="Merchant workbench"
-      subtitle="Today's tasks, live status, and organizer notices."
+      label={t("shell.merchantLabel")}
+      subtitle={t("shell.merchantSubtitle")}
       pathname={pathname}
       onNavigate={onNavigate}
       onLogout={onLogout}
@@ -28,10 +31,10 @@ export function MerchantProductShell({
       accent="amber"
       testId="merchant-shell"
       nav={[
-        { label: "Tasks", href: "/merchant/events/demo-night-tour/tasks", icon: <ClipboardList size={16} /> },
-        { label: "Status", href: "/merchant/events/demo-night-tour/status", icon: <ToggleLeft size={16} /> },
-        { label: "Notices", href: "/merchant/notifications", icon: <Bell size={16} /> },
-        { label: "Today", href: "/merchant/dashboard", icon: <Store size={16} /> }
+        { label: t("shell.nav.tasks"), href: "/merchant/events/demo-night-tour/tasks", icon: <ClipboardList size={16} /> },
+        { label: t("shell.nav.status"), href: "/merchant/events/demo-night-tour/status", icon: <ToggleLeft size={16} /> },
+        { label: t("shell.nav.notices"), href: "/merchant/notifications", icon: <Bell size={16} /> },
+        { label: t("shell.nav.today"), href: "/merchant/dashboard", icon: <Store size={16} /> }
       ]}
     >
       {children}

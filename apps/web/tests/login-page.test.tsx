@@ -18,11 +18,23 @@ test("login page offers credentials and demo account shortcuts", async () => {
 
   render(<App />);
 
-  expect(await screen.findByLabelText(/username/i)).toBeInTheDocument();
-  expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /organizer demo/i })).toBeInTheDocument();
+  expect(await screen.findByLabelText("用户名")).toBeInTheDocument();
+  expect(screen.getByLabelText("密码")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /主办方演示/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /商户演示/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /游客演示/i })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /繁體中文/i })).toBeInTheDocument();
+});
+
+test("language switcher changes login copy before authentication", async () => {
+  vi.stubGlobal("fetch", mockAppFetch(null));
+
+  render(<App />);
+
+  fireEvent.click(await screen.findByRole("button", { name: /English/i }));
+  expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /merchant demo/i })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /tourist demo/i })).toBeInTheDocument();
+  expect(localStorage.getItem("zhiyin.locale")).toBe("en");
 });
 
 test("selecting merchant fills credentials and submit creates backend session", async () => {
@@ -53,13 +65,13 @@ test("selecting merchant fills credentials and submit creates backend session", 
   vi.stubGlobal("fetch", fetchMock);
 
   render(<App />);
-  fireEvent.click(await screen.findByRole("button", { name: /merchant demo/i }));
+  fireEvent.click(await screen.findByRole("button", { name: /商户演示/i }));
 
-  expect(screen.getByLabelText(/username/i)).toHaveValue("merchant.m001.demo");
-  expect(screen.getByLabelText(/password/i)).toHaveValue("demo1234");
+  expect(screen.getByLabelText("用户名")).toHaveValue("merchant.m001.demo");
+  expect(screen.getByLabelText("密码")).toHaveValue("demo1234");
   expect(getDemoSession()).toBeNull();
 
-  fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+  fireEvent.click(screen.getByRole("button", { name: /登\s*录/i }));
 
   await waitFor(() => expect(window.location.pathname).toBe("/merchant/dashboard"));
   expect(await screen.findByTestId("merchant-shell")).toBeInTheDocument();

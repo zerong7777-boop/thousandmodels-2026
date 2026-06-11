@@ -1,8 +1,10 @@
 import { api } from "../../api";
 import { NoticeFeed, ProductPageHeader, RouteProgress, RouteStopCard, StatusPill } from "../../components/product";
+import { LanguageSwitcher, useI18n } from "../../i18n";
 import { asArray, useAsyncData } from "../productUtils";
 
 export function PublicEventPage({ eventId = "demo-night-tour" }: { eventId?: string }) {
+  const { t } = useI18n();
   const { data: event } = useAsyncData(() => api.getPublicEvent(eventId), null);
   const points = asArray(event?.route_points);
   const routeNames = asArray(event?.route);
@@ -22,11 +24,18 @@ export function PublicEventPage({ eventId = "demo-night-tour" }: { eventId?: str
   return (
     <main className="min-h-screen bg-violet-50 px-4 py-5 text-ink">
       <div className="mx-auto max-w-xl space-y-4">
+        <div className="flex justify-end">
+          <LanguageSwitcher />
+        </div>
         <ProductPageHeader
-          eyebrow="Visitor route"
-          title="Tonight's route"
+          eyebrow={t("public.event.visitorRoute")}
+          title={t("public.event.tonightsRoute")}
           description={event?.title ?? event?.theme ?? "Historic District Night Tour"}
-          meta={[event?.area ?? "Rua da Felicidade", `${displayPoints.length || 2} story stops`, "Visitor notices ready"]}
+          meta={[
+            event?.area ?? t("demo.event.area"),
+            t("public.event.storyStops", { count: displayPoints.length || 2 }),
+            t("public.event.noticesReady")
+          ]}
           status={event?.status ?? "active"}
           tone="visitor"
         />

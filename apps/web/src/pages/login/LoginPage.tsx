@@ -3,6 +3,7 @@ import { Building2, Map, Store } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useAuth } from "../../auth/AuthProvider";
 import { defaultPathForRole } from "../../auth/roleRouting";
+import { LanguageSwitcher, useI18n } from "../../i18n";
 import type { UserRole } from "../../types";
 
 interface LoginPageProps {
@@ -11,9 +12,9 @@ interface LoginPageProps {
 
 interface DemoCredential {
   role: UserRole;
-  label: string;
-  productLabel: string;
-  description: string;
+  labelKey: string;
+  productLabelKey: string;
+  descriptionKey: string;
   icon: ReactNode;
   username: string;
   password: string;
@@ -22,27 +23,27 @@ interface DemoCredential {
 const demoCredentials: DemoCredential[] = [
   {
     role: "organizer",
-    label: "Organizer demo",
-    productLabel: "Organizer workspace",
-    description: "Operate events, approvals, exceptions, and review.",
+    labelKey: "auth.organizerDemo",
+    productLabelKey: "auth.organizerWorkspace",
+    descriptionKey: "auth.organizerDescription",
     icon: <Building2 size={20} />,
     username: "organizer.demo",
     password: "demo1234"
   },
   {
     role: "merchant",
-    label: "Merchant demo",
-    productLabel: "Merchant workbench",
-    description: "View assigned tasks and report runtime status.",
+    labelKey: "auth.merchantDemo",
+    productLabelKey: "auth.merchantWorkbench",
+    descriptionKey: "auth.merchantDescription",
     icon: <Store size={20} />,
     username: "merchant.m001.demo",
     password: "demo1234"
   },
   {
     role: "tourist",
-    label: "Tourist demo",
-    productLabel: "Visitor route",
-    description: "Follow the public route, stories, tasks, and notices.",
+    labelKey: "auth.touristDemo",
+    productLabelKey: "auth.visitorRoute",
+    descriptionKey: "auth.visitorDescription",
     icon: <Map size={20} />,
     username: "tourist.demo",
     password: "demo1234"
@@ -57,6 +58,7 @@ const roleColor: Record<UserRole, string> = {
 
 export function LoginPage({ onNavigate }: LoginPageProps) {
   const { login } = useAuth();
+  const { t } = useI18n();
   const [form] = Form.useForm<{ username: string; password: string }>();
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -73,7 +75,7 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
       const user = await login(values.username, values.password);
       onNavigate(defaultPathForRole(user.role));
     } catch {
-      setError("The username or password is incorrect.");
+      setError(t("auth.invalidCredentials"));
     } finally {
       setSubmitting(false);
     }
@@ -84,14 +86,14 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
       <Card className="login-panel overflow-hidden border-0 shadow-xl">
         <div className="grid gap-0 lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
           <section className="bg-slate-950 p-7 text-white md:p-9">
-            <p className="text-xs font-semibold uppercase tracking-normal text-teal-200">Product access</p>
+            <div className="mb-5 flex justify-end">
+              <LanguageSwitcher />
+            </div>
+            <p className="text-xs font-semibold uppercase tracking-normal text-teal-200">{t("auth.productAccess")}</p>
             <Typography.Title level={1} style={{ color: "white", margin: "8px 0 0" }}>
-              Zhiyin Haojiang
+              {t("common.brand")}
             </Typography.Title>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300">
-              Role-based product surfaces for event operators, merchants, and visitors. Use one of the local demo
-              accounts to enter the deterministic workflow.
-            </p>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300">{t("auth.productPurpose")}</p>
 
             <div className="mt-8 grid gap-3">
               {demoCredentials.map((credential) => (
@@ -108,8 +110,8 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
                     {credential.icon}
                   </span>
                   <span className="min-w-0">
-                    <span className="block text-sm font-semibold text-white">{credential.productLabel}</span>
-                    <span className="mt-1 block text-xs leading-5 text-slate-300">{credential.description}</span>
+                    <span className="block text-sm font-semibold text-white">{t(credential.productLabelKey)}</span>
+                    <span className="mt-1 block text-xs leading-5 text-slate-300">{t(credential.descriptionKey)}</span>
                   </span>
                 </button>
               ))}
@@ -117,16 +119,16 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
 
             <dl className="mt-8 grid gap-3 text-sm text-slate-300 sm:grid-cols-3">
               <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                <dt className="font-semibold text-white">Operator</dt>
-                <dd className="mt-1">Approval, recovery, release</dd>
+                <dt className="font-semibold text-white">{t("auth.operatorSummaryTitle")}</dt>
+                <dd className="mt-1">{t("auth.operatorSummaryBody")}</dd>
               </div>
               <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                <dt className="font-semibold text-white">Merchant</dt>
-                <dd className="mt-1">Tasks, stock, queues</dd>
+                <dt className="font-semibold text-white">{t("auth.merchantSummaryTitle")}</dt>
+                <dd className="mt-1">{t("auth.merchantSummaryBody")}</dd>
               </div>
               <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                <dt className="font-semibold text-white">Visitor</dt>
-                <dd className="mt-1">Stories, stops, updates</dd>
+                <dt className="font-semibold text-white">{t("auth.visitorSummaryTitle")}</dt>
+                <dd className="mt-1">{t("auth.visitorSummaryBody")}</dd>
               </div>
             </dl>
           </section>
@@ -135,34 +137,34 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
             <Space orientation="vertical" size={20} className="full-width">
               <Space orientation="vertical" size={4}>
                 <Typography.Title level={2} style={{ margin: 0 }}>
-                  Product access
+                  {t("auth.productAccess")}
                 </Typography.Title>
-                <Typography.Text type="secondary">Demo credentials are preloaded into the local backend.</Typography.Text>
+                <Typography.Text type="secondary">{t("auth.demoCredentialsHint")}</Typography.Text>
               </Space>
 
               <Form form={form} layout="vertical" onFinish={submit} requiredMark={false}>
                 <Form.Item
-                  label="Username"
+                  label={t("auth.username")}
                   name="username"
-                  rules={[{ required: true, message: "Username is required." }]}
+                  rules={[{ required: true, message: t("auth.usernameRequired") }]}
                 >
                   <Input autoComplete="username" />
                 </Form.Item>
                 <Form.Item
-                  label="Password"
+                  label={t("auth.password")}
                   name="password"
-                  rules={[{ required: true, message: "Password is required." }]}
+                  rules={[{ required: true, message: t("auth.passwordRequired") }]}
                 >
                   <Input.Password autoComplete="current-password" />
                 </Form.Item>
                 {error ? <Alert type="error" showIcon message={error} /> : null}
                 <Button type="primary" htmlType="submit" loading={submitting} block className="mt-16">
-                  Sign in
+                  {t("auth.signIn")}
                 </Button>
               </Form>
 
               <div>
-                <Typography.Text type="secondary">Demo account quick fill</Typography.Text>
+                <Typography.Text type="secondary">{t("auth.demoQuickFill")}</Typography.Text>
                 <div className="mt-3 grid gap-2">
                   {demoCredentials.map((credential) => (
                     <Button
@@ -174,7 +176,7 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
                       <Space>
                         {credential.icon}
                         <span>
-                          {credential.label}
+                          {t(credential.labelKey)}
                           <span className="ml-2 text-slate-500">{credential.username}</span>
                         </span>
                       </Space>
