@@ -2,17 +2,27 @@
 
 ## Recommended Next Step
 
-Review the v0.7 narrative package, then choose one next track:
+Review `docs/proposal/v0.8-agent-capability-spec.md`, then write the backend-first implementation plan:
 
-1. Start a narrow Qwen/QwenPaw advisory spike for recovery explanations, public notices, and review prose.
-2. Convert the v0.7 storyboard into a final presentation deck.
-3. Regenerate exact v0.7 screenshots if the reused v0.5/v0.6 screenshots are not strong enough for final judging.
+```text
+docs/proposal/v0.8-agent-capability-implementation-plan.md
+```
 
 Recommended order:
 
 ```text
-review v0.7 materials -> narrow Qwen/QwenPaw advisory spike -> final deck
+review v0.8 agent capability spec
+-> write v0.8 backend-first implementation plan
+-> implement deterministic Agent runtime and tool-call evidence
+-> add optional Qwen draft path only after deterministic Agent tests pass
 ```
+
+The next implementation phase should focus on real Agent capability rather than additional UI polish:
+
+1. make `AgentRun`, richer `AgentStep`, `AgentToolCall`, and `AgentDraft` contracts concrete
+2. build deterministic specialist agents around planning, incident recovery, public notices, and review
+3. prove sold-out incident recovery creates auditable Agent evidence before organizer approval
+4. keep Qwen/QwenPaw optional and non-blocking
 
 ## Do Not Do Yet
 
@@ -20,3 +30,4 @@ review v0.7 materials -> narrow Qwen/QwenPaw advisory spike -> final deck
 - Do not let model output mutate approval, inventory, route publication, or plan persistence directly.
 - Do not add real merchants, hardware, POS, payment, map API, or real traffic prediction.
 - Do not claim full QwenPaw orchestration until it is actually implemented and verified.
+- Do not start a broad frontend redesign before the Agent runtime exists.
