@@ -3,7 +3,9 @@ import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
 import { localizedDemoList, localizedDemoText, localizedStatus, useI18n } from "../../i18n";
+import { AgentEvidencePanel, latestRunForTrigger, stepsForRun, toolCallsForRun } from "../../components/agent";
 import { MetricTile, ProductPageHeader, WorkflowStepper } from "../../components/product";
+import type { AgentToolCall } from "../../types";
 import { asArray, useAsyncData } from "../productUtils";
 
 export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { eventId?: string }) {
@@ -11,9 +13,20 @@ export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { e
   const { data: plans } = useAsyncData(() => api.getPlanVersions(eventId), []);
   const { data: traces } = useAsyncData(() => api.getAgentTraces(eventId), []);
   const { data: tasks } = useAsyncData(() => api.getMerchantTasks(eventId), []);
+  const { data: agentRuns } = useAsyncData(() => api.getAgentRuns(eventId), [], [eventId]);
   const planList = asArray(plans);
   const traceList = asArray(traces);
   const taskList = asArray(tasks);
+  const planningRun = latestRunForTrigger(asArray(agentRuns), "planning_generation");
+  const { data: planningToolCalls } = useAsyncData<AgentToolCall[]>(
+    () => (planningRun ? api.getAgentToolCalls(eventId, planningRun.run_id) : Promise.resolve([])),
+    [],
+    [eventId, planningRun?.run_id]
+  );
+  const planningSteps = stepsForRun(
+    traceList.flatMap((trace) => asArray(trace.steps)),
+    planningRun?.run_id
+  );
   const currentPlan = planList.find((plan) => plan.status === "approved") ?? planList[0];
   const readinessCount = taskList.filter((task) => task.task_status === "active").length;
   const currentStatus = currentPlan?.status ?? "draft";
@@ -73,6 +86,16 @@ export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { e
           ]}
         />
       </section>
+
+      <AgentEvidencePanel
+        title={t("organizer.agentEvidence.planningTitle")}
+        description={t("organizer.agentEvidence.planningDescription")}
+        runs={planningRun ? [planningRun] : []}
+        steps={planningSteps}
+        toolCalls={toolCallsForRun(asArray(planningToolCalls), planningRun?.run_id)}
+        drafts={[]}
+        emptyMessage={t("organizer.agentEvidence.emptyPlanning")}
+      />
 
       <div className="grid gap-4 md:grid-cols-3">
         <MetricTile
