@@ -1,0 +1,12 @@
+{
+  "event_id": "demo-night-tour",
+  "area": "福隆新街-新马路-内港",
+  "date": "2026-07-18",
+  "time_window": "18:00-21:30",
+  "budget_mop": 50000,
+  "target_audience": ["年轻游客", "亲子游客"],
+  "event_goal": "吸引游客进入旧区，结合美食、文化故事和打卡互动",
+  "theme_preferences": ["夜游", "老字号", "文化故事"],
+  "constraints": ["路线不过长", "避免局部拥堵"],
+  "priority_rules": ["优先室内备用点", "对外更新必须主办方确认"]
+}

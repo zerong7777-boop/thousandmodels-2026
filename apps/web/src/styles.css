@@ -1,0 +1,129 @@
+@import "./design/tokens.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #f4f6f5;
+}
+
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.login-panel {
+  width: min(980px, 100%);
+}
+
+.login-role-card {
+  width: 250px;
+}
+
+.login-role-card h4 {
+  margin: 0;
+}
+
+.auth-loading {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  color: #51615a;
+}
+
+.app-layout {
+  min-height: 100vh;
+}
+
+.app-sider {
+  min-height: 100vh;
+}
+
+.brand-block {
+  padding: 20px 18px 14px;
+}
+
+.brand-block h4,
+.brand-block .ant-typography {
+  color: #fff;
+  margin: 0;
+}
+
+.app-header {
+  height: auto;
+  min-height: 78px;
+  padding: 16px 24px;
+  border-bottom: 1px solid #e7ece9;
+  display: flex;
+  align-items: center;
+}
+
+.app-header h3 {
+  margin: 0;
+}
+
+.app-content {
+  padding: 20px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.mt-16 {
+  margin-top: 16px;
+}
+
+.trace-pre {
+  margin: 0;
+  padding: 10px;
+  border-radius: 6px;
+  background: #f6f8f7;
+  border: 1px solid #e4ebe7;
+  max-height: 220px;
+  overflow: auto;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.app-sider a {
+  color: inherit;
+}
+
+.app-sider a:hover {
+  color: inherit;
+}
+
+.merchant-state-card {
+  width: 180px;
+}
+
+.h5-frame {
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+@media (max-width: 768px) {
+  .app-header {
+    padding: 14px 16px;
+  }
+
+  .app-content {
+    padding: 14px;
+  }
+
+  .ant-steps {
+    overflow-x: auto;
+  }
+}

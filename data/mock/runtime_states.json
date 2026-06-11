@@ -1,0 +1,5 @@
+[
+  {"merchant_id": "m001", "inventory_status": "normal", "queue_status": "normal", "available_for_visitors": true, "temporary_note": "", "updated_at": "2026-07-18T18:00:00Z"},
+  {"merchant_id": "m002", "inventory_status": "normal", "queue_status": "normal", "available_for_visitors": true, "temporary_note": "", "updated_at": "2026-07-18T18:00:00Z"},
+  {"merchant_id": "m003", "inventory_status": "normal", "queue_status": "normal", "available_for_visitors": true, "temporary_note": "", "updated_at": "2026-07-18T18:00:00Z"}
+]

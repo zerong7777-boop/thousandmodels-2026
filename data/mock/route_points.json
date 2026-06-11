@@ -1,0 +1,7 @@
+[
+  {"point_id": "p001", "name": "福隆新街集合", "type": "集合点", "rainy_day": false},
+  {"point_id": "p002", "name": "福隆老饼家", "type": "老字号", "rainy_day": false},
+  {"point_id": "p003", "name": "新马路文创铺", "type": "文创", "rainy_day": true},
+  {"point_id": "p004", "name": "内港小展馆", "type": "文化", "rainy_day": true},
+  {"point_id": "p005", "name": "旧区社区客厅", "type": "备用", "rainy_day": true}
+]

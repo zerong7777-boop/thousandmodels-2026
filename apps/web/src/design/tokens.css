@@ -1,0 +1,25 @@
+:root {
+  --zh-bg: #f5f7f8;
+  --zh-surface: #ffffff;
+  --zh-ink: #172026;
+  --zh-muted: #60717a;
+  --zh-line: #d9e2e6;
+  --zh-harbor: #0f766e;
+  --zh-amber: #d97706;
+  --zh-lotus: #7c3aed;
+  --zh-organizer: #245b57;
+  --zh-organizer-soft: #e5f1ef;
+  --zh-merchant: #9a5a10;
+  --zh-merchant-soft: #fff4df;
+  --zh-visitor: #7a3f68;
+  --zh-visitor-soft: #f7eaf2;
+  --zh-info: #2563eb;
+  --zh-info-soft: #eff6ff;
+  --zh-success: #15803d;
+  --zh-success-soft: #ecfdf3;
+  --zh-warning: #b45309;
+  --zh-warning-soft: #fff7ed;
+  --zh-danger: #dc2626;
+  --zh-danger-soft: #fef2f2;
+  --zh-radius: 8px;
+}

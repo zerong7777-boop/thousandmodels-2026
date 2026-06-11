@@ -1,0 +1,191 @@
+import { Alert, Button, Card, Form, Input, Space, Typography } from "antd";
+import { Building2, Map, Store } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { useAuth } from "../../auth/AuthProvider";
+import { defaultPathForRole } from "../../auth/roleRouting";
+import type { UserRole } from "../../types";
+
+interface LoginPageProps {
+  onNavigate: (path: string) => void;
+}
+
+interface DemoCredential {
+  role: UserRole;
+  label: string;
+  productLabel: string;
+  description: string;
+  icon: ReactNode;
+  username: string;
+  password: string;
+}
+
+const demoCredentials: DemoCredential[] = [
+  {
+    role: "organizer",
+    label: "Organizer demo",
+    productLabel: "Organizer workspace",
+    description: "Operate events, approvals, exceptions, and review.",
+    icon: <Building2 size={20} />,
+    username: "organizer.demo",
+    password: "demo1234"
+  },
+  {
+    role: "merchant",
+    label: "Merchant demo",
+    productLabel: "Merchant workbench",
+    description: "View assigned tasks and report runtime status.",
+    icon: <Store size={20} />,
+    username: "merchant.m001.demo",
+    password: "demo1234"
+  },
+  {
+    role: "tourist",
+    label: "Tourist demo",
+    productLabel: "Visitor route",
+    description: "Follow the public route, stories, tasks, and notices.",
+    icon: <Map size={20} />,
+    username: "tourist.demo",
+    password: "demo1234"
+  }
+];
+
+const roleColor: Record<UserRole, string> = {
+  organizer: "#2f6f4f",
+  merchant: "#2563eb",
+  tourist: "#7c3aed"
+};
+
+export function LoginPage({ onNavigate }: LoginPageProps) {
+  const { login } = useAuth();
+  const [form] = Form.useForm<{ username: string; password: string }>();
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const fillCredential = (credential: DemoCredential) => {
+    form.setFieldsValue({ username: credential.username, password: credential.password });
+    setError(null);
+  };
+
+  const submit = async (values: { username: string; password: string }) => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      const user = await login(values.username, values.password);
+      onNavigate(defaultPathForRole(user.role));
+    } catch {
+      setError("The username or password is incorrect.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <main className="login-page bg-slate-100">
+      <Card className="login-panel overflow-hidden border-0 shadow-xl">
+        <div className="grid gap-0 lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)]">
+          <section className="bg-slate-950 p-7 text-white md:p-9">
+            <p className="text-xs font-semibold uppercase tracking-normal text-teal-200">Product access</p>
+            <Typography.Title level={1} style={{ color: "white", margin: "8px 0 0" }}>
+              Zhiyin Haojiang
+            </Typography.Title>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300">
+              Role-based product surfaces for event operators, merchants, and visitors. Use one of the local demo
+              accounts to enter the deterministic workflow.
+            </p>
+
+            <div className="mt-8 grid gap-3">
+              {demoCredentials.map((credential) => (
+                <button
+                  key={credential.role}
+                  className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-4 text-left transition hover:bg-white/10"
+                  onClick={() => fillCredential(credential)}
+                  type="button"
+                >
+                  <span
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-white text-slate-900"
+                    style={{ color: roleColor[credential.role] }}
+                  >
+                    {credential.icon}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-white">{credential.productLabel}</span>
+                    <span className="mt-1 block text-xs leading-5 text-slate-300">{credential.description}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <dl className="mt-8 grid gap-3 text-sm text-slate-300 sm:grid-cols-3">
+              <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+                <dt className="font-semibold text-white">Operator</dt>
+                <dd className="mt-1">Approval, recovery, release</dd>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+                <dt className="font-semibold text-white">Merchant</dt>
+                <dd className="mt-1">Tasks, stock, queues</dd>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+                <dt className="font-semibold text-white">Visitor</dt>
+                <dd className="mt-1">Stories, stops, updates</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section className="p-7 md:p-9">
+            <Space orientation="vertical" size={20} className="full-width">
+              <Space orientation="vertical" size={4}>
+                <Typography.Title level={2} style={{ margin: 0 }}>
+                  Product access
+                </Typography.Title>
+                <Typography.Text type="secondary">Demo credentials are preloaded into the local backend.</Typography.Text>
+              </Space>
+
+              <Form form={form} layout="vertical" onFinish={submit} requiredMark={false}>
+                <Form.Item
+                  label="Username"
+                  name="username"
+                  rules={[{ required: true, message: "Username is required." }]}
+                >
+                  <Input autoComplete="username" />
+                </Form.Item>
+                <Form.Item
+                  label="Password"
+                  name="password"
+                  rules={[{ required: true, message: "Password is required." }]}
+                >
+                  <Input.Password autoComplete="current-password" />
+                </Form.Item>
+                {error ? <Alert type="error" showIcon message={error} /> : null}
+                <Button type="primary" htmlType="submit" loading={submitting} block className="mt-16">
+                  Sign in
+                </Button>
+              </Form>
+
+              <div>
+                <Typography.Text type="secondary">Demo account quick fill</Typography.Text>
+                <div className="mt-3 grid gap-2">
+                  {demoCredentials.map((credential) => (
+                    <Button
+                      key={credential.role}
+                      className="login-demo-button flex h-auto w-full justify-start py-2 text-left"
+                      onClick={() => fillCredential(credential)}
+                      style={{ borderColor: roleColor[credential.role] }}
+                    >
+                      <Space>
+                        {credential.icon}
+                        <span>
+                          {credential.label}
+                          <span className="ml-2 text-slate-500">{credential.username}</span>
+                        </span>
+                      </Space>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </Space>
+          </section>
+        </div>
+      </Card>
+    </main>
+  );
+}
