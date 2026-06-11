@@ -1,6 +1,24 @@
 from app.schemas import AgentStep, AgentTrace, PlanVersion
 
 
+def build_trace_from_steps(
+    event_id: str,
+    trigger: str,
+    steps: list[AgentStep],
+    final_output_ref: str,
+    trace_id: str,
+    human_decision_ref: str | None = None,
+) -> AgentTrace:
+    return AgentTrace(
+        trace_id=trace_id,
+        event_id=event_id,
+        trigger=trigger,
+        steps=steps,
+        final_output_ref=final_output_ref,
+        human_decision_ref=human_decision_ref,
+    )
+
+
 def build_planning_trace(event_id: str, plan: PlanVersion) -> AgentTrace:
     steps = [
         AgentStep(

@@ -4,7 +4,8 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.agents.orchestrator import choose_agent_backend
-from app.agents.trace_builder import build_planning_trace
+from app.agents.runtime import AgentRuntime
+from app.agents.trace_builder import build_trace_from_steps
 from app.audit import build_audit_log
 from app.auth import (
     SESSION_COOKIE,
@@ -77,6 +78,18 @@ def audit(event_id: str, actor_type: str, actor_id: str, action_type: str, note:
 
 def audit_user(event_id: str, user: AuthUserRecord, action_type: str, note: str) -> None:
     audit(event_id, user.role, user.user_id, action_type, note)
+
+
+def persist_agent_runtime_result(result) -> None:
+    STORE.save_agent_run(result.run)
+    for call in result.tool_calls:
+        STORE.save_agent_tool_call(call)
+    for draft in result.drafts:
+        STORE.save_agent_draft(draft)
+    for model_call in result.model_calls:
+        STORE.save_agent_model_call(model_call)
+    for evaluation in result.evaluations:
+        STORE.save_agent_evaluation(evaluation)
 
 
 @app.get("/api/health")
@@ -165,11 +178,24 @@ def generate_plan(
         version=1,
         reason="initial_plan",
     )
-    trace = build_planning_trace(event_id, plan_v1)
+    runtime_result = AgentRuntime(mode="deterministic").run_planning(
+        event_id=event_id,
+        brief=brief,
+        merchants=merchants,
+        plan=plan_v1,
+    )
+    trace = build_trace_from_steps(
+        event_id=event_id,
+        trigger="planning_generation",
+        steps=runtime_result.steps,
+        final_output_ref=runtime_result.run.final_output_ref or f"plan:{event_id}:v{plan_v1.version}",
+        trace_id=f"trace_{event_id}_v{plan_v1.version}",
+    )
     tasks = generate_merchant_tasks(plan_v1, merchants)
     STORE.save_plan(plan)
     STORE.save_packs(event_id, packs)
     STORE.save_plan_version(plan_v1)
+    persist_agent_runtime_result(runtime_result)
     STORE.save_agent_trace(trace)
     STORE.save_merchant_tasks(event_id, tasks)
     audit(event_id, "agent", "planner", "generate_plan", "生成 EventPlan 和商户执行包")
@@ -177,6 +203,7 @@ def generate_plan(
         **plan.model_dump(),
         "current_plan": plan_v1,
         "agent_trace": trace,
+        "agent_run": runtime_result.run,
         "merchant_tasks": tasks,
     }
 
@@ -259,6 +286,32 @@ def approve_plan_version(
 @app.get("/api/events/{event_id}/agent-traces")
 def agent_traces(event_id: str, user: AuthUserRecord = Depends(require_organizer)):
     return STORE.list_agent_traces(event_id)
+
+
+@app.get("/api/events/{event_id}/agent-runs")
+def agent_runs(event_id: str, user: AuthUserRecord = Depends(require_organizer)):
+    return STORE.list_agent_runs(event_id)
+
+
+@app.get("/api/events/{event_id}/agent-drafts")
+def agent_drafts(
+    event_id: str,
+    draft_type: str | None = None,
+    user: AuthUserRecord = Depends(require_organizer),
+):
+    return STORE.list_agent_drafts(event_id, draft_type=draft_type)
+
+
+@app.get("/api/events/{event_id}/agent-runs/{run_id}/tool-calls")
+def agent_tool_calls(
+    event_id: str,
+    run_id: str,
+    user: AuthUserRecord = Depends(require_organizer),
+):
+    run = STORE.get_agent_run(run_id)
+    if not run or run.event_id != event_id:
+        raise HTTPException(status_code=404, detail="agent run not found")
+    return STORE.list_agent_tool_calls(run_id)
 
 
 @app.get("/api/events/{event_id}/merchant-tasks")
