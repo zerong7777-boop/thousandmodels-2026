@@ -6,6 +6,10 @@ PUBLIC_FORBIDDEN_TERMS = [
     "RecoveryProposal",
     "Incident",
     "AgentTrace",
+    "AgentRun",
+    "AgentDraft",
+    "AgentToolCall",
+    "AgentModelCall",
     "backend",
     "schema",
     "fallback",
@@ -40,3 +44,39 @@ def evaluate_public_copy(
         public_copy_ready=bool(content.strip()) and not forbidden,
         notes=[f"forbidden_terms={','.join(forbidden)}"] if forbidden else ["public copy passed"],
     )
+
+
+UNSAFE_MUTATION_TERMS = [
+    "approval_status",
+    "publish_status",
+    "approved_by",
+    "approved_at",
+    "inventory_status",
+    "queue_status",
+    "available_for_visitors",
+    "plan_patch",
+    "merchant_task_patch",
+    "public_notice.publish_status",
+    "create_plan_version",
+    "approve_recovery",
+    "publish_notice",
+]
+
+
+class UnsafeMutationAttempt(ValueError):
+    pass
+
+
+def find_unsafe_mutation_terms(payload: object) -> list[str]:
+    text = str(payload).lower()
+    found: list[str] = []
+    for term in UNSAFE_MUTATION_TERMS:
+        if term.lower() in text:
+            found.append(term)
+    return found
+
+
+def assert_no_unsafe_mutation(payload: object) -> None:
+    found = find_unsafe_mutation_terms(payload)
+    if found:
+        raise UnsafeMutationAttempt(",".join(found))
