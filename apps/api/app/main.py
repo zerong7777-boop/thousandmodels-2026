@@ -326,6 +326,18 @@ def agent_model_calls(
     return STORE.list_agent_model_calls(run_id)
 
 
+@app.get("/api/events/{event_id}/agent-runs/{run_id}/evaluations")
+def agent_evaluations(
+    event_id: str,
+    run_id: str,
+    user: AuthUserRecord = Depends(require_organizer),
+):
+    run = STORE.get_agent_run(run_id)
+    if not run or run.event_id != event_id:
+        raise HTTPException(status_code=404, detail="agent run not found")
+    return STORE.list_agent_evaluations(run_id)
+
+
 @app.get("/api/events/{event_id}/merchant-tasks")
 def merchant_tasks(event_id: str, user: AuthUserRecord = Depends(require_organizer)):
     return STORE.list_merchant_tasks(event_id)
