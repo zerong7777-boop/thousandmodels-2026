@@ -17,7 +17,7 @@ describe("v0.9 Agent evidence boundaries", () => {
     const importers = files
       .filter((file) => !file.includes(`${path.sep}components${path.sep}agent${path.sep}`))
       .filter((file) => readFileSync(file, "utf8").includes("components/agent"))
-      .map((file) => path.relative(srcRoot, file).replaceAll(path.sep, "/"));
+      .map((file) => path.relative(srcRoot, file).split(path.sep).join("/"));
 
     expect(importers.sort()).toEqual([
       "pages/organizer/OrganizerEventWorkspacePage.tsx",

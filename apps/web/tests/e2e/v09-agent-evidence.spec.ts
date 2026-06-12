@@ -279,7 +279,8 @@ async function mockApi(page: Page, role: DemoRole) {
     }
 
     if (pathname.includes("/api/events/demo-night-tour/agent-runs/") && pathname.endsWith("/tool-calls")) {
-      const runId = pathname.split("/").at(-2) ?? "";
+      const pathParts = pathname.split("/");
+      const runId = pathParts[pathParts.length - 2] ?? "";
       await route.fulfill(json(toolCalls[runId as keyof typeof toolCalls] ?? []));
       return;
     }
