@@ -314,6 +314,18 @@ def agent_tool_calls(
     return STORE.list_agent_tool_calls(run_id)
 
 
+@app.get("/api/events/{event_id}/agent-runs/{run_id}/model-calls")
+def agent_model_calls(
+    event_id: str,
+    run_id: str,
+    user: AuthUserRecord = Depends(require_organizer),
+):
+    run = STORE.get_agent_run(run_id)
+    if not run or run.event_id != event_id:
+        raise HTTPException(status_code=404, detail="agent run not found")
+    return STORE.list_agent_model_calls(run_id)
+
+
 @app.get("/api/events/{event_id}/merchant-tasks")
 def merchant_tasks(event_id: str, user: AuthUserRecord = Depends(require_organizer)):
     return STORE.list_merchant_tasks(event_id)
@@ -356,7 +368,7 @@ def update_runtime_state(
     runtime_result = None
     if incident:
         STORE.save_incident(incident)
-        runtime_result = AgentRuntime(mode="deterministic").run_incident_recovery_preview(
+        runtime_result = AgentRuntime().run_incident_recovery_preview(
             event_id="demo-night-tour",
             incident=incident,
             state=next_state,

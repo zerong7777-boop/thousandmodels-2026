@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from app.agents.drafts import (
-    build_public_notice_draft,
-    build_recovery_explanation_draft,
-    build_review_summary_draft,
+from app.agents.drafts import build_review_summary_draft
+from app.agents.draft_generation import (
+    DraftGenerationContext,
+    DraftGenerationResult,
+    choose_draft_generator,
 )
-from app.agents.guards import evaluate_public_copy
 from app.agents.tool_recorder import ToolRecorder
 from app.schemas import (
     AgentDraft,
@@ -45,8 +45,16 @@ def utc_now() -> str:
 
 
 class AgentRuntime:
-    def __init__(self, mode: str = "deterministic"):
-        self.mode = mode if mode in {"deterministic", "qwen_draft"} else "deterministic"
+    def __init__(self, mode: str | None = None, draft_generator=None):
+        self.draft_generator = draft_generator or choose_draft_generator()
+        selected_mode = mode or getattr(self.draft_generator, "mode", "deterministic")
+        self.mode = selected_mode if selected_mode in {"deterministic", "qwen_draft"} else "deterministic"
+
+    def _draft_fallback_state(self, results: list[DraftGenerationResult]) -> tuple[bool, str | None, str]:
+        fallback_reasons = sorted({result.fallback_reason for result in results if result.fallback_reason})
+        fallback_used = any(result.fallback_used for result in results)
+        status = "fallback_completed" if fallback_used and self.mode == "qwen_draft" else "completed"
+        return fallback_used, ",".join(fallback_reasons) if fallback_reasons else None, status
 
     def run_planning(
         self,
@@ -210,14 +218,33 @@ class AgentRuntime:
             input_payload={"incident_id": incident.incident_id, "type": incident.type},
             fn=lambda: build_recovery_proposal(incident).model_dump(),
         )
-        recovery_draft = build_recovery_explanation_draft(run_id, incident, proposal_payload)
-        notice_draft = build_public_notice_draft(run_id, incident, proposal_payload)
-        evaluation = evaluate_public_copy(
-            run_id=run_id,
-            content=notice_draft.content,
-            human_approval_required=True,
-            fallback_used=False,
+        recovery_result = self.draft_generator.generate_recovery_explanation(
+            DraftGenerationContext(
+                run_id=run_id,
+                event_id=event_id,
+                draft_type="recovery_explanation",
+                input_refs=[f"incident:{incident.incident_id}", "recovery_proposal_payload"],
+                incident=incident,
+                proposal_payload=proposal_payload,
+            )
         )
+        notice_result = self.draft_generator.generate_public_notice(
+            DraftGenerationContext(
+                run_id=run_id,
+                event_id=event_id,
+                draft_type="public_notice",
+                input_refs=[f"incident:{incident.incident_id}", f"draft:{recovery_result.draft.draft_id}"],
+                incident=incident,
+                proposal_payload=proposal_payload,
+            )
+        )
+        recovery_draft = recovery_result.draft
+        notice_draft = notice_result.draft
+        draft_results = [recovery_result, notice_result]
+        fallback_used, fallback_reason, run_status = self._draft_fallback_state(draft_results)
+        evaluations = [result.evaluation for result in draft_results if result.evaluation is not None]
+        model_calls = [result.model_call for result in draft_results if result.model_call is not None]
+        public_ready = not evaluations or all(evaluation.public_copy_ready for evaluation in evaluations)
         runtime_ref = f"runtime_state:{state.merchant_id}" if state else "runtime_state:none"
         steps = [
             AgentStep(
@@ -232,8 +259,9 @@ class AgentRuntime:
                 decision_reason="The merchant signal affects route guidance and needs organizer approval.",
                 confidence=0.86,
                 requires_human_approval=True,
+                model_call_ref=recovery_result.model_call.model_call_id if recovery_result.model_call else None,
                 schema_name="RecoveryProposal",
-                validation_status="passed",
+                validation_status="fallback" if recovery_result.fallback_used else "passed",
             ),
             AgentStep(
                 step_id="step_public_notice",
@@ -245,25 +273,26 @@ class AgentRuntime:
                 tool_call_refs=[],
                 structured_output={
                     "draft_id": notice_draft.draft_id,
-                    "public_copy_ready": evaluation.public_copy_ready,
+                    "public_copy_ready": public_ready,
                 },
                 decision_reason="Visitors need action guidance without internal operational terms.",
                 confidence=0.84,
                 requires_human_approval=True,
+                model_call_ref=notice_result.model_call.model_call_id if notice_result.model_call else None,
                 schema_name="AgentDraft",
-                validation_status="passed" if evaluation.public_copy_ready else "failed",
+                validation_status="fallback" if notice_result.fallback_used else ("passed" if public_ready else "failed"),
             ),
         ]
         run = AgentRun(
             run_id=run_id,
             event_id=event_id,
             trigger="incident_recovery",
-            mode="deterministic",
-            status="completed",
+            mode=self.mode,
+            status=run_status,
             started_at=started_at,
             completed_at=utc_now(),
-            fallback_used=False,
-            fallback_reason=None,
+            fallback_used=fallback_used,
+            fallback_reason=fallback_reason,
             final_output_ref=f"draft:{notice_draft.draft_id}",
             error_summary=None,
         )
@@ -272,8 +301,8 @@ class AgentRuntime:
             steps=steps,
             tool_calls=recorder.calls,
             drafts=[recovery_draft, notice_draft],
-            model_calls=[],
-            evaluations=[evaluation],
+            model_calls=model_calls,
+            evaluations=evaluations,
         )
 
     def run_review_generation(
