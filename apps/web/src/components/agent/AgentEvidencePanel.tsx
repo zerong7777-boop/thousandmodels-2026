@@ -57,7 +57,7 @@ export function AgentEvidencePanel({
       </CardHeader>
       <CardContent className="space-y-4">
         <AgentRunSummary run={selectedRun} />
-        <AgentSafetyChecklist />
+        <AgentSafetyChecklist hasModelEvidence={modelCalls.some((call) => call.model_call_id)} />
         <AgentModelEvidenceCard modelCalls={modelCalls} evaluations={evaluations} />
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.8fr)]">
           <AgentStepTimeline steps={steps} />

@@ -81,6 +81,18 @@ shadcn/ui-inspired local component layer
 - Smoke documentation is in `docs/research/v0.9-agent-evidence-smoke.md`.
 - Qwen/QwenPaw remains outside the required deterministic demo path.
 
+## v1.0 Qwen Controlled Draft State
+
+- v1.0 adds optional Qwen-assisted controlled drafts behind `AGENT_DRAFT_BACKEND=qwen`.
+- Default local demo remains deterministic and does not require `DASHSCOPE_API_KEY`.
+- Incident recovery can record Qwen/skipped/fallback model evidence for recovery explanation and public notice drafts.
+- Review generation can record Qwen/skipped/fallback model evidence for review summary drafts.
+- Model output is schema-checked, public-copy checked, unsafe-mutation checked, and never directly mutates authoritative state.
+- Organizer pages can inspect model draft evidence; merchant, tourist, and public H5 pages do not expose raw model/backend terms.
+- Screenshot evidence is under `docs/research/assets/v1.0-qwen-controlled-draft/`.
+- Smoke documentation is in `docs/research/v1.0-qwen-controlled-draft-smoke.md`.
+- QwenPaw remains unimplemented and must not be claimed as active workflow orchestration.
+
 ## Demo Accounts
 
 - organizer: `organizer.demo`
@@ -92,4 +104,4 @@ shadcn/ui-inspired local component layer
 
 This is a stronger productized multilingual MVP, not a final commercial UI. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview.
 
-Do not continue into Qwen/QwenPaw integration, real merchant connections, hardware, real traffic prediction, model training, payment/POS integrations, open registration, real map APIs, or a marketing landing page without a new plan.
+Do not continue into QwenPaw integration, real merchant connections, hardware, real traffic prediction, model training, payment/POS integrations, open registration, real map APIs, or a marketing landing page without a new plan.

@@ -11,7 +11,7 @@ function walk(dir: string): string[] {
   });
 }
 
-describe("v0.9 Agent evidence boundaries", () => {
+describe("v0.9/v1.0 Agent evidence boundaries", () => {
   test("Agent evidence components are only imported by organizer-facing files", () => {
     const files = walk(srcRoot).filter((file) => file.endsWith(".tsx") || file.endsWith(".ts"));
     const importers = files

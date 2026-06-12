@@ -201,3 +201,48 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 | --- | --- | --- | --- |
 | `rg -n "DASHSCOPE_API_KEY|required Qwen|required QwenPaw|must provide" apps docs` | project root | 0 | Matches are optional/non-required behavior, tests, specs, or historical verification notes; no required model API path was introduced. |
 | `rg -n "AgentRun|AgentDraft|AgentToolCall|AgentModelCall|AgentEvaluation|Qwen|QwenPaw|fallback|schema|backend" apps\web\src\pages\merchant apps\web\src\pages\tourist apps\web\src\pages\public` | project root | 1 | No matches; `rg` exit 1 is expected for no matches. |
+
+## v1.0 Qwen Controlled Draft Verification
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python -m pytest tests/test_v10_draft_generation.py tests/test_v10_qwen_draft_runtime.py tests/test_v10_agent_evidence_api.py -q` | `apps/api` | 0 | 15 v1.0 backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `python -m pytest -q` | `apps/api` | 0 | 57 backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `npm.cmd run test -- v10-agent-model-api.test.ts v10-agent-model-components.test.tsx v10-agent-model-pages.test.tsx v09-agent-boundaries.test.ts` | `apps/web` | 0 | 4 focused frontend test files passed, 10 tests passed. |
+| `npm.cmd run test` | `apps/web` | 0 | 24 frontend test files passed, 78 tests passed. |
+| `npm.cmd run build` | `apps/web` | 0 | `tsc -b && vite build` passed; 3216 modules transformed; existing >500 kB chunk warning remains for `assets/index-CQMjPpfb.js` at 786.59 kB. |
+| `npm.cmd exec playwright test tests/e2e/v10-qwen-draft-evidence.spec.ts` | `apps/web` | 0 | 3 v1.0 Playwright smoke tests passed and generated 3 screenshots. |
+| `npm.cmd exec playwright test` | `apps/web` | 0 | 21 active Playwright tests passed, 4 historical v0.4 tests skipped. |
+
+### v1.0 Screenshot Evidence
+
+| Route | Screenshot |
+| --- | --- |
+| `/organizer/events/demo-night-tour/exceptions` | `docs/research/assets/v1.0-qwen-controlled-draft/01-exception-model-evidence.png` |
+| `/organizer/events/demo-night-tour/review` | `docs/research/assets/v1.0-qwen-controlled-draft/02-review-model-evidence.png` |
+| `/public/events/demo-night-tour` | `docs/research/assets/v1.0-qwen-controlled-draft/03-public-h5-no-model-terms.png` |
+
+### v1.0 Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Demo runs without `DASHSCOPE_API_KEY` | pass |
+| Qwen path is optional behind `AGENT_DRAFT_BACKEND=qwen` | pass |
+| Missing provider key records skipped model calls and deterministic fallback | pass |
+| Invalid JSON/schema/provider errors fall back deterministically | pass |
+| Public notice blocks raw model/backend terms | pass |
+| Model output cannot create plan versions or publish notices | pass |
+| Merchant/tourist/public pages do not expose raw model evidence | pass |
+| QwenPaw is not claimed as implemented workflow orchestration | pass |
+
+### v1.0 Boundary Scan Commands
+
+| Command | Working directory | Exit code | Result |
+| --- | --- | --- | --- |
+| `rg -n "DASHSCOPE_API_KEY|required Qwen|required QwenPaw|must provide" apps docs` | project root | 0 | Matches are optional/non-required behavior, tests, specs, implementation plan examples, or adapter code; no required model API path was introduced. |
+| `rg -n "AgentModelCall|Qwen|QwenPaw|fallback|schema|backend|deterministic" apps\web\src\pages\merchant apps\web\src\pages\tourist apps\web\src\pages\public` | project root | 1 | No matches; `rg` exit 1 is expected for no matches. |
+
+### v1.0 Verification Notes
+
+- Initial Playwright/build attempts in the managed sandbox hit Windows `EPERM` when writing `test-results` or `tsconfig.tsbuildinfo`; the same commands passed when rerun with approved project write access.
+- The v1.0 focused smoke screenshots were manually inspected after generation. The organizer exception/review pages show model draft evidence, and the public H5 screenshot remains visitor-facing.

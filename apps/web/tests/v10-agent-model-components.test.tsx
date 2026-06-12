@@ -83,4 +83,22 @@ describe("v1.0 model evidence components", () => {
 
     expect(screen.getAllByText("No model call recorded for this deterministic run.").length).toBeGreaterThan(0);
   });
+
+  test("AgentEvidencePanel does not show deterministic no-model badge when model evidence exists", () => {
+    renderEnglish(
+      <AgentEvidencePanel
+        title="Review Agent evidence"
+        description="Evidence created by specialist Agents."
+        runs={[run]}
+        steps={[]}
+        toolCalls={[]}
+        drafts={[]}
+        modelCalls={[modelCall]}
+        evaluations={[evaluation]}
+        emptyMessage="Generate a report to create review evidence."
+      />
+    );
+
+    expect(screen.queryByText("No model call recorded for this deterministic run.")).not.toBeInTheDocument();
+  });
 });
