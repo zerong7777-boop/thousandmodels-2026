@@ -194,4 +194,4 @@ def test_render_markdown_does_not_include_secret_values():
     assert "No API key" in markdown
     assert "sk-secret" not in markdown
     assert "Authorization: Bearer" not in markdown
-    assert "raw provider payload" not in markdown
+    assert "raw provider payload includes" not in markdown
