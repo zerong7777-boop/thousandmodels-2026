@@ -19,6 +19,16 @@ def test_live_smoke_env_requires_manual_guard(monkeypatch):
         require_live_qwen_env()
 
 
+@pytest.mark.parametrize("guard_value", ["true", "0"])
+def test_live_smoke_env_requires_exact_manual_guard_value(monkeypatch, guard_value):
+    monkeypatch.setenv("RUN_LIVE_QWEN_SMOKE", guard_value)
+    monkeypatch.setenv("AGENT_DRAFT_BACKEND", "qwen")
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
+
+    with pytest.raises(LiveSmokeConfigError, match="RUN_LIVE_QWEN_SMOKE"):
+        require_live_qwen_env()
+
+
 def test_live_smoke_env_requires_qwen_backend(monkeypatch):
     monkeypatch.setenv("RUN_LIVE_QWEN_SMOKE", "1")
     monkeypatch.setenv("AGENT_DRAFT_BACKEND", "deterministic")
@@ -96,6 +106,15 @@ def test_has_live_success_only_counts_non_fallback_success():
     assert has_live_success(result) is True
 
 
+def test_has_live_success_ignores_fallback_successes():
+    result = {
+        "recovery": {"model_calls": [{"response_status": "success", "fallback_used": True}]},
+        "review": {"model_calls": [{"response_status": "success", "fallback_used": True}]},
+    }
+
+    assert has_live_success(result) is False
+
+
 def test_render_markdown_does_not_include_secret_values():
     result = {
         "date": "2026-06-12",
@@ -124,6 +143,8 @@ def test_render_markdown_does_not_include_secret_values():
                     "fallback_used": False,
                     "error_summary": None,
                     "created_at": "2026-06-12T10:00:00Z",
+                    "Authorization": "Bearer sk-secret",
+                    "parsed_output": {"content": "raw provider payload includes sk-secret"},
                 }
             ],
             "evaluations": [
@@ -173,3 +194,4 @@ def test_render_markdown_does_not_include_secret_values():
     assert "No API key" in markdown
     assert "sk-secret" not in markdown
     assert "Authorization: Bearer" not in markdown
+    assert "raw provider payload" not in markdown
