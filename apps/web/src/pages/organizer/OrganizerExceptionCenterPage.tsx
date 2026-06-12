@@ -19,6 +19,16 @@ export function OrganizerExceptionCenterPage({ eventId = "demo-night-tour" }: { 
     [],
     [eventId, recoveryRun?.run_id]
   );
+  const { data: recoveryModelCalls } = useAsyncData(
+    () => (recoveryRun ? api.getAgentModelCalls(eventId, recoveryRun.run_id) : Promise.resolve([])),
+    [],
+    [eventId, recoveryRun?.run_id]
+  );
+  const { data: recoveryEvaluations } = useAsyncData(
+    () => (recoveryRun ? api.getAgentEvaluations(eventId, recoveryRun.run_id) : Promise.resolve([])),
+    [],
+    [eventId, recoveryRun?.run_id]
+  );
   const incidents = asArray(exceptions) as Incident[];
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
   const [proposal, setProposal] = useState<RecoveryProposal | null>(null);
@@ -79,6 +89,8 @@ export function OrganizerExceptionCenterPage({ eventId = "demo-night-tour" }: { 
             draft.source_run_id === recoveryRun?.run_id &&
             (draft.draft_type === "recovery_explanation" || draft.draft_type === "public_notice")
         )}
+        modelCalls={asArray(recoveryModelCalls)}
+        evaluations={asArray(recoveryEvaluations)}
         emptyMessage={t("organizer.agentEvidence.emptyRecovery")}
       />
 

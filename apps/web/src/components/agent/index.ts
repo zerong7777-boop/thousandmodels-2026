@@ -1,5 +1,6 @@
 export { AgentDraftCard } from "./AgentDraftCard";
 export { AgentEvidencePanel } from "./AgentEvidencePanel";
+export { AgentModelEvidenceCard } from "./AgentModelEvidenceCard";
 export { AgentRunSummary } from "./AgentRunSummary";
 export { AgentSafetyChecklist } from "./AgentSafetyChecklist";
 export { AgentStepTimeline } from "./AgentStepTimeline";

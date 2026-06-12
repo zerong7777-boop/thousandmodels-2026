@@ -23,6 +23,16 @@ export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { e
     [],
     [eventId, planningRun?.run_id]
   );
+  const { data: planningModelCalls } = useAsyncData(
+    () => (planningRun ? api.getAgentModelCalls(eventId, planningRun.run_id) : Promise.resolve([])),
+    [],
+    [eventId, planningRun?.run_id]
+  );
+  const { data: planningEvaluations } = useAsyncData(
+    () => (planningRun ? api.getAgentEvaluations(eventId, planningRun.run_id) : Promise.resolve([])),
+    [],
+    [eventId, planningRun?.run_id]
+  );
   const planningSteps = stepsForRun(
     traceList.flatMap((trace) => asArray(trace.steps)),
     planningRun?.run_id
@@ -94,6 +104,8 @@ export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { e
         steps={planningSteps}
         toolCalls={toolCallsForRun(asArray(planningToolCalls), planningRun?.run_id)}
         drafts={[]}
+        modelCalls={asArray(planningModelCalls)}
+        evaluations={asArray(planningEvaluations)}
         emptyMessage={t("organizer.agentEvidence.emptyPlanning")}
       />
 

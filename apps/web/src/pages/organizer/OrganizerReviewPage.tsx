@@ -11,6 +11,16 @@ export function OrganizerReviewPage({ eventId = "demo-night-tour" }: { eventId?:
   const { data: agentRuns } = useAsyncData(() => api.getAgentRuns(eventId), [], [eventId]);
   const reviewRun = latestRunForTrigger(asArray(agentRuns), "review_generation");
   const { data: reviewDrafts } = useAsyncData(() => api.getAgentDrafts(eventId, "review_summary"), [], [eventId]);
+  const { data: reviewModelCalls } = useAsyncData(
+    () => (reviewRun ? api.getAgentModelCalls(eventId, reviewRun.run_id) : Promise.resolve([])),
+    [],
+    [eventId, reviewRun?.run_id]
+  );
+  const { data: reviewEvaluations } = useAsyncData(
+    () => (reviewRun ? api.getAgentEvaluations(eventId, reviewRun.run_id) : Promise.resolve([])),
+    [],
+    [eventId, reviewRun?.run_id]
+  );
   const recommendations = localizedDemoList(asArray(report?.next_event_recommendations), t);
   const lessons = localizedDemoList(asArray(report?.lessons_learned), t);
 
@@ -42,6 +52,8 @@ export function OrganizerReviewPage({ eventId = "demo-night-tour" }: { eventId?:
         steps={[]}
         toolCalls={[]}
         drafts={asArray(reviewDrafts).filter((draft) => draft.source_run_id === reviewRun?.run_id)}
+        modelCalls={asArray(reviewModelCalls)}
+        evaluations={asArray(reviewEvaluations)}
         emptyMessage={t("organizer.agentEvidence.emptyReview")}
       />
       <div className="grid gap-4 lg:grid-cols-2">

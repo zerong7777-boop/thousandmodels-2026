@@ -1,7 +1,8 @@
-import type { AgentDraft, AgentRun, AgentStep, AgentToolCall } from "../../types";
+import type { AgentDraft, AgentEvaluation, AgentModelCall, AgentRun, AgentStep, AgentToolCall } from "../../types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
 import { useI18n } from "../../i18n";
 import { AgentDraftCard } from "./AgentDraftCard";
+import { AgentModelEvidenceCard } from "./AgentModelEvidenceCard";
 import { AgentRunSummary } from "./AgentRunSummary";
 import { AgentSafetyChecklist } from "./AgentSafetyChecklist";
 import { AgentStepTimeline } from "./AgentStepTimeline";
@@ -14,6 +15,8 @@ interface AgentEvidencePanelProps {
   steps: AgentStep[];
   toolCalls: AgentToolCall[];
   drafts: AgentDraft[];
+  modelCalls?: AgentModelCall[];
+  evaluations?: AgentEvaluation[];
   emptyMessage: string;
 }
 
@@ -24,6 +27,8 @@ export function AgentEvidencePanel({
   steps,
   toolCalls,
   drafts,
+  modelCalls = [],
+  evaluations = [],
   emptyMessage
 }: AgentEvidencePanelProps) {
   const { t } = useI18n();
@@ -53,6 +58,7 @@ export function AgentEvidencePanel({
       <CardContent className="space-y-4">
         <AgentRunSummary run={selectedRun} />
         <AgentSafetyChecklist />
+        <AgentModelEvidenceCard modelCalls={modelCalls} evaluations={evaluations} />
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.8fr)]">
           <AgentStepTimeline steps={steps} />
           <AgentToolCallList toolCalls={toolCalls} />
