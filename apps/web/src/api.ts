@@ -2,6 +2,8 @@ import type {
   AuditLog,
   AgentDraft,
   AgentDraftType,
+  AgentEvaluation,
+  AgentModelCall,
   AgentRun,
   AgentTrace,
   AgentToolCall,
@@ -79,6 +81,14 @@ export const api = {
   getAgentToolCalls: (eventId: string, runId: string) =>
     json<AgentToolCall[]>(
       fetch(`${API_BASE}/api/events/${eventId}/agent-runs/${runId}/tool-calls`, READ_OPTIONS)
+    ),
+  getAgentModelCalls: (eventId: string, runId: string) =>
+    json<AgentModelCall[]>(
+      fetch(`${API_BASE}/api/events/${eventId}/agent-runs/${runId}/model-calls`, READ_OPTIONS)
+    ),
+  getAgentEvaluations: (eventId: string, runId: string) =>
+    json<AgentEvaluation[]>(
+      fetch(`${API_BASE}/api/events/${eventId}/agent-runs/${runId}/evaluations`, READ_OPTIONS)
     ),
   getMerchantTasks: (eventId: string) =>
     json<MerchantTask[]>(fetch(`${API_BASE}/api/events/${eventId}/merchant-tasks`, READ_OPTIONS)),
