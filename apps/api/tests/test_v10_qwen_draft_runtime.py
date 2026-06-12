@@ -126,3 +126,65 @@ def test_qwen_recovery_success_does_not_create_v2_before_approval(monkeypatch):
     login_as(client, "organizer.demo")
     current_plan = client.get("/api/events/demo-night-tour/plans/current")
     assert current_plan.json()["version"] == 1
+
+
+def complete_review_event(client: TestClient):
+    prepare_active_event(client)
+    report_sold_out(client)
+    login_as(client, "organizer.demo")
+    incident = client.get("/api/events/demo-night-tour/incidents").json()[0]
+    proposal = client.post(
+        f"/api/events/demo-night-tour/incidents/{incident['incident_id']}/recovery-proposals",
+        headers=MUTATION_HEADERS,
+    ).json()
+    client.post(
+        f"/api/events/demo-night-tour/recovery-proposals/{proposal['proposal_id']}/approve",
+        headers=MUTATION_HEADERS,
+    )
+
+
+def test_qwen_review_summary_uses_existing_metric_refs(monkeypatch):
+    monkeypatch.setenv("AGENT_DRAFT_BACKEND", "qwen")
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
+    raw = json.dumps(
+        {
+            "content": "Evidence: h5_visits was observed. Recommendation: keep backup thresholds visible.",
+            "locale": "en",
+            "structured_payload": {"metrics": ["h5_visits"], "evidence_backed": True},
+            "evidence_refs": ["metrics"],
+            "safety_notes": ["no invented conversion metric"],
+        }
+    )
+    monkeypatch.setattr(
+        "app.agents.draft_generation.DashScopeQwenDraftProvider",
+        lambda: FakeQwenProvider(raw),
+    )
+    client = TestClient(app)
+    complete_review_event(client)
+
+    response = client.post("/api/events/demo-night-tour/review-report", headers=MUTATION_HEADERS)
+
+    assert response.status_code == 200
+    assert response.json()["agent_run"]["mode"] == "qwen_draft"
+    drafts = client.get("/api/events/demo-night-tour/agent-drafts?draft_type=review_summary").json()
+    assert drafts
+    assert "h5_visits" in drafts[0]["structured_payload"]["metrics"]
+    assert "conversion_rate" not in drafts[0]["content"]
+
+
+def test_qwen_review_schema_failure_falls_back_to_metric_backed_summary(monkeypatch):
+    monkeypatch.setenv("AGENT_DRAFT_BACKEND", "qwen")
+    monkeypatch.setenv("DASHSCOPE_API_KEY", "test-key")
+    monkeypatch.setattr(
+        "app.agents.draft_generation.DashScopeQwenDraftProvider",
+        lambda: FakeQwenProvider('{"content": "", "locale": "en"}'),
+    )
+    client = TestClient(app)
+    complete_review_event(client)
+
+    response = client.post("/api/events/demo-night-tour/review-report", headers=MUTATION_HEADERS)
+
+    assert response.status_code == 200
+    assert response.json()["agent_run"]["status"] == "fallback_completed"
+    drafts = client.get("/api/events/demo-night-tour/agent-drafts?draft_type=review_summary").json()
+    assert "h5_visits" in drafts[0]["structured_payload"]["metrics"]

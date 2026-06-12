@@ -600,7 +600,7 @@ def review_report(
         audit_logs=STORE.list_audit_logs(event_id),
         metrics=STORE.list_operational_metrics(event_id),
     )
-    runtime_result = AgentRuntime(mode="deterministic").run_review_generation(
+    runtime_result = AgentRuntime().run_review_generation(
         event_id=event_id,
         metrics=STORE.list_operational_metrics(event_id),
         incidents=STORE.list_incidents(event_id),

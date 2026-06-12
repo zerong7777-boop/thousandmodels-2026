@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from app.agents.drafts import build_review_summary_draft
 from app.agents.draft_generation import (
     DraftGenerationContext,
     DraftGenerationResult,
@@ -315,14 +314,20 @@ class AgentRuntime:
     ) -> AgentRuntimeResult:
         started_at = utc_now()
         run_id = f"run_{event_id}_review"
-        draft = build_review_summary_draft(
-            run_id=run_id,
-            event_id=event_id,
-            metrics=metrics,
-            incidents=incidents,
-            notices=notices,
-            proposals=proposals,
+        review_result = self.draft_generator.generate_review_summary(
+            DraftGenerationContext(
+                run_id=run_id,
+                event_id=event_id,
+                draft_type="review_summary",
+                input_refs=["metrics", "incidents", "public_notices", "recovery_proposals"],
+                metrics=metrics,
+                incidents=incidents,
+                notices=notices,
+                proposals=proposals,
+            )
         )
+        draft = review_result.draft
+        fallback_used, fallback_reason, run_status = self._draft_fallback_state([review_result])
         step = AgentStep(
             step_id="step_review",
             run_id=run_id,
@@ -335,19 +340,20 @@ class AgentRuntime:
             decision_reason="Review should separate evidence from recommendations.",
             confidence=0.86,
             requires_human_approval=False,
+            model_call_ref=review_result.model_call.model_call_id if review_result.model_call else None,
             schema_name="AgentDraft",
-            validation_status="passed",
+            validation_status="fallback" if fallback_used else "passed",
         )
         run = AgentRun(
             run_id=run_id,
             event_id=event_id,
             trigger="review_generation",
-            mode="deterministic",
-            status="completed",
+            mode=self.mode,
+            status=run_status,
             started_at=started_at,
             completed_at=utc_now(),
-            fallback_used=False,
-            fallback_reason=None,
+            fallback_used=fallback_used,
+            fallback_reason=fallback_reason,
             final_output_ref=f"draft:{draft.draft_id}",
             error_summary=None,
         )
@@ -356,6 +362,6 @@ class AgentRuntime:
             steps=[step],
             tool_calls=[],
             drafts=[draft],
-            model_calls=[],
-            evaluations=[],
+            model_calls=[review_result.model_call] if review_result.model_call else [],
+            evaluations=[review_result.evaluation] if review_result.evaluation else [],
         )
