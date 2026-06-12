@@ -162,3 +162,42 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 | Review draft references metrics/incidents/proposals/notices | pass |
 | Qwen/QwenPaw remains optional | pass |
 | Frontend regression not rerun | not run; no frontend files changed |
+
+## v0.9 Agent Evidence UI Verification
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `npm.cmd run test -- v09-agent-api.test.ts v09-agent-components.test.tsx v09-agent-evidence-pages.test.tsx v09-agent-boundaries.test.ts` | `apps/web` | 0 | 4 v0.9 test files passed, 13 tests passed. |
+| `npm.cmd run test` | `apps/web` | 0 | 21 frontend test files passed, 70 tests passed. |
+| `npm.cmd run build` | `apps/web` | 0 | `tsc -b && vite build` passed; 3215 modules transformed; Vite emitted the existing >500 kB chunk warning. Initial build attempt exposed test-source TS target issues (`Array.at`, `replaceAll`), which were fixed before the passing run. |
+| `npm.cmd exec playwright test` | `apps/web` | 0 | 18 active Playwright tests passed, 4 historical v0.4 tests skipped; v0.9 screenshots regenerated. |
+| `python -m pytest -q` | `apps/api` | 0 | 42 backend tests passed; 3 existing FastAPI/Starlette deprecation warnings. |
+
+### Screenshot Evidence
+
+| Route | Screenshot |
+| --- | --- |
+| `/organizer/events/demo-night-tour` | `docs/research/assets/v0.9-agent-evidence/01-organizer-workspace-agent-evidence.png` |
+| `/organizer/events/demo-night-tour/exceptions` | `docs/research/assets/v0.9-agent-evidence/02-organizer-exception-agent-drafts.png` |
+| `/organizer/events/demo-night-tour/review` | `docs/research/assets/v0.9-agent-evidence/03-organizer-review-agent-evidence.png` |
+| `/public/events/demo-night-tour` | `docs/research/assets/v0.9-agent-evidence/04-public-h5-no-agent-leakage-mobile.png` |
+
+### Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Agent evidence visible on organizer workspace | pass |
+| Agent evidence visible on organizer exception center | pass |
+| Agent evidence visible on organizer review center | pass |
+| Merchant pages do not expose raw Agent internals | pass |
+| Tourist/public pages do not expose raw Agent/backend/model terms | pass |
+| Public H5 remains unauthenticated | pass |
+| Merchant sold-out quick action still triggers organizer review | pass |
+| Qwen/QwenPaw remains optional and non-required | pass |
+
+### Boundary Scan Commands
+
+| Command | Working directory | Exit code | Result |
+| --- | --- | --- | --- |
+| `rg -n "DASHSCOPE_API_KEY|required Qwen|required QwenPaw|must provide" apps docs` | project root | 0 | Matches are optional/non-required behavior, tests, specs, or historical verification notes; no required model API path was introduced. |
+| `rg -n "AgentRun|AgentDraft|AgentToolCall|AgentModelCall|AgentEvaluation|Qwen|QwenPaw|fallback|schema|backend" apps\web\src\pages\merchant apps\web\src\pages\tourist apps\web\src\pages\public` | project root | 1 | No matches; `rg` exit 1 is expected for no matches. |

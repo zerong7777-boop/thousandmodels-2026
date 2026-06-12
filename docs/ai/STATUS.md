@@ -69,6 +69,18 @@ shadcn/ui-inspired local component layer
 - Optional Qwen draft backend was not executed in v0.8 P0.
 - Qwen/QwenPaw remains optional and non-required for the deterministic demo.
 
+## v0.9 Agent Evidence UI State
+
+- v0.9 exposes the v0.8 backend Agent evidence inside organizer-facing product pages.
+- Organizer workspace shows planning Agent run status, specialist steps, deterministic tool calls, and the human approval boundary.
+- Organizer exception center shows incident recovery Agent evidence plus controlled recovery/public-notice drafts before approval.
+- Organizer review center shows review Agent evidence and review summary draft beside the metric-backed report.
+- Merchant, tourist, and public H5 pages do not import Agent evidence components or expose raw Agent/backend/model terms.
+- Public H5 remains unauthenticated and visitor-facing.
+- Screenshot evidence is under `docs/research/assets/v0.9-agent-evidence/`.
+- Smoke documentation is in `docs/research/v0.9-agent-evidence-smoke.md`.
+- Qwen/QwenPaw remains outside the required deterministic demo path.
+
 ## Demo Accounts
 
 - organizer: `organizer.demo`
