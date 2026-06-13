@@ -163,7 +163,9 @@ def test_render_markdown_does_not_include_secret_values():
                 {
                     "draft_type": "public_notice",
                     "locale": "en",
+                    "status": "drafted",
                     "content_preview": "Please continue.",
+                    "structured_payload_keys": ["requires_organizer_approval"],
                 }
             ],
         },
@@ -192,6 +194,18 @@ def test_render_markdown_does_not_include_secret_values():
     assert "# v1.1 Live Qwen Smoke" in markdown
     assert "qwen_public_notice_v1" in markdown
     assert "No API key" in markdown
+    assert "schema_pass=True" in markdown
+    assert "fallback_used=False" in markdown
+    assert "unsafe_mutation_attempted=False" in markdown
+    assert "human_approval_required=True" in markdown
+    assert "forbidden_public_terms_present=False" in markdown
+    assert "public_copy_ready=True" in markdown
+    assert "public copy ready" in markdown
+    assert "public_notice" in markdown
+    assert "en" in markdown
+    assert "drafted" in markdown
+    assert "Please continue." in markdown
+    assert "requires_organizer_approval" in markdown
     assert "sk-secret" not in markdown
     assert "Authorization: Bearer" not in markdown
     assert "raw provider payload includes" not in markdown

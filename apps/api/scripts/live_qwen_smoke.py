@@ -329,6 +329,52 @@ def render_markdown(result: dict[str, Any]) -> str:
     safe_review_calls = [
         sanitize_model_call(call) for call in result.get("review", {}).get("model_calls", [])
     ]
+    evaluation_lines: list[str] = []
+    for phase in ("recovery", "review"):
+        evaluations = result.get(phase, {}).get("evaluations", [])
+        if not evaluations:
+            evaluation_lines.append(f"- {phase}: none")
+            continue
+        for evaluation in evaluations:
+            notes = "; ".join(_redact_secret_like(evaluation.get("notes") or []))
+            evaluation_lines.append(
+                "- {phase}: schema_pass={schema_pass}, fallback_used={fallback_used}, "
+                "unsafe_mutation_attempted={unsafe_mutation_attempted}, "
+                "human_approval_required={human_approval_required}, "
+                "forbidden_public_terms_present={forbidden_public_terms_present}, "
+                "public_copy_ready={public_copy_ready}, notes={notes}".format(
+                    phase=phase,
+                    schema_pass=evaluation.get("schema_pass"),
+                    fallback_used=evaluation.get("fallback_used"),
+                    unsafe_mutation_attempted=evaluation.get("unsafe_mutation_attempted"),
+                    human_approval_required=evaluation.get("human_approval_required"),
+                    forbidden_public_terms_present=evaluation.get(
+                        "forbidden_public_terms_present"
+                    ),
+                    public_copy_ready=evaluation.get("public_copy_ready"),
+                    notes=notes,
+                )
+            )
+    draft_lines: list[str] = []
+    for phase in ("recovery", "review"):
+        drafts = result.get(phase, {}).get("drafts", [])
+        if not drafts:
+            draft_lines.append(f"- {phase}: none")
+            continue
+        for draft in drafts:
+            content_preview = _redact_secret_like(draft.get("content_preview") or "")
+            payload_keys = ", ".join(draft.get("structured_payload_keys") or [])
+            draft_lines.append(
+                "- {phase}: type={draft_type}, locale={locale}, status={status}, "
+                "payload_keys={payload_keys}, preview={content_preview}".format(
+                    phase=phase,
+                    draft_type=draft.get("draft_type", ""),
+                    locale=draft.get("locale", ""),
+                    status=draft.get("status", ""),
+                    payload_keys=payload_keys,
+                    content_preview=content_preview,
+                )
+            )
     lines = [
         "# v1.1 Live Qwen Smoke",
         "",
@@ -375,6 +421,14 @@ def render_markdown(result: dict[str, Any]) -> str:
             "",
             f"- Recovery public notice drafts: {len(recovery_drafts)}",
             f"- Review summary drafts: {len(review_drafts)}",
+            "",
+            "## Evaluations",
+            "",
+            *evaluation_lines,
+            "",
+            "## Draft Evidence",
+            "",
+            *draft_lines,
             "",
             "## Public Projection",
             "",
