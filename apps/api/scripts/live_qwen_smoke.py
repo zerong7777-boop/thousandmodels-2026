@@ -27,6 +27,7 @@ ASSET_DIR = REPO_ROOT / "docs" / "research" / "assets" / "v1.1-live-qwen-smoke"
 RESULT_JSON = ASSET_DIR / "live-qwen-smoke-result.json"
 SMOKE_DOC = REPO_ROOT / "docs" / "research" / "v1.1-live-qwen-smoke.md"
 EVENT_ID = "demo-night-tour"
+FORBIDDEN_EVIDENCE_KEYS = {"authorization", "parsed_output"}
 
 
 class LiveSmokeConfigError(RuntimeError):
@@ -44,6 +45,18 @@ def _redact_secret_like(value: Any) -> Any:
     if isinstance(value, dict):
         return {key: _redact_secret_like(item) for key, item in value.items()}
     return value
+
+
+def sanitize_evidence_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {
+            key: sanitize_evidence_value(item)
+            for key, item in value.items()
+            if key.lower() not in FORBIDDEN_EVIDENCE_KEYS
+        }
+    if isinstance(value, list):
+        return [sanitize_evidence_value(item) for item in value]
+    return _redact_secret_like(value)
 
 
 def require_live_qwen_env(env: dict[str, str] | None = None) -> dict[str, str]:
@@ -453,10 +466,14 @@ def render_markdown(result: dict[str, Any]) -> str:
 
 
 def write_artifacts(result: dict[str, Any]) -> dict[str, str]:
+    sanitized_result = sanitize_evidence_value(result)
     ASSET_DIR.mkdir(parents=True, exist_ok=True)
-    RESULT_JSON.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+    RESULT_JSON.write_text(
+        json.dumps(sanitized_result, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
     SMOKE_DOC.parent.mkdir(parents=True, exist_ok=True)
-    SMOKE_DOC.write_text(render_markdown(result), encoding="utf-8")
+    SMOKE_DOC.write_text(render_markdown(sanitized_result), encoding="utf-8")
     return {"json": str(RESULT_JSON), "markdown": str(SMOKE_DOC)}
 
 

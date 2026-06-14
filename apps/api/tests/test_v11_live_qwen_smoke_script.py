@@ -1,5 +1,8 @@
+import json
+
 import pytest
 
+from scripts import live_qwen_smoke
 from scripts.live_qwen_smoke import (
     ACCEPTED_MODEL_STATUSES,
     LiveSmokeConfigError,
@@ -7,6 +10,7 @@ from scripts.live_qwen_smoke import (
     render_markdown,
     require_live_qwen_env,
     sanitize_model_call,
+    write_artifacts,
 )
 
 
@@ -209,3 +213,65 @@ def test_render_markdown_does_not_include_secret_values():
     assert "sk-secret" not in markdown
     assert "Authorization: Bearer" not in markdown
     assert "raw provider payload includes" not in markdown
+
+
+def test_write_artifacts_sanitizes_json_evidence(tmp_path, monkeypatch):
+    result = {
+        "date": "2026-06-12",
+        "config": {
+            "agent_draft_backend": "qwen",
+            "qwen_model": "qwen-plus Bearer sk-secret",
+            "qwen_timeout_seconds": "30",
+        },
+        "outcome": "live_success",
+        "recovery": {
+            "run": {
+                "run_id": "run_recovery",
+                "error_summary": "provider said " + "Authorization: " + "Bearer sk-secret",
+            },
+            "model_calls": [
+                {
+                    "model_call_id": "model_recovery",
+                    "provider": "dashscope",
+                    "parsed_output": {"content": "raw provider payload includes sk-secret"},
+                    "Authorization": "Bearer sk-secret",
+                    "response_status": "success",
+                    "fallback_used": False,
+                }
+            ],
+            "evaluations": [
+                {
+                    "evaluation_id": "eval_recovery",
+                    "notes": ["raw provider payload includes sk-secret"],
+                }
+            ],
+            "drafts": [
+                {
+                    "draft_type": "public_notice",
+                    "content_preview": "visitor copy plus sk-secret",
+                    "structured_payload_keys": ["requires_organizer_approval"],
+                }
+            ],
+        },
+        "review": {"run": {}, "model_calls": [], "evaluations": [], "drafts": []},
+        "public_projection": {"current_plan_version": 2, "notice_count": 1},
+        "deterministic_fallback_probe": {"agent_run_mode": "deterministic"},
+        "secret_policy": "No API key, Authorization header, or raw provider payload is stored.",
+    }
+    monkeypatch.setattr(live_qwen_smoke, "ASSET_DIR", tmp_path)
+    monkeypatch.setattr(live_qwen_smoke, "RESULT_JSON", tmp_path / "result.json")
+    monkeypatch.setattr(live_qwen_smoke, "SMOKE_DOC", tmp_path / "smoke.md")
+
+    write_artifacts(result)
+
+    json_text = (tmp_path / "result.json").read_text(encoding="utf-8")
+    markdown = (tmp_path / "smoke.md").read_text(encoding="utf-8")
+    evidence = json.loads(json_text)
+
+    assert evidence["config"]["qwen_model"] == "qwen-plus Bearer [redacted]"
+    assert "parsed_output" not in json_text
+    assert '"Authorization"' not in json_text
+    assert "Authorization: Bearer" not in json_text
+    assert "sk-secret" not in json_text
+    assert "Authorization: Bearer" not in markdown
+    assert "sk-secret" not in markdown
