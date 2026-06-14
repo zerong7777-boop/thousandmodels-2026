@@ -37,6 +37,14 @@ function loadResult(): LiveSmokeResult | null {
 
 const liveResult = loadResult();
 
+function requireLiveSuccessResult(): LiveSmokeResult {
+  if (!liveResult || liveResult.outcome !== "live_success") {
+    test.skip(true, "No live success evidence to screenshot.");
+    throw new Error("unreachable after Playwright skip");
+  }
+  return liveResult;
+}
+
 const organizerUser = {
   user_id: "usr_org_demo",
   username: "organizer.demo",
@@ -249,9 +257,9 @@ async function snap(page: Page, fileName: string) {
 }
 
 test("v1.1 live smoke exception model evidence screenshot", async ({ page }) => {
-  test.skip(!liveResult || liveResult.outcome !== "live_success", "No live success evidence to screenshot.");
+  const result = requireLiveSuccessResult();
   await page.setViewportSize({ width: 1440, height: 900 });
-  await mockApi(page, liveResult);
+  await mockApi(page, result);
   await useEnglish(page);
   await page.goto("/organizer/events/demo-night-tour/exceptions");
   await expect(page.getByText("Model draft evidence")).toBeVisible();
@@ -260,9 +268,9 @@ test("v1.1 live smoke exception model evidence screenshot", async ({ page }) => 
 });
 
 test("v1.1 live smoke review model evidence screenshot", async ({ page }) => {
-  test.skip(!liveResult || liveResult.outcome !== "live_success", "No live success evidence to screenshot.");
+  const result = requireLiveSuccessResult();
   await page.setViewportSize({ width: 1440, height: 900 });
-  await mockApi(page, liveResult);
+  await mockApi(page, result);
   await useEnglish(page);
   await page.goto("/organizer/events/demo-night-tour/review");
   await expect(page.getByText("Model draft evidence")).toBeVisible();
