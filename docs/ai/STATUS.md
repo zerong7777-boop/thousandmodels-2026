@@ -93,6 +93,18 @@ shadcn/ui-inspired local component layer
 - Smoke documentation is in `docs/research/v1.0-qwen-controlled-draft-smoke.md`.
 - QwenPaw remains unimplemented and must not be claimed as active workflow orchestration.
 
+## v1.1 Live Qwen Smoke And Demo Material State
+
+- v1.1 adds a guarded manual live Qwen smoke procedure under `apps/api/scripts/live_qwen_smoke.py`.
+- The live smoke is not part of default backend pytest and requires `RUN_LIVE_QWEN_SMOKE=1` plus local process environment credentials.
+- The live smoke writes sanitized evidence to `docs/research/v1.1-live-qwen-smoke.md` and `docs/research/assets/v1.1-live-qwen-smoke/live-qwen-smoke-result.json`.
+- The current recorded smoke outcome is `blocked` because `DASHSCOPE_API_KEY` was not present in the local process environment.
+- The blocked smoke evidence records a completed deterministic fallback probe; no API key, Authorization header, or raw provider payload is stored.
+- Added `apps/web/tests/e2e/v11-live-qwen-smoke-evidence.spec.ts`; it skips live screenshots unless the smoke outcome is `live_success`.
+- Demo material documents now cover the demo script, architecture brief, slide outline, and screenshot index.
+- Qwen remains optional and constrained to controlled drafts.
+- QwenPaw remains unimplemented and must not be claimed as active workflow orchestration.
+
 ## Demo Accounts
 
 - organizer: `organizer.demo`

@@ -246,3 +246,54 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 
 - Initial Playwright/build attempts in the managed sandbox hit Windows `EPERM` when writing `test-results` or `tsconfig.tsbuildinfo`; the same commands passed when rerun with approved project write access.
 - The v1.0 focused smoke screenshots were manually inspected after generation. The organizer exception/review pages show model draft evidence, and the public H5 screenshot remains visitor-facing.
+
+## v1.1 Live Qwen Smoke And Demo Material Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python scripts\live_qwen_smoke.py` with `RUN_LIVE_QWEN_SMOKE=1`, `AGENT_DRAFT_BACKEND=qwen`, `QWEN_MODEL=qwen-plus`, `QWEN_TIMEOUT_SECONDS=30` | `apps/api` | 2 | Wrote sanitized blocked evidence because `DASHSCOPE_API_KEY` was not present in the process environment; deterministic fallback probe completed. Initial sandboxed attempt hit SQLite `readonly database`, then the same non-secret command wrote evidence with approved project write access. |
+| `python -m pytest tests/test_v11_live_qwen_smoke_script.py tests/test_v10_qwen_draft_runtime.py -q` | `apps/api` | 0 | 17 selected backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `python -m pytest -q` | `apps/api` | 0 | 69 backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `npm.cmd run test` | `apps/web` | 0 | 24 frontend test files passed, 78 tests passed. |
+| `npm.cmd run build` | `apps/web` | 0 | `tsc -b && vite build` passed after fixing v1.1 Playwright result typing; 3216 modules transformed; existing >500 kB chunk warning remains. Initial sandboxed build attempt also hit Windows `EPERM` on `tsconfig.tsbuildinfo`. |
+| `npm.cmd exec playwright test tests/e2e/v11-live-qwen-smoke-evidence.spec.ts` | `apps/web` | 0 | 2 tests skipped because the recorded v1.1 smoke outcome is `blocked`, not `live_success`. |
+| `npm.cmd exec playwright test` | `apps/web` | 0 | 21 active Playwright tests passed, 6 tests skipped. The skips include 4 historical v0.4 tests and 2 v1.1 live-success-only screenshot tests. |
+| `rg -n "sk-[A-Za-z0-9]{16,}\|Authorization: Bearer [A-Za-z0-9]" apps docs` | project root | 1 | No real API key or Authorization bearer pattern found; `rg` exit 1 is expected for no matches. |
+| `rg -n "AgentModelCall\|Qwen\|QwenPaw\|fallback\|schema\|backend\|deterministic" apps\web\src\pages\merchant apps\web\src\pages\tourist apps\web\src\pages\public` | project root | 1 | No raw model/backend terms in merchant, tourist, or public page source; `rg` exit 1 is expected for no matches. |
+
+### v1.1 Artifacts
+
+| Artifact | Path |
+| --- | --- |
+| Guarded smoke script | `apps/api/scripts/live_qwen_smoke.py` |
+| Smoke contract tests | `apps/api/tests/test_v11_live_qwen_smoke_script.py` |
+| Smoke result document | `docs/research/v1.1-live-qwen-smoke.md` |
+| Sanitized smoke JSON | `docs/research/assets/v1.1-live-qwen-smoke/live-qwen-smoke-result.json` |
+| Live evidence Playwright spec | `apps/web/tests/e2e/v11-live-qwen-smoke-evidence.spec.ts` |
+| Demo script | `docs/research/v1.1-demo-script.md` |
+| Architecture brief | `docs/research/v1.1-architecture-brief.md` |
+| Slide outline | `docs/research/v1.1-slide-outline.md` |
+| Screenshot index | `docs/research/v1.1-screenshot-index.md` |
+
+### v1.1 Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Live smoke requires `RUN_LIVE_QWEN_SMOKE=1` | pass |
+| Live smoke requires `AGENT_DRAFT_BACKEND=qwen` | pass |
+| Live smoke requires `DASHSCOPE_API_KEY` from process env and does not store it | pass |
+| Live smoke is not part of default automated tests | pass |
+| Current live smoke artifact honestly records `blocked`, not `live_success` | pass |
+| Deterministic fallback remains verified after blocked smoke | pass |
+| No real API key or Authorization header appears in repo evidence | pass |
+| Merchant/tourist/public pages do not expose raw model evidence | pass |
+| v1.1 live screenshots are skipped unless outcome is `live_success` | pass |
+| Demo materials do not claim QwenPaw implementation | pass |
+
+### v1.1 Verification Notes
+
+- The current v1.1 evidence does not prove live Qwen provider success. It proves the guarded live path exists, safely blocks without a process key, writes sanitized blocked evidence, and verifies deterministic fallback.
+- Do not use v1.1 live screenshot paths in slides while the outcome remains `blocked`.
+- Full Playwright regenerated several historical screenshots during verification; those generated diffs were cleaned because they were not v1.1 plan outputs.
