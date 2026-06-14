@@ -1,0 +1,29 @@
+{
+  "date": "2026-06-14",
+  "config": {
+    "agent_draft_backend": "qwen",
+    "qwen_model": "qwen-plus",
+    "qwen_timeout_seconds": "30"
+  },
+  "outcome": "blocked",
+  "blocked_reason": "DASHSCOPE_API_KEY is required",
+  "recovery": {
+    "run": {},
+    "model_calls": [],
+    "evaluations": [],
+    "drafts": []
+  },
+  "review": {
+    "run": {},
+    "model_calls": [],
+    "evaluations": [],
+    "drafts": []
+  },
+  "public_projection": {},
+  "deterministic_fallback_probe": {
+    "agent_run_mode": "deterministic",
+    "agent_run_status": "completed",
+    "fallback_used": false
+  },
+  "secret_policy": "No API key, Authorization header, or raw provider payload is stored."
+}
