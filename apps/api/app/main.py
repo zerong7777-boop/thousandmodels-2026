@@ -50,6 +50,11 @@ from app.services.planning import (
     generate_plan_version,
 )
 from app.services.publication import build_public_event
+from app.services.qwenpaw_shadow import (
+    QwenPawShadowRunRequest,
+    QwenPawShadowRunResponse,
+    run_qwenpaw_shadow,
+)
 from app.services.recovery import (
     apply_recovery_proposal,
     build_inventory_recovery,
@@ -489,6 +494,48 @@ def approve_operation_suggestion_endpoint(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     audit_user(event_id, user, "approve_operation_suggestion", suggestion_id)
     return suggestion
+
+
+@app.post(
+    "/api/events/{event_id}/qwenpaw-shadow-orchestration/run",
+    response_model=QwenPawShadowRunResponse,
+)
+def run_qwenpaw_shadow_orchestration_endpoint(
+    request: Request,
+    event_id: str,
+    payload: QwenPawShadowRunRequest,
+    user: AuthUserRecord = Depends(require_organizer),
+):
+    verify_mutation_origin(request)
+    try:
+        runtime_result, advisory_bundle = run_qwenpaw_shadow(
+            event_id=event_id,
+            incident_id=payload.incident_id,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    persist_agent_runtime_result(runtime_result)
+    trace = build_trace_from_steps(
+        event_id=event_id,
+        trigger="qwenpaw_shadow_orchestration",
+        steps=runtime_result.steps,
+        final_output_ref=runtime_result.run.final_output_ref or "",
+        trace_id=f"trace_{runtime_result.run.run_id}",
+    )
+    STORE.save_agent_trace(trace)
+    permission_decisions = [
+        call.output_payload["permission_decision"]
+        for call in runtime_result.tool_calls
+        if "permission_decision" in call.output_payload
+    ]
+    audit_user(event_id, user, "run_qwenpaw_shadow_orchestration", runtime_result.run.run_id)
+    return QwenPawShadowRunResponse(
+        agent_run=runtime_result.run,
+        advisory_bundle=advisory_bundle,
+        steps=runtime_result.steps,
+        permission_decisions=permission_decisions,
+    )
 
 
 @app.get("/api/merchants")
