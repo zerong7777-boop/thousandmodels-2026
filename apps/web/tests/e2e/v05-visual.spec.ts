@@ -366,7 +366,7 @@ test("v0.5 public H5 mobile screenshot", async ({ page }) => {
   await mockApi(page, null);
   await useEnglish(page);
   await page.goto("/public/events/demo-night-tour");
-  await expect(page.getByText("Tonight's route")).toBeVisible();
+  await expect(page.getByText("Tonight's event")).toBeVisible();
   await expect(page.getByText("Route progress").first()).toBeVisible();
   await expect(page.getByText("Live update")).toBeVisible();
   await snap(page, "09-public-h5-mobile.png");

@@ -105,6 +105,52 @@ shadcn/ui-inspired local component layer
 - Qwen remains optional and constrained to controlled drafts.
 - QwenPaw remains unimplemented and must not be claimed as active workflow orchestration.
 
+## v1.2 Backend P0 State
+
+- v1.2 Task 1-7 backend P0 is complete.
+- Added event-page, merchant-edge package, in-shop touchpoint, coupon/redemption, and operation-suggestion backend contracts.
+- Event pages can be drafted/published from an approved current `PlanVersion`, and public projection attaches only a published page for the current plan version.
+- Merchant edge package generation creates merchant-scoped interaction packages, in-shop touchpoints, coupon rules, and deterministic Agent evidence.
+- Public scan, coupon claim, and redemption simulation is anonymous and feeds merchant workbench plus review metrics.
+- Merchant sold-out/runtime updates still create incidents and can now generate current-state operation suggestions.
+- Operation suggestions are scoped to the current approved plan, filter stale task/package data, refresh pending payloads, and reject stale approvals.
+- Review reports include touchpoint summary, merchant outcomes, extension tasks, and the existing responsibility-boundary lesson.
+- Optional Qwen draft parsing now accepts a single `agent_draft` wrapper, sanitizes outbound prompt payload control fields, serializes provider prompts as JSON, and keeps unsafe output rejection intact.
+- No real Qwen live call was run in this phase; Qwen remains optional and non-authoritative.
+- Frontend exposure for v1.2 event page / merchant edge / operation suggestion surfaces is now implemented; see the Task 8-10 state below.
+- QwenPaw remains unimplemented and must not be claimed as active workflow orchestration.
+
+## v1.2 Event Page And Merchant Edge Frontend State
+
+- v1.2 Task 8-10 is complete.
+- Organizer workspace exposes Event Page draft/publish actions, merchant package generation, package readiness, evidence refs, and operation-suggestion generation.
+- Organizer exception center exposes operation suggestions beside incidents/recovery proposals and guards stale proposal/suggestion responses.
+- Merchant dashboard exposes the merchant-scoped interaction package, QR/touchpoint cards, coupon rules, claimed/redeemed counts, operator brief, and runtime update flow.
+- Public H5 is framed as a visitor Event Page, remains unauthenticated, and supports simulated scan, coupon claim, and redemption actions without exposing backend/model terms.
+- Review center shows touchpoint summary, merchant outcomes, extension tasks, and business-facing metric labels.
+- Added v1.2 frontend API/types, UI tests, Playwright visual smoke, screenshots, and smoke documentation.
+- Screenshot evidence is under `docs/research/assets/v1.2-event-page-merchant-edge/`.
+- Smoke documentation is in `docs/research/v1.2-event-page-merchant-edge-smoke.md`.
+- v1.2 Playwright smoke uses deterministic mocked API data for visual/product-flow evidence; backend authority is covered by pytest, not by a live backend E2E in this phase.
+- Full verification passed on 2026-06-17: frontend tests/build, Playwright suite, backend pytest, public-boundary scan, local-path scan, and strict secret scan.
+- Broad secret-pattern scanning only matched documentation examples and test assertions, not a real key or bearer token.
+- QwenPaw remains unimplemented and must not be claimed as active workflow orchestration.
+
+## v1.3 Live Demo Hardening State
+
+- v1.3 adds a deterministic local demo reset command under `apps/api/scripts/reset_demo_state.py`.
+- v1.3 adds a separate live Playwright config under `apps/web/playwright.live.config.ts`.
+- v1.3 keeps the default mocked Playwright suite separate from the live-only smoke; `v13-live-demo-smoke.spec.ts` is excluded from `apps/web/playwright.config.ts` and runs through the live config.
+- v1.3 live smoke starts FastAPI and Vite together and exercises real backend state.
+- The live smoke covers organizer login, merchant login, public H5, merchant sold-out reporting, organizer operation suggestions, public UI scan/claim/redeem, and review metrics.
+- Public interaction controls expose only visitor-safe touchpoint/coupon fields for the current plan version.
+- Screenshot evidence is under `docs/research/assets/v1.3-live-demo-smoke/`.
+- Smoke documentation is in `docs/research/v1.3-live-demo-smoke.md`.
+- Operator demo script is in `docs/research/v1.3-operator-demo-script.md`.
+- Optional Qwen live smoke is currently classified as `blocked` because `DASHSCOPE_API_KEY` was not present in the process environment.
+- Qwen remains optional and non-authoritative.
+- QwenPaw remains unimplemented and must not be claimed as active workflow orchestration.
+
 ## Demo Accounts
 
 - organizer: `organizer.demo`

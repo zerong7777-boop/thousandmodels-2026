@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../api";
-import type { AgentToolCall, Incident, RecoveryProposal } from "../../types";
+import type { AgentToolCall, Incident, OperationSuggestion, OperationSuggestionsResponse, RecoveryProposal } from "../../types";
+import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
 import { AgentEvidencePanel, latestRunForTrigger, toolCallsForRun } from "../../components/agent";
@@ -8,9 +9,17 @@ import { ApprovalPanel, ProductPageHeader, RecoveryDiff, StatusPill } from "../.
 import { localizedDemoText, localizedStatus, useI18n } from "../../i18n";
 import { asArray, useAsyncData } from "../productUtils";
 
+const suggestionTypeLabels: Record<string, string> = {
+  route_adjustment: "organizer.exceptions.suggestionType.routeAdjustment",
+  merchant_capacity: "organizer.exceptions.suggestionType.merchantCapacity",
+  coupon_rebalance: "organizer.exceptions.suggestionType.couponRebalance",
+  public_notice: "organizer.exceptions.suggestionType.publicNotice",
+  extension_task: "organizer.exceptions.suggestionType.extensionTask"
+};
+
 export function OrganizerExceptionCenterPage({ eventId = "demo-night-tour" }: { eventId?: string }) {
   const { t } = useI18n();
-  const { data: exceptions } = useAsyncData(() => api.getIncidents(eventId), []);
+  const { data: exceptions } = useAsyncData(() => api.getIncidents(eventId), [], [eventId]);
   const { data: agentRuns } = useAsyncData(() => api.getAgentRuns(eventId), [], [eventId]);
   const recoveryRun = latestRunForTrigger(asArray(agentRuns), "incident_recovery");
   const { data: recoveryDrafts } = useAsyncData(() => api.getAgentDrafts(eventId), [], [eventId]);
@@ -33,6 +42,11 @@ export function OrganizerExceptionCenterPage({ eventId = "demo-night-tour" }: { 
   const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(null);
   const [proposal, setProposal] = useState<RecoveryProposal | null>(null);
   const [confirmationMessage, setConfirmationMessage] = useState<string | null>(null);
+  const [recoveryError, setRecoveryError] = useState<string | null>(null);
+  const [operationSuggestions, setOperationSuggestions] = useState<OperationSuggestion[]>([]);
+  const [suggestionMessage, setSuggestionMessage] = useState<string | null>(null);
+  const suggestionsRequestRef = useRef(0);
+  const proposalRequestRef = useRef(0);
   const selectedIncident = useMemo(
     () => incidents.find((item) => item.incident_id === selectedIncidentId) ?? incidents[0],
     [incidents, selectedIncidentId]
@@ -52,20 +66,95 @@ export function OrganizerExceptionCenterPage({ eventId = "demo-night-tour" }: { 
     ? proposal.recommended_changes.map((item) => localizedDemoText(item, t))
     : fallbackChanges;
 
+  useEffect(() => {
+    let active = true;
+    const requestId = ++suggestionsRequestRef.current;
+    api
+      .getOperationSuggestions(eventId)
+      .then((response) => {
+        if (active && requestId === suggestionsRequestRef.current) {
+          setOperationSuggestions(asArray(response.suggestions));
+        }
+      })
+      .catch(() => {
+        if (active && requestId === suggestionsRequestRef.current) {
+          setOperationSuggestions([]);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [eventId]);
+
+  const refreshOperationSuggestions = async () => {
+    const requestId = ++suggestionsRequestRef.current;
+    const response = await api.getOperationSuggestions(eventId);
+    if (requestId === suggestionsRequestRef.current) {
+      setOperationSuggestions(asArray(response.suggestions));
+    }
+  };
+
   const prepareProposal = async (incident: Incident) => {
-    const nextProposal = await api.createRecoveryProposal(eventId, incident.incident_id);
-    setProposal(nextProposal);
     setSelectedIncidentId(incident.incident_id);
     setConfirmationMessage(null);
+    setRecoveryError(null);
+    const requestId = ++proposalRequestRef.current;
+    try {
+      const nextProposal = await api.createRecoveryProposal(eventId, incident.incident_id);
+      if (requestId === proposalRequestRef.current) {
+        setProposal(nextProposal);
+      }
+    } catch {
+      if (requestId === proposalRequestRef.current) {
+        setRecoveryError(t("organizer.exceptions.prepareSuggestionError"));
+      }
+    }
   };
 
   const confirmRecovery = async () => {
     if (!proposal?.proposal_id) {
       setConfirmationMessage(t("organizer.exceptions.proposalRequired"));
+      setRecoveryError(null);
       return;
     }
-    await api.approveRecoveryProposal(eventId, proposal.proposal_id);
-    setConfirmationMessage(t("organizer.exceptions.confirmedMessage"));
+    setRecoveryError(null);
+    const requestId = proposalRequestRef.current;
+    try {
+      await api.approveRecoveryProposal(eventId, proposal.proposal_id);
+      if (requestId === proposalRequestRef.current) {
+        setConfirmationMessage(t("organizer.exceptions.confirmedMessage"));
+      }
+    } catch {
+      if (requestId === proposalRequestRef.current) {
+        setConfirmationMessage(null);
+        setRecoveryError(t("organizer.exceptions.confirmRecoveryError"));
+      }
+    }
+  };
+
+  const generateOperationSuggestions = async () => {
+    setSuggestionMessage(null);
+    const requestId = ++suggestionsRequestRef.current;
+    try {
+      const response = await api.generateOperationSuggestions(eventId);
+      if (requestId === suggestionsRequestRef.current) {
+        setOperationSuggestions(asArray(response.suggestions));
+      }
+    } catch {
+      setSuggestionMessage(t("organizer.exceptions.operationSuggestionsRefreshFailed"));
+      await refreshOperationSuggestions().catch(() => undefined);
+    }
+  };
+
+  const approveOperationSuggestion = async (suggestionId: string) => {
+    setSuggestionMessage(null);
+    try {
+      const approved = await api.approveOperationSuggestion(eventId, suggestionId);
+      setOperationSuggestions((items) => items.map((item) => (item.id === approved.id ? approved : item)));
+    } catch {
+      setSuggestionMessage(t("organizer.exceptions.operationSuggestionStale"));
+      await refreshOperationSuggestions().catch(() => undefined);
+    }
   };
 
   return (
@@ -94,6 +183,65 @@ export function OrganizerExceptionCenterPage({ eventId = "demo-night-tour" }: { 
         emptyMessage={t("organizer.agentEvidence.emptyRecovery")}
       />
 
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <CardTitle>{t("organizer.exceptions.operationSuggestionsTitle")}</CardTitle>
+              <CardDescription>{t("organizer.exceptions.operationSuggestionsDescription")}</CardDescription>
+            </div>
+            <Button size="sm" onClick={() => void generateOperationSuggestions()}>
+              {t("organizer.exceptions.generateOperationSuggestions")}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="grid gap-3 lg:grid-cols-2">
+          {suggestionMessage ? (
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 lg:col-span-2">
+              {suggestionMessage}
+            </div>
+          ) : null}
+          {operationSuggestions.map((suggestion) => (
+            <div key={suggestion.id} className="rounded-md border border-slate-200 p-3">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <div className="font-medium">{localizedDemoText(suggestion.title, t)}</div>
+                  <div className="mt-1 text-sm text-slate-600">
+                    {t(suggestionTypeLabels[suggestion.suggestion_type] ?? "organizer.exceptions.suggestionType.other")}
+                  </div>
+                </div>
+                <Badge variant={suggestion.status === "approved" || suggestion.status === "applied" ? "success" : "neutral"}>
+                  {localizedStatus(suggestion.status === "pending_approval" ? "pending" : suggestion.status, t)}
+                </Badge>
+              </div>
+              <p className="mt-2 text-sm leading-5 text-slate-700">{localizedDemoText(suggestion.rationale, t)}</p>
+              <div className="mt-3 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
+                <span>
+                  {t("organizer.exceptions.impactedMerchants", {
+                    value: asArray(suggestion.impacted_merchants).join(", ") || t("common.unavailable")
+                  })}
+                </span>
+                <span>{t("organizer.exceptions.evidenceCount", { count: asArray(suggestion.evidence_refs).length })}</span>
+              </div>
+              <Button
+                className="mt-3"
+                disabled={suggestion.status === "approved" || suggestion.status === "applied"}
+                size="sm"
+                variant="secondary"
+                onClick={() => void approveOperationSuggestion(suggestion.id)}
+              >
+                {t("organizer.exceptions.approveSuggestion")}
+              </Button>
+            </div>
+          ))}
+          {!operationSuggestions.length ? (
+            <div className="rounded-md border border-dashed border-slate-200 p-4 text-sm text-slate-500">
+              {t("organizer.exceptions.operationSuggestionsEmpty")}
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+
       <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)_360px]">
         <Card>
           <CardHeader>
@@ -106,8 +254,11 @@ export function OrganizerExceptionCenterPage({ eventId = "demo-night-tour" }: { 
                 className="w-full rounded-lg border border-slate-200 bg-white p-3 text-left transition hover:border-teal-300 hover:bg-teal-50"
                 key={item.incident_id ?? item.event_id}
                 onClick={() => {
+                  ++proposalRequestRef.current;
                   setSelectedIncidentId(item.incident_id);
+                  setProposal(null);
                   setConfirmationMessage(null);
+                  setRecoveryError(null);
                 }}
                 type="button"
               >
@@ -191,6 +342,7 @@ export function OrganizerExceptionCenterPage({ eventId = "demo-night-tour" }: { 
                   ? localizedDemoText(proposal.public_notice_patch, t)
                   : t("organizer.exceptions.fallbackNotice")}
               </div>
+              {recoveryError ? <StatusPill tone="danger">{recoveryError}</StatusPill> : null}
               {confirmationMessage ? <StatusPill tone="success">{confirmationMessage}</StatusPill> : null}
             </CardContent>
           </Card>

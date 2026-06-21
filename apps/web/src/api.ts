@@ -8,21 +8,27 @@ import type {
   AgentTrace,
   AgentToolCall,
   ApproveRecoveryResponse,
+  CouponRedemption,
+  EventPage,
   EventPlan,
   EventSummary,
   GeneratePlanResponse,
   Incident,
+  MerchantEdgePackagesResponse,
   MerchantPack,
   MerchantTask,
   MerchantWorkbench,
   MerchantRuntimeState,
+  OperationSuggestion,
+  OperationSuggestionsResponse,
   PlanVersion,
   PublicEvent,
   PublicEventV2,
   RecoveryAction,
   RecoveryProposal,
   RuntimeStateUpdateResponse,
-  ReviewReport
+  ReviewReport,
+  TouchpointInteraction
 } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -94,6 +100,39 @@ export const api = {
     json<MerchantTask[]>(fetch(`${API_BASE}/api/events/${eventId}/merchant-tasks`, READ_OPTIONS)),
   getPacks: (eventId = "demo-night-tour") =>
     json<MerchantPack[]>(fetch(`${API_BASE}/api/events/${eventId}/merchant-packs`, READ_OPTIONS)),
+  draftEventPage: (eventId: string) =>
+    json<EventPage>(
+      fetch(`${API_BASE}/api/events/${eventId}/event-page/draft`, mutationOptions())
+    ),
+  publishEventPage: (eventId: string) =>
+    json<EventPage>(
+      fetch(`${API_BASE}/api/events/${eventId}/event-page/publish`, mutationOptions())
+    ),
+  getEventPage: (eventId: string) =>
+    json<EventPage>(fetch(`${API_BASE}/api/events/${eventId}/event-page`, READ_OPTIONS)),
+  generateMerchantEdgePackages: (eventId: string) =>
+    json<MerchantEdgePackagesResponse>(
+      fetch(`${API_BASE}/api/events/${eventId}/merchant-edge-packages/generate`, mutationOptions())
+    ),
+  getMerchantEdgePackages: (eventId: string) =>
+    json<MerchantEdgePackagesResponse>(
+      fetch(`${API_BASE}/api/events/${eventId}/merchant-edge-packages`, READ_OPTIONS)
+    ),
+  generateOperationSuggestions: (eventId: string) =>
+    json<OperationSuggestionsResponse>(
+      fetch(`${API_BASE}/api/events/${eventId}/operation-suggestions/generate`, mutationOptions())
+    ),
+  getOperationSuggestions: (eventId: string) =>
+    json<OperationSuggestionsResponse>(
+      fetch(`${API_BASE}/api/events/${eventId}/operation-suggestions`, READ_OPTIONS)
+    ),
+  approveOperationSuggestion: (eventId: string, suggestionId: string) =>
+    json<OperationSuggestion>(
+      fetch(
+        `${API_BASE}/api/events/${eventId}/operation-suggestions/${suggestionId}/approve`,
+        mutationOptions()
+      )
+    ),
   getRuntimeStates: () =>
     json<MerchantRuntimeState[]>(fetch(`${API_BASE}/api/merchants/runtime-states`, READ_OPTIONS)),
   getMerchantWorkbench: (merchantId: string, eventId = "demo-night-tour") =>
@@ -131,6 +170,36 @@ export const api = {
     ),
   getPublicEvent: (eventId = "demo-night-tour") =>
     json<PublicEventV2 & PublicEvent>(fetch(`${API_BASE}/api/public/events/${eventId}`)),
+  recordTouchpointInteraction: (
+    eventId: string,
+    touchpointId: string,
+    payload: {
+      interaction_type?: TouchpointInteraction["interaction_type"];
+      source?: string;
+      anonymous_interaction_id?: string;
+      metadata?: Record<string, unknown>;
+    }
+  ) =>
+    json<TouchpointInteraction>(
+      fetch(
+        `${API_BASE}/api/public/events/${eventId}/touchpoints/${touchpointId}/interactions`,
+        mutationOptions(payload)
+      )
+    ),
+  claimCoupon: (eventId: string, couponRuleId: string, anonymousInteractionId: string) =>
+    json<CouponRedemption>(
+      fetch(
+        `${API_BASE}/api/public/events/${eventId}/coupons/${couponRuleId}/claim`,
+        mutationOptions({ anonymous_interaction_id: anonymousInteractionId })
+      )
+    ),
+  redeemCoupon: (eventId: string, redemptionId: string) =>
+    json<CouponRedemption>(
+      fetch(
+        `${API_BASE}/api/public/events/${eventId}/coupon-redemptions/${redemptionId}/redeem`,
+        mutationOptions()
+      )
+    ),
   generateReport: (eventId = "demo-night-tour") =>
     json<ReviewReport>(
       fetch(`${API_BASE}/api/events/${eventId}/review-report`, mutationOptions())

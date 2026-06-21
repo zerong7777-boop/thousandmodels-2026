@@ -17,14 +17,20 @@ from app.schemas import (
     AuthSessionRecord,
     AuthUserRecord,
     AuditLog,
+    CouponRedemption,
+    CouponRule,
+    EventPage,
     EventBrief,
     EventPlan,
     EventSummary,
+    InShopTouchpoint,
     Incident,
+    MerchantInteractionPackage,
     MerchantExecutionPack,
     MerchantProfile,
     MerchantRuntimeState,
     MerchantTask,
+    OperationSuggestion,
     OperationalMetric,
     PlanVersion,
     PublicNotice,
@@ -32,6 +38,7 @@ from app.schemas import (
     RecoveryProposal,
     ReviewReport,
     RoutePoint,
+    TouchpointInteraction,
 )
 
 T = TypeVar("T", bound=BaseModel)
@@ -214,6 +221,13 @@ class MVPStore:
             "agent_traces",
             "operational_metrics",
             "reports",
+            "event_pages",
+            "merchant_interaction_packages",
+            "in_shop_touchpoints",
+            "coupon_rules",
+            "coupon_redemptions",
+            "touchpoint_interactions",
+            "operation_suggestions",
             "notices",
             "audit_logs",
         ]
@@ -222,13 +236,21 @@ class MVPStore:
                 self.conn.execute("DELETE FROM records WHERE collection = ?", (collection,))
             elif collection in {"agent_tool_calls", "agent_model_calls", "agent_evaluations"}:
                 self.conn.execute(
-                    "DELETE FROM records WHERE collection = ? AND item_key LIKE ?",
-                    (collection, f"%{event_id}%"),
+                    """
+                    DELETE FROM records
+                    WHERE collection = ?
+                      AND item_key LIKE ?
+                    """,
+                    (collection, f"run_{event_id}_%"),
                 )
             else:
                 self.conn.execute(
-                    "DELETE FROM records WHERE collection = ? AND item_key LIKE ?",
-                    (collection, f"{event_id}%"),
+                    """
+                    DELETE FROM records
+                    WHERE collection = ?
+                      AND (item_key = ? OR item_key LIKE ?)
+                    """,
+                    (collection, event_id, f"{event_id}:%"),
                 )
         self.conn.commit()
 
@@ -260,6 +282,22 @@ class MVPStore:
         if payload is None:
             return None
         return model_class.model_validate(payload)
+
+    def get_event_scoped_model(
+        self, collection: str, event_id: str, item_id: str, model_class: type[T]
+    ) -> T | None:
+        return self.get_model(collection, f"{event_id}:{item_id}", model_class)
+
+    def get_unique_suffix_model(
+        self, collection: str, item_id: str, model_class: type[T]
+    ) -> T | None:
+        rows = self.conn.execute(
+            "SELECT payload FROM records WHERE collection = ? AND item_key LIKE ? ORDER BY item_key",
+            (collection, f"%:{item_id}"),
+        ).fetchall()
+        if len(rows) != 1:
+            return None
+        return model_class.model_validate(json.loads(rows[0]["payload"]))
 
     def list_models(self, collection: str, model_class: type[T], prefix: str = "") -> list[T]:
         if prefix:
@@ -307,7 +345,7 @@ class MVPStore:
     def save_packs(self, event_id: str, packs: list[MerchantExecutionPack]) -> None:
         self.conn.execute(
             "DELETE FROM records WHERE collection = ? AND item_key LIKE ?",
-            ("merchant_packs", f"{event_id}:"),
+            ("merchant_packs", f"{event_id}:%"),
         )
         for pack in packs:
             self.upsert_model("merchant_packs", f"{event_id}:{pack.merchant_id}", pack)
@@ -319,14 +357,14 @@ class MVPStore:
     def save_recovery_action(self, action: RecoveryAction) -> None:
         self.upsert_model("recovery_actions", f"{action.event_id}:{action.action_id}", action)
 
-    def get_recovery_action(self, action_id: str) -> RecoveryAction | None:
-        rows = self.conn.execute(
-            "SELECT payload FROM records WHERE collection = ? AND item_key LIKE ?",
-            ("recovery_actions", f"%:{action_id}"),
-        ).fetchall()
-        if not rows:
-            return None
-        return RecoveryAction.model_validate(json.loads(rows[0]["payload"]))
+    def get_recovery_action(
+        self, action_id: str, event_id: str | None = None
+    ) -> RecoveryAction | None:
+        if event_id:
+            return self.get_event_scoped_model(
+                "recovery_actions", event_id, action_id, RecoveryAction
+            )
+        return self.get_unique_suffix_model("recovery_actions", action_id, RecoveryAction)
 
     def list_recovery_actions(self, event_id: str) -> list[RecoveryAction]:
         return self.list_models("recovery_actions", RecoveryAction, prefix=f"{event_id}:")
@@ -346,6 +384,167 @@ class MVPStore:
 
     def get_report(self, event_id: str) -> ReviewReport | None:
         return self.get_model("reports", event_id, ReviewReport)
+
+    def save_event_page(self, page: EventPage) -> EventPage:
+        self.upsert_model("event_pages", f"{page.event_id}:{page.id}", page)
+        return page
+
+    def get_event_page(self, event_id: str, page_id: str) -> EventPage | None:
+        return self.get_event_scoped_model("event_pages", event_id, page_id, EventPage)
+
+    def get_latest_event_page(self, event_id: str) -> EventPage | None:
+        pages = self.list_event_pages(event_id)
+        if not pages:
+            return None
+        return max(
+            pages,
+            key=lambda page: (
+                page.plan_version,
+                page.updated_at or "",
+                page.published_at or "",
+                page.id,
+            ),
+        )
+
+    def list_event_pages(self, event_id: str) -> list[EventPage]:
+        return self.list_models("event_pages", EventPage, prefix=f"{event_id}:")
+
+    def save_merchant_interaction_package(
+        self, package: MerchantInteractionPackage
+    ) -> MerchantInteractionPackage:
+        self.upsert_model(
+            "merchant_interaction_packages",
+            f"{package.event_id}:{package.merchant_id}",
+            package,
+        )
+        return package
+
+    def list_merchant_interaction_packages(
+        self, event_id: str
+    ) -> list[MerchantInteractionPackage]:
+        return self.list_models(
+            "merchant_interaction_packages",
+            MerchantInteractionPackage,
+            prefix=f"{event_id}:",
+        )
+
+    def get_merchant_interaction_package(
+        self, event_id: str, merchant_id: str
+    ) -> MerchantInteractionPackage | None:
+        return self.get_model(
+            "merchant_interaction_packages",
+            f"{event_id}:{merchant_id}",
+            MerchantInteractionPackage,
+        )
+
+    def save_touchpoint(self, touchpoint: InShopTouchpoint) -> InShopTouchpoint:
+        self.upsert_model(
+            "in_shop_touchpoints", f"{touchpoint.event_id}:{touchpoint.id}", touchpoint
+        )
+        return touchpoint
+
+    def get_touchpoint(
+        self, event_id: str, touchpoint_id: str
+    ) -> InShopTouchpoint | None:
+        return self.get_event_scoped_model(
+            "in_shop_touchpoints", event_id, touchpoint_id, InShopTouchpoint
+        )
+
+    def list_touchpoints(
+        self, event_id: str, merchant_id: str | None = None
+    ) -> list[InShopTouchpoint]:
+        touchpoints = self.list_models(
+            "in_shop_touchpoints", InShopTouchpoint, prefix=f"{event_id}:"
+        )
+        if merchant_id:
+            return [touchpoint for touchpoint in touchpoints if touchpoint.merchant_id == merchant_id]
+        return touchpoints
+
+    def save_coupon_rule(self, rule: CouponRule) -> CouponRule:
+        self.upsert_model("coupon_rules", f"{rule.event_id}:{rule.id}", rule)
+        return rule
+
+    def get_coupon_rule(self, event_id: str, rule_id: str) -> CouponRule | None:
+        return self.get_event_scoped_model("coupon_rules", event_id, rule_id, CouponRule)
+
+    def list_coupon_rules(
+        self, event_id: str, merchant_id: str | None = None
+    ) -> list[CouponRule]:
+        rules = self.list_models("coupon_rules", CouponRule, prefix=f"{event_id}:")
+        if merchant_id:
+            return [rule for rule in rules if rule.merchant_id == merchant_id]
+        return rules
+
+    def save_touchpoint_interaction(
+        self, interaction: TouchpointInteraction
+    ) -> TouchpointInteraction:
+        self.upsert_model(
+            "touchpoint_interactions",
+            f"{interaction.event_id}:{interaction.id}",
+            interaction,
+        )
+        return interaction
+
+    def list_touchpoint_interactions(
+        self, event_id: str, merchant_id: str | None = None
+    ) -> list[TouchpointInteraction]:
+        interactions = self.list_models(
+            "touchpoint_interactions",
+            TouchpointInteraction,
+            prefix=f"{event_id}:",
+        )
+        if merchant_id:
+            return [
+                interaction
+                for interaction in interactions
+                if interaction.merchant_id == merchant_id
+            ]
+        return interactions
+
+    def save_coupon_redemption(self, redemption: CouponRedemption) -> CouponRedemption:
+        self.upsert_model(
+            "coupon_redemptions", f"{redemption.event_id}:{redemption.id}", redemption
+        )
+        return redemption
+
+    def get_coupon_redemption(
+        self, event_id: str, redemption_id: str
+    ) -> CouponRedemption | None:
+        return self.get_event_scoped_model(
+            "coupon_redemptions", event_id, redemption_id, CouponRedemption
+        )
+
+    def list_coupon_redemptions(
+        self, event_id: str, merchant_id: str | None = None
+    ) -> list[CouponRedemption]:
+        redemptions = self.list_models(
+            "coupon_redemptions", CouponRedemption, prefix=f"{event_id}:"
+        )
+        if merchant_id:
+            return [
+                redemption for redemption in redemptions if redemption.merchant_id == merchant_id
+            ]
+        return redemptions
+
+    def save_operation_suggestion(
+        self, suggestion: OperationSuggestion
+    ) -> OperationSuggestion:
+        self.upsert_model(
+            "operation_suggestions", f"{suggestion.event_id}:{suggestion.id}", suggestion
+        )
+        return suggestion
+
+    def list_operation_suggestions(self, event_id: str) -> list[OperationSuggestion]:
+        return self.list_models(
+            "operation_suggestions", OperationSuggestion, prefix=f"{event_id}:"
+        )
+
+    def get_operation_suggestion(
+        self, event_id: str, suggestion_id: str
+    ) -> OperationSuggestion | None:
+        return self.get_event_scoped_model(
+            "operation_suggestions", event_id, suggestion_id, OperationSuggestion
+        )
 
     def save_audit_log(self, log: AuditLog) -> None:
         self.upsert_model("audit_logs", f"{log.event_id}:{log.log_id}", log)
@@ -380,7 +579,7 @@ class MVPStore:
     def save_merchant_tasks(self, event_id: str, tasks: list[MerchantTask]) -> None:
         self.conn.execute(
             "DELETE FROM records WHERE collection = ? AND item_key LIKE ?",
-            ("merchant_tasks", f"{event_id}:"),
+            ("merchant_tasks", f"{event_id}:%"),
         )
         for task in tasks:
             self.upsert_model("merchant_tasks", f"{event_id}:{task.task_id}", task)
@@ -397,14 +596,10 @@ class MVPStore:
     def save_incident(self, incident: Incident) -> None:
         self.upsert_model("incidents", f"{incident.event_id}:{incident.incident_id}", incident)
 
-    def get_incident(self, incident_id: str) -> Incident | None:
-        rows = self.conn.execute(
-            "SELECT payload FROM records WHERE collection = ? AND item_key LIKE ?",
-            ("incidents", f"%:{incident_id}"),
-        ).fetchall()
-        if not rows:
-            return None
-        return Incident.model_validate(json.loads(rows[0]["payload"]))
+    def get_incident(self, incident_id: str, event_id: str | None = None) -> Incident | None:
+        if event_id:
+            return self.get_event_scoped_model("incidents", event_id, incident_id, Incident)
+        return self.get_unique_suffix_model("incidents", incident_id, Incident)
 
     def list_incidents(self, event_id: str) -> list[Incident]:
         return self.list_models("incidents", Incident, prefix=f"{event_id}:")
@@ -414,14 +609,16 @@ class MVPStore:
             "recovery_proposals", f"{proposal.event_id}:{proposal.proposal_id}", proposal
         )
 
-    def get_recovery_proposal(self, proposal_id: str) -> RecoveryProposal | None:
-        rows = self.conn.execute(
-            "SELECT payload FROM records WHERE collection = ? AND item_key LIKE ?",
-            ("recovery_proposals", f"%:{proposal_id}"),
-        ).fetchall()
-        if not rows:
-            return None
-        return RecoveryProposal.model_validate(json.loads(rows[0]["payload"]))
+    def get_recovery_proposal(
+        self, proposal_id: str, event_id: str | None = None
+    ) -> RecoveryProposal | None:
+        if event_id:
+            return self.get_event_scoped_model(
+                "recovery_proposals", event_id, proposal_id, RecoveryProposal
+            )
+        return self.get_unique_suffix_model(
+            "recovery_proposals", proposal_id, RecoveryProposal
+        )
 
     def list_recovery_proposals(self, event_id: str) -> list[RecoveryProposal]:
         return self.list_models("recovery_proposals", RecoveryProposal, prefix=f"{event_id}:")
@@ -441,14 +638,10 @@ class MVPStore:
     def save_agent_run(self, run: AgentRun) -> None:
         self.upsert_model("agent_runs", f"{run.event_id}:{run.run_id}", run)
 
-    def get_agent_run(self, run_id: str) -> AgentRun | None:
-        rows = self.conn.execute(
-            "SELECT payload FROM records WHERE collection = ? AND item_key LIKE ?",
-            ("agent_runs", f"%:{run_id}"),
-        ).fetchall()
-        if not rows:
-            return None
-        return AgentRun.model_validate(json.loads(rows[0]["payload"]))
+    def get_agent_run(self, run_id: str, event_id: str | None = None) -> AgentRun | None:
+        if event_id:
+            return self.get_event_scoped_model("agent_runs", event_id, run_id, AgentRun)
+        return self.get_unique_suffix_model("agent_runs", run_id, AgentRun)
 
     def list_agent_runs(self, event_id: str) -> list[AgentRun]:
         return self.list_models("agent_runs", AgentRun, prefix=f"{event_id}:")

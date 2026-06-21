@@ -77,7 +77,7 @@ test("public H5 switches language without login", async () => {
   expect(await screen.findByText(zh["public.event.tonightsRoute"])).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: /English/i }));
 
-  expect(await screen.findByText(/Tonight's route/i)).toBeInTheDocument();
+  expect(await screen.findByText(/Tonight's event/i)).toBeInTheDocument();
   expect(window.location.pathname).toBe("/public/events/demo-night-tour");
   expect(screen.queryByText(/logout/i)).not.toBeInTheDocument();
 });

@@ -1,4 +1,5 @@
 import "@testing-library/jest-dom/vitest";
+import { afterEach } from "vitest";
 
 class ResizeObserverMock {
   observe() {}
@@ -23,4 +24,10 @@ Object.defineProperty(window, "matchMedia", {
 Object.defineProperty(window, "ResizeObserver", {
   writable: true,
   value: ResizeObserverMock
+});
+
+afterEach(() => {
+  document.head
+    .querySelectorAll("style[data-css-hash], style[data-token-hash], style[data-rc-order], style[data-ant-cssinjs-cache-path]")
+    .forEach((node) => node.remove());
 });

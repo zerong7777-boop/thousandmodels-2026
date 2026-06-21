@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -118,6 +118,135 @@ class ReviewReport(BaseModel):
     human_approvals: list[str]
     lessons_learned: list[str]
     next_event_recommendations: list[str]
+    touchpoint_summary: dict = Field(default_factory=dict)
+    merchant_outcomes: list[dict] = Field(default_factory=list)
+    extension_tasks: list[dict] = Field(default_factory=list)
+
+
+EventPageStatus = Literal["draft", "published", "archived"]
+TouchpointType = Literal[
+    "event_page",
+    "in_shop_qr",
+    "coupon",
+    "redemption",
+    "status_report",
+    "display",
+]
+CouponRuleStatus = Literal["active", "paused", "expired"]
+CouponRedemptionStatus = Literal["claimed", "redeemed", "expired", "cancelled"]
+OperationSuggestionStatus = Literal[
+    "draft",
+    "pending_approval",
+    "approved",
+    "rejected",
+    "applied",
+]
+OperationSuggestionType = Literal[
+    "route_adjustment",
+    "merchant_capacity",
+    "coupon_rebalance",
+    "public_notice",
+    "extension_task",
+]
+
+
+class EventPage(BaseModel):
+    id: str
+    event_id: str
+    plan_version: int
+    status: EventPageStatus = "draft"
+    title: str
+    subtitle: str
+    story_sections: list[dict[str, Any]] = Field(default_factory=list)
+    route_highlights: list[dict[str, Any]] = Field(default_factory=list)
+    merchant_highlights: list[dict[str, Any]] = Field(default_factory=list)
+    notices: list[dict[str, Any]] = Field(default_factory=list)
+    generated_from_run_id: str | None = None
+    published_at: str | None = None
+    updated_at: str
+
+
+class InShopTouchpoint(BaseModel):
+    id: str
+    event_id: str
+    merchant_id: str | None = None
+    package_id: str | None = None
+    touchpoint_type: TouchpointType
+    label: str
+    public_copy: str
+    token: str
+    status: Literal["active", "paused"] = "active"
+    metrics: dict[str, int] = Field(default_factory=dict)
+    created_at: str
+
+
+class CouponRule(BaseModel):
+    id: str
+    event_id: str
+    merchant_id: str
+    package_id: str
+    title: str
+    description: str
+    max_redemptions: int = Field(gt=0)
+    per_anonymous_interaction_limit: int = Field(default=1, gt=0)
+    status: CouponRuleStatus = "active"
+    created_at: str
+
+
+class MerchantInteractionPackage(BaseModel):
+    id: str
+    event_id: str
+    merchant_id: str
+    plan_version: int
+    status: Literal["draft", "active", "paused"] = "draft"
+    operator_brief: str
+    visitor_pitch: str
+    task_ids: list[str] = Field(default_factory=list)
+    touchpoints: list[InShopTouchpoint] = Field(default_factory=list)
+    coupon_rules: list[CouponRule] = Field(default_factory=list)
+    evidence_refs: list[str] = Field(default_factory=list)
+    generated_from_run_id: str | None = None
+    created_at: str
+    updated_at: str
+
+
+class TouchpointInteraction(BaseModel):
+    id: str
+    event_id: str
+    touchpoint_id: str
+    merchant_id: str | None = None
+    interaction_type: Literal["view", "scan", "claim", "redeem", "status_check"]
+    source: str = "demo"
+    anonymous_interaction_id: str
+    created_at: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class CouponRedemption(BaseModel):
+    id: str
+    event_id: str
+    coupon_rule_id: str
+    merchant_id: str
+    anonymous_interaction_id: str
+    status: CouponRedemptionStatus = "claimed"
+    claimed_at: str
+    redeemed_at: str | None = None
+
+
+class OperationSuggestion(BaseModel):
+    id: str
+    event_id: str
+    suggestion_type: OperationSuggestionType
+    status: OperationSuggestionStatus = "pending_approval"
+    title: str
+    rationale: str
+    recommended_actions: list[dict[str, Any]] = Field(default_factory=list)
+    impacted_merchants: list[str] = Field(default_factory=list)
+    impacted_route_points: list[str] = Field(default_factory=list)
+    evidence_refs: list[str] = Field(default_factory=list)
+    agent_run_id: str | None = None
+    created_at: str
+    approved_at: str | None = None
 
 
 class AuditLog(BaseModel):
@@ -246,6 +375,7 @@ class PublicNotice(BaseModel):
 
 AgentTrigger = Literal[
     "planning_generation",
+    "merchant_edge_package_generation",
     "incident_recovery",
     "public_notice_draft",
     "review_generation",

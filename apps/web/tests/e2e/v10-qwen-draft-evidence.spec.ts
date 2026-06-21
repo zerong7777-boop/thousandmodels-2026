@@ -360,7 +360,7 @@ test("v1.0 public H5 remains visitor-safe without model evidence terms", async (
   await mockApi(page, null);
   await useEnglish(page);
   await page.goto("/public/events/demo-night-tour");
-  await expect(page.getByText("Tonight's route")).toBeVisible();
+  await expect(page.getByText("Tonight's event")).toBeVisible();
   await expect(page.getByText(/Qwen|AgentModelCall|fallback|schema|backend/i)).toHaveCount(0);
   await snap(page, "03-public-h5-no-model-terms.png");
 });

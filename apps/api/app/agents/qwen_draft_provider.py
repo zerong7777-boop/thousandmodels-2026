@@ -1,3 +1,4 @@
+import json
 import os
 from typing import Protocol
 
@@ -27,6 +28,11 @@ class DashScopeQwenDraftProvider:
     def complete_json(self, prompt_template_id: str, payload: dict) -> str:
         if not self.api_key:
             raise QwenProviderError("missing_provider_key")
+        prompt_payload = json.dumps(
+            {"template": prompt_template_id, "payload": payload},
+            ensure_ascii=False,
+            sort_keys=True,
+        )
         response = httpx.post(
             "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
             headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
@@ -36,14 +42,18 @@ class DashScopeQwenDraftProvider:
                     {
                         "role": "system",
                         "content": (
-                            "Return JSON only. Produce a controlled AgentDraft candidate. "
-                            "Do not approve, publish, mutate inventory, create plan versions, "
-                            "or include backend schema names in public copy."
+                            "Return one JSON object only, with exactly these top-level keys: "
+                            "content, locale, structured_payload, evidence_refs, safety_notes. "
+                            "Do not wrap the object in agent_draft or any other key. "
+                            "Do not include approval_status, publish_status, approved_at, "
+                            "published_at, status_transition, plan_patch, approval actions, "
+                            "publish actions, plan-version creation, inventory mutation, or "
+                            "backend schema names in public copy."
                         ),
                     },
                     {
                         "role": "user",
-                        "content": str({"template": prompt_template_id, "payload": payload}),
+                        "content": prompt_payload,
                     },
                 ],
                 "response_format": {"type": "json_object"},

@@ -412,7 +412,7 @@ test("v0.9 public H5 does not expose Agent internals", async ({ page }) => {
   await mockApi(page, null);
   await useEnglish(page);
   await page.goto("/public/events/demo-night-tour");
-  await expect(page.getByText("Tonight's route")).toBeVisible();
+  await expect(page.getByText("Tonight's event")).toBeVisible();
   await expect(page.getByText(/AgentRun|AgentDraft|Qwen|fallback|schema|backend/i)).toHaveCount(0);
   await snap(page, "04-public-h5-no-agent-leakage-mobile.png");
 });

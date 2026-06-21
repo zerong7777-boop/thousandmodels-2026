@@ -6,49 +6,64 @@ def generate_review_report(
     recovery_actions: list[RecoveryAction],
     audit_logs: list[AuditLog],
     metrics: list[OperationalMetric] | None = None,
+    touchpoint_summary: dict | None = None,
+    merchant_outcomes: list[dict] | None = None,
+    extension_tasks: list[dict] | None = None,
 ) -> ReviewReport:
     approved = [action for action in recovery_actions if action.approval_status == "approved"]
-    incidents = "；".join(action.trigger_detail for action in recovery_actions) or "未触发异常"
+    incidents = "; ".join(action.trigger_detail for action in recovery_actions) or "No exception triggered."
     approvals = [
         f"{action.action_id}: {action.tourist_notification}" for action in approved
-    ] or ["本次演示未执行恢复审批"]
+    ] or ["No recovery approval was executed in this demo run."]
     metric_map = {metric.name: metric for metric in metrics or []}
     metric_lessons = []
     if "h5_visits" in metric_map:
         metric_lessons.append(
-            f"H5 访问量 h5_visits={metric_map['h5_visits'].value:.0f}，说明游客端可作为通知主通道。"
+            f"h5_visits={metric_map['h5_visits'].value:.0f}; public H5 can act as the visitor notice channel."
         )
     if "incident_response_minutes" in metric_map:
         metric_lessons.append(
-            "异常处理耗时 "
-            f"incident_response_minutes={metric_map['incident_response_minutes'].value:.0f} 分钟，"
-            "后续可把库存阈值前置到商户端。"
+            "incident_response_minutes="
+            f"{metric_map['incident_response_minutes'].value:.0f}; merchant status thresholds should stay visible."
         )
+
     return ReviewReport(
         event_id=plan.event_id,
-        summary=f"{plan.theme} 已完成从方案生成、商户执行包、游客端通知到复盘的演示闭环。",
-        route_result=f"主路线包含 {len(plan.route)} 个点位；雨天或库存异常可通过 Recovery Agent 切换。",
-        merchant_result=f"共生成 {len(plan.merchant_assignments)} 个商户角色分配，覆盖补给、文创、讲解和收尾。",
+        summary=(
+            f"{plan.theme} completed the deterministic demo loop from plan generation, "
+            "merchant execution, visitor notice, and metric-backed review."
+        ),
+        route_result=(
+            f"The main route contains {len(plan.route)} stops; inventory and weather exceptions "
+            "can be handled through the recovery approval flow."
+        ),
+        merchant_result=(
+            f"{len(plan.merchant_assignments)} merchant roles were assigned across supply, "
+            "creative, story, and closing tasks."
+        ),
         incident_summary=incidents,
         agent_actions=[
-            "总策划 Agent 生成 EventPlan。",
-            "商户匹配和路线规则生成执行包。",
-            "Recovery Agent 根据状态触发恢复建议。",
-            "复盘 Agent 汇总计划、异常和审计记录。",
+            "Coordinator generated the event plan.",
+            "Merchant matching and route rules produced execution packages.",
+            "Recovery logic drafted exception handling options from runtime state.",
+            "Review logic summarized plans, exceptions, audit logs, and touchpoint metrics.",
         ],
         human_approvals=approvals,
         lessons_learned=[
             *metric_lessons,
-            "热门商户需要提前设置库存阈值和备用商户。",
-            "雨天路线应优先使用室内点位和高容量商户。",
-            "游客端更新必须由主办方确认后发布。",
-            f"本次记录 {len(audit_logs)} 条审计事件，可用于实践文章说明责任边界。",
+            "Popular merchants need earlier inventory thresholds and fallback merchants.",
+            "Rain-route planning should prioritize indoor stops and higher-capacity merchants.",
+            "Visitor-facing updates must be published only after organizer confirmation.",
+            "责任边界需要在主办方确认、商户执行、游客通知之间保持清晰。",
+            f"{len(audit_logs)} audit events were recorded for responsibility tracing.",
         ],
         next_event_recommendations=[
-            "根据 h5_visits 和 checkins_completed 的 mock 指标调整游客导流节奏。",
-            "根据 incident_response_minutes 指标缩短商户上报到主办方审批的链路。",
-            "接入真实商户状态前，先扩充 mock 数据和异常脚本。",
-            "增加居民影响和路线拥堵的人工审核项。",
-            "在 deterministic loop 稳定后再接入 Qwen/QwenPaw。",
+            "Use h5_visits and checkins_completed to tune visitor guidance timing.",
+            "Use incident_response_minutes to shorten merchant report and organizer approval paths.",
+            "Before real merchant integration, keep expanding simulated metrics and exception scripts.",
+            "Add manual review points for resident impact and route congestion.",
         ],
+        touchpoint_summary=touchpoint_summary or {},
+        merchant_outcomes=merchant_outcomes or [],
+        extension_tasks=extension_tasks or [],
     )
