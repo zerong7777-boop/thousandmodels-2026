@@ -45,6 +45,33 @@ def _linked_merchants(
     return highlights
 
 
+def _public_touchpoints(package: Any) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": touchpoint.id,
+            "touchpoint_type": touchpoint.touchpoint_type,
+            "label": touchpoint.label,
+            "public_copy": touchpoint.public_copy,
+            "status": touchpoint.status,
+        }
+        for touchpoint in getattr(package, "touchpoints", []) or []
+        if touchpoint.status == "active"
+    ]
+
+
+def _public_coupon_rules(package: Any) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": rule.id,
+            "title": rule.title,
+            "description": rule.description,
+            "status": rule.status,
+        }
+        for rule in getattr(package, "coupon_rules", []) or []
+        if rule.status == "active"
+    ]
+
+
 def build_event_page_draft(
     event: EventSummary,
     plan_version: PlanVersion,
@@ -140,9 +167,21 @@ def build_event_page_projection(
 ) -> dict[str, Any]:
     coupon_count = 0
     package_count = 0
+    packages_by_merchant = {}
     for package in packages or []:
         package_count += 1
         coupon_count += len(getattr(package, "coupon_rules", []) or [])
+        if getattr(package, "status", None) == "active":
+            packages_by_merchant[getattr(package, "merchant_id", "")] = package
+
+    merchant_highlights = []
+    for highlight in page.merchant_highlights:
+        public_highlight = dict(highlight)
+        package = packages_by_merchant.get(str(public_highlight.get("id", "")))
+        if package:
+            public_highlight["touchpoints"] = _public_touchpoints(package)
+            public_highlight["coupon_rules"] = _public_coupon_rules(package)
+        merchant_highlights.append(public_highlight)
 
     return {
         "id": page.id,
@@ -152,7 +191,7 @@ def build_event_page_projection(
         "subtitle": page.subtitle,
         "story_sections": page.story_sections,
         "route_highlights": page.route_highlights,
-        "merchant_highlights": page.merchant_highlights,
+        "merchant_highlights": merchant_highlights,
         "notices": page.notices or _notice_payloads(notices),
         "current_plan_version": plan_version.version,
         "interaction_status": {

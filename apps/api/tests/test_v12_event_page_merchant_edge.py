@@ -94,6 +94,49 @@ def test_merchant_edge_package_generation_is_exposed_only_to_that_merchant(clien
         assert package_id not in workbench_text
 
 
+def test_public_projection_exposes_safe_event_page_interaction_controls(client: TestClient):
+    event_id = seed_and_approve_v1(client)
+    draft = client.post(f"/api/events/{event_id}/event-page/draft", headers=MUTATION_HEADERS)
+    assert draft.status_code == 200, draft.text
+    published = client.post(f"/api/events/{event_id}/event-page/publish", headers=MUTATION_HEADERS)
+    assert published.status_code == 200, published.text
+    generated = client.post(
+        f"/api/events/{event_id}/merchant-edge-packages/generate",
+        headers=MUTATION_HEADERS,
+    )
+    assert generated.status_code == 200, generated.text
+    package = generated.json()["packages"][0]
+
+    public = client.get(f"/api/public/events/{event_id}")
+    assert public.status_code == 200, public.text
+    merchant_highlight = next(
+        highlight
+        for highlight in public.json()["event_page"]["merchant_highlights"]
+        if highlight["id"] == package["merchant_id"]
+    )
+
+    assert merchant_highlight["touchpoints"]
+    assert merchant_highlight["coupon_rules"]
+    assert merchant_highlight["touchpoints"][0] == {
+        "id": package["touchpoints"][0]["id"],
+        "touchpoint_type": package["touchpoints"][0]["touchpoint_type"],
+        "label": package["touchpoints"][0]["label"],
+        "public_copy": package["touchpoints"][0]["public_copy"],
+        "status": package["touchpoints"][0]["status"],
+    }
+    assert merchant_highlight["coupon_rules"][0] == {
+        "id": package["coupon_rules"][0]["id"],
+        "title": package["coupon_rules"][0]["title"],
+        "description": package["coupon_rules"][0]["description"],
+        "status": package["coupon_rules"][0]["status"],
+    }
+    public_text = json.dumps(public.json(), ensure_ascii=False)
+    assert package["id"] not in public_text
+    assert "operator_brief" not in public_text
+    assert "evidence_refs" not in public_text
+    assert "generated_from_run_id" not in public_text
+
+
 def test_merchant_workbench_summarizes_only_current_package_children(client: TestClient):
     event_id = seed_and_approve_v1(client)
     generated_v1 = client.post(

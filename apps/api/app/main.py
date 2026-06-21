@@ -839,6 +839,7 @@ def public_event(event_id: str):
                     page=page,
                     plan_version=plan_version,
                     notices=STORE.list_public_notices(event_id),
+                    packages=STORE.list_merchant_interaction_packages(event_id),
                 )
                 public_payload["event_page"] = event_page
                 public_payload["merchant_highlights"] = event_page["merchant_highlights"]

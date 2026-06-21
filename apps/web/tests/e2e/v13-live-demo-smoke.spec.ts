@@ -16,22 +16,6 @@ const MUTATION_HEADERS = {
 const FORBIDDEN_SURFACE_TERMS =
   /AgentDraft|AgentRun|PlanVersion|RecoveryProposal|qwen|dashscope|schema_failed|approval_status/i;
 
-type MerchantEdgePackage = {
-  id: string;
-  merchant_id: string;
-  touchpoints: Array<{ id: string }>;
-  coupon_rules: Array<{ id: string }>;
-};
-
-type MerchantEdgePackageResponse = {
-  packages: MerchantEdgePackage[];
-};
-
-type DemoSetup = {
-  touchpointId: string;
-  couponRuleId: string;
-};
-
 async function expectOk(response: Awaited<ReturnType<APIRequestContext["post"]>>, pathName: string) {
   if (!response.ok()) {
     throw new Error(`${pathName}: ${response.status()} ${await response.text()}`);
@@ -57,7 +41,7 @@ async function apiGet<T>(request: APIRequestContext, pathName: string): Promise<
   return response.json() as Promise<T>;
 }
 
-async function setupDemo(request: APIRequestContext): Promise<DemoSetup> {
+async function setupDemo(request: APIRequestContext) {
   await apiPost(request, "/api/auth/login", {
     username: "organizer.demo",
     password: "demo1234"
@@ -67,18 +51,7 @@ async function setupDemo(request: APIRequestContext): Promise<DemoSetup> {
   await apiPost(request, `/api/events/${EVENT_ID}/plans/1/approve`);
   await apiPost(request, `/api/events/${EVENT_ID}/event-page/draft`);
   await apiPost(request, `/api/events/${EVENT_ID}/event-page/publish`);
-  const generated = await apiPost<MerchantEdgePackageResponse>(
-    request,
-    `/api/events/${EVENT_ID}/merchant-edge-packages/generate`
-  );
-  const firstPackage = generated.packages.find(
-    (item) => item.touchpoints.length > 0 && item.coupon_rules.length > 0
-  );
-  expect(firstPackage, "merchant package with touchpoint and coupon rule").toBeTruthy();
-  return {
-    touchpointId: firstPackage?.touchpoints[0]?.id ?? "",
-    couponRuleId: firstPackage?.coupon_rules[0]?.id ?? ""
-  };
+  await apiPost(request, `/api/events/${EVENT_ID}/merchant-edge-packages/generate`);
 }
 
 async function loginThroughUi(page: Page, username: string) {
@@ -100,67 +73,24 @@ async function expectForbiddenTermsHidden(page: Page) {
   await expect(page.getByText(FORBIDDEN_SURFACE_TERMS)).toHaveCount(0);
 }
 
-async function publicPostFromBrowser<T>(
-  page: Page,
-  pathName: string,
-  data?: Record<string, unknown>
-): Promise<T> {
-  return page.evaluate(
-    async ({ apiBase, pathName: browserPathName, data: browserData }) => {
-      const response = await fetch(`${apiBase}${browserPathName}`, {
-        method: "POST",
-        credentials: "omit",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Zhiyin-CSRF": "demo"
-        },
-        body: browserData === undefined ? undefined : JSON.stringify(browserData)
-      });
-      const text = await response.text();
-      if (!response.ok) {
-        throw new Error(`${browserPathName}: ${response.status} ${text}`);
-      }
-      return text ? JSON.parse(text) : null;
-    },
-    { apiBase: API_BASE, pathName, data }
-  ) as Promise<T>;
-}
-
-async function runPublicInteractions(page: Page, setup: DemoSetup) {
+async function runPublicInteractions(page: Page) {
   const scanButton = page.getByRole("button", { name: "Scan spot" });
   const claimButton = page.getByRole("button", { name: "Claim offer" });
   const redeemButton = page.getByRole("button", { name: "Redeem offer" });
 
-  if (await scanButton.isEnabled()) {
-    await scanButton.click();
-    await expect(page.getByText("Spot scan recorded.")).toBeVisible();
-    await claimButton.click();
-    await expect(page.getByText("Offer claimed.")).toBeVisible();
-    await redeemButton.click();
-    await expect(page.getByText("Offer redeemed.")).toBeVisible();
-    return;
-  }
-
-  const interaction = await publicPostFromBrowser<{ anonymous_interaction_id: string }>(
-    page,
-    `/api/public/events/${EVENT_ID}/touchpoints/${setup.touchpointId}/interactions`,
-    { interaction_type: "scan", source: "public-event-demo", metadata: { display_mode: "h5" } }
-  );
-  const claim = await publicPostFromBrowser<{ id: string; status: string }>(
-    page,
-    `/api/public/events/${EVENT_ID}/coupons/${setup.couponRuleId}/claim`,
-    { anonymous_interaction_id: interaction.anonymous_interaction_id }
-  );
-  expect(claim.status).toBe("claimed");
-  const redeemed = await publicPostFromBrowser<{ status: string }>(
-    page,
-    `/api/public/events/${EVENT_ID}/coupon-redemptions/${claim.id}/redeem`
-  );
-  expect(redeemed.status).toBe("redeemed");
+  await expect(scanButton).toBeEnabled();
+  await scanButton.click();
+  await expect(page.getByText("Spot scan recorded.")).toBeVisible();
+  await expect(claimButton).toBeEnabled();
+  await claimButton.click();
+  await expect(page.getByText("Offer claimed.")).toBeVisible();
+  await expect(redeemButton).toBeEnabled();
+  await redeemButton.click();
+  await expect(page.getByText("Offer redeemed.")).toBeVisible();
 }
 
 test("v1.3 live local demo runs through FastAPI and Vite", async ({ page, request }) => {
-  const setup = await setupDemo(request);
+  await setupDemo(request);
 
   await page.addInitScript(() => window.localStorage.setItem("zhiyin.locale", "en"));
   await page.setViewportSize({ width: 1440, height: 940 });
@@ -194,7 +124,7 @@ test("v1.3 live local demo runs through FastAPI and Vite", async ({ page, reques
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`/public/events/${EVENT_ID}`);
   await expect(page.getByText("Visitor event page")).toBeVisible();
-  await runPublicInteractions(page, setup);
+  await runPublicInteractions(page);
   await expectForbiddenTermsHidden(page);
   await snap(page, "04-live-public-event-page.png");
 
