@@ -58,9 +58,14 @@ class ToolExecutionResult:
 class ToolRegistry:
     def __init__(self) -> None:
         self._definitions: dict[str, ToolDefinition] = {}
+        self._call_counter = 0
 
     def register(self, definition: ToolDefinition) -> None:
         self._definitions[definition.name] = definition
+
+    def _next_tool_call_id(self, run_id: str, step_id: str, tool_name: str) -> str:
+        self._call_counter += 1
+        return f"{run_id}:{step_id}:{tool_name}:{self._call_counter:03d}"
 
     def request(
         self,
@@ -68,7 +73,25 @@ class ToolRegistry:
         step_id: str,
         request: ToolRequest,
     ) -> ToolExecutionResult:
-        definition = self._definitions[request.tool_name]
+        definition = self._definitions.get(request.tool_name)
+        if definition is None:
+            reason = f"tool {request.tool_name} is not registered for shadow orchestration"
+            decision = ToolDecision(allowed=False, permission=ToolPermission.FORBIDDEN, reason=reason)
+            tool_call = AgentToolCall(
+                tool_call_id=self._next_tool_call_id(run_id, step_id, request.tool_name),
+                run_id=run_id,
+                step_id=step_id,
+                tool_name=request.tool_name,
+                input_payload={
+                    "requested_by_agent": request.requested_by_agent,
+                    "payload": request.input_payload,
+                },
+                output_payload={"permission_decision": decision.model_dump()},
+                status="failed",
+                latency_ms=0,
+                error_summary=reason,
+            )
+            return ToolExecutionResult(decision=decision, output_payload={}, tool_call=tool_call)
         allowed = definition.permission in ALLOWED_SHADOW_PERMISSIONS
         reason = (
             f"tool permission {definition.permission.value} is allowed for shadow orchestration"
@@ -76,9 +99,17 @@ class ToolRegistry:
             else f"tool permission {definition.permission.value} is denied in shadow orchestration"
         )
         decision = ToolDecision(allowed=allowed, permission=definition.permission, reason=reason)
-        output_payload = definition.handler(request.input_payload) if allowed else {}
+        output_payload: dict[str, Any] = {}
+        status = "success" if allowed else "failed"
+        error_summary = None if allowed else reason
+        if allowed:
+            try:
+                output_payload = definition.handler(request.input_payload)
+            except Exception as exc:
+                status = "failed"
+                error_summary = str(exc)
         tool_call = AgentToolCall(
-            tool_call_id=f"{run_id}:{step_id}:{request.tool_name}",
+            tool_call_id=self._next_tool_call_id(run_id, step_id, request.tool_name),
             run_id=run_id,
             step_id=step_id,
             tool_name=request.tool_name,
@@ -90,9 +121,9 @@ class ToolRegistry:
                 **output_payload,
                 "permission_decision": decision.model_dump(),
             },
-            status="success" if allowed else "failed",
+            status=status,
             latency_ms=0,
-            error_summary=None if allowed else reason,
+            error_summary=error_summary,
         )
         return ToolExecutionResult(
             decision=decision,
