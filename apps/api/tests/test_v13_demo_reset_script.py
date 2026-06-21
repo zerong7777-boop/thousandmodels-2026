@@ -18,9 +18,9 @@ def test_reset_demo_state_seeds_event_summary_and_demo_accounts():
 
     result = reset_demo_state()
 
-    assert result["status"] == "ok"
+    assert result["status"] == "reset"
     assert result["event_id"] == EVENT_ID
-    assert result["demo_account_usernames"] == [
+    assert result["demo_accounts"] == [
         account["username"] for account in DEMO_AUTH_USERS
     ]
 
@@ -29,7 +29,7 @@ def test_reset_demo_state_seeds_event_summary_and_demo_accounts():
     assert summary.event_id == EVENT_ID
     assert summary.current_plan_version == 0
 
-    for username in result["demo_account_usernames"]:
+    for username in result["demo_accounts"]:
         user = STORE.get_user_by_username(username)
         assert user is not None
         assert user.status == "active"

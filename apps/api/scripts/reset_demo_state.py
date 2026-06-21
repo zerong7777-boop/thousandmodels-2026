@@ -16,9 +16,9 @@ def reset_demo_state(store: MVPStore = STORE, event_id: str = EVENT_ID) -> dict:
     seed_demo_accounts(store)
     brief = seed_demo(store, event_id=event_id)
     return {
-        "status": "ok",
+        "status": "reset",
         "event_id": brief.event_id,
-        "demo_account_usernames": [
+        "demo_accounts": [
             account["username"] for account in DEMO_AUTH_USERS
         ],
     }
