@@ -4,6 +4,16 @@ from typing import Any
 from app.schemas import EventPage, EventSummary, MerchantProfile, PlanVersion, PublicNotice, RoutePoint
 
 
+PUBLIC_MERCHANT_HIGHLIGHT_FIELDS = (
+    "id",
+    "name",
+    "type",
+    "story",
+    "signature_products",
+    "visitor_pitch",
+)
+
+
 def _now() -> str:
     return datetime.now(UTC).isoformat()
 
@@ -70,6 +80,14 @@ def _public_coupon_rules(package: Any) -> list[dict[str, Any]]:
         for rule in getattr(package, "coupon_rules", []) or []
         if rule.status == "active"
     ]
+
+
+def _public_merchant_highlight(highlight: dict[str, Any]) -> dict[str, Any]:
+    return {
+        field: highlight[field]
+        for field in PUBLIC_MERCHANT_HIGHLIGHT_FIELDS
+        if field in highlight
+    }
 
 
 def build_event_page_draft(
@@ -169,14 +187,17 @@ def build_event_page_projection(
     package_count = 0
     packages_by_merchant = {}
     for package in packages or []:
+        if getattr(package, "status", None) != "active":
+            continue
+        if getattr(package, "plan_version", None) != plan_version.version:
+            continue
         package_count += 1
         coupon_count += len(getattr(package, "coupon_rules", []) or [])
-        if getattr(package, "status", None) == "active":
-            packages_by_merchant[getattr(package, "merchant_id", "")] = package
+        packages_by_merchant[getattr(package, "merchant_id", "")] = package
 
     merchant_highlights = []
     for highlight in page.merchant_highlights:
-        public_highlight = dict(highlight)
+        public_highlight = _public_merchant_highlight(highlight)
         package = packages_by_merchant.get(str(public_highlight.get("id", "")))
         if package:
             public_highlight["touchpoints"] = _public_touchpoints(package)

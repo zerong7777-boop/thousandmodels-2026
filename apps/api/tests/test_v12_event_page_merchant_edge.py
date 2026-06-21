@@ -106,6 +106,11 @@ def test_public_projection_exposes_safe_event_page_interaction_controls(client: 
     )
     assert generated.status_code == 200, generated.text
     package = generated.json()["packages"][0]
+    page = STORE.get_latest_event_page(event_id)
+    assert page is not None
+    page.merchant_highlights[0]["approval_status"] = "internal-only"
+    page.merchant_highlights[0]["internal_note"] = "do not project"
+    STORE.save_event_page(page)
 
     public = client.get(f"/api/public/events/{event_id}")
     assert public.status_code == 200, public.text
@@ -135,6 +140,68 @@ def test_public_projection_exposes_safe_event_page_interaction_controls(client: 
     assert "operator_brief" not in public_text
     assert "evidence_refs" not in public_text
     assert "generated_from_run_id" not in public_text
+    assert "approval_status" not in public_text
+    assert "internal_note" not in public_text
+    assert "package_id" not in public_text
+    assert "token" not in public_text
+    assert "max_redemptions" not in public_text
+    assert "per_anonymous_interaction_limit" not in public_text
+    assert all("metrics" not in touchpoint for touchpoint in merchant_highlight["touchpoints"])
+
+
+def test_public_projection_does_not_expose_previous_version_interaction_controls(client: TestClient):
+    event_id = seed_and_approve_v1(client)
+    draft_v1 = client.post(f"/api/events/{event_id}/event-page/draft", headers=MUTATION_HEADERS)
+    assert draft_v1.status_code == 200, draft_v1.text
+    published_v1 = client.post(f"/api/events/{event_id}/event-page/publish", headers=MUTATION_HEADERS)
+    assert published_v1.status_code == 200, published_v1.text
+    generated_v1 = client.post(
+        f"/api/events/{event_id}/merchant-edge-packages/generate",
+        headers=MUTATION_HEADERS,
+    )
+    assert generated_v1.status_code == 200, generated_v1.text
+    stale_package = generated_v1.json()["packages"][0]
+
+    plan_v1 = STORE.get_plan_version(event_id, 1)
+    assert plan_v1 is not None
+    plan_v2_payload = plan_v1.model_dump()
+    plan_v2_payload.update(
+        {
+            "plan_id": f"{event_id}:v2",
+            "version": 2,
+            "status": "approved",
+            "created_reason": "event_page_without_package_regeneration",
+            "approved_by": "usr_org_demo",
+            "approved_at": "2026-06-15T11:00:00Z",
+        }
+    )
+    plan_v2 = PlanVersion.model_validate(plan_v2_payload)
+    STORE.save_plan_version(plan_v2)
+    STORE.save_merchant_tasks(event_id, generate_merchant_tasks(plan_v2, STORE.list_merchants()))
+    event = STORE.get_event_summary(event_id)
+    assert event is not None
+    event.current_plan_version = 2
+    STORE.save_event_summary(event)
+
+    draft_v2 = client.post(f"/api/events/{event_id}/event-page/draft", headers=MUTATION_HEADERS)
+    assert draft_v2.status_code == 200, draft_v2.text
+    published_v2 = client.post(f"/api/events/{event_id}/event-page/publish", headers=MUTATION_HEADERS)
+    assert published_v2.status_code == 200, published_v2.text
+    assert published_v2.json()["plan_version"] == 2
+
+    public = client.get(f"/api/public/events/{event_id}")
+    assert public.status_code == 200, public.text
+    assert public.json()["current_plan_version"] == 2
+    merchant_highlight = next(
+        highlight
+        for highlight in public.json()["event_page"]["merchant_highlights"]
+        if highlight["id"] == stale_package["merchant_id"]
+    )
+    assert "touchpoints" not in merchant_highlight
+    assert "coupon_rules" not in merchant_highlight
+    public_text = json.dumps(public.json(), ensure_ascii=False)
+    assert stale_package["touchpoints"][0]["id"] not in public_text
+    assert stale_package["coupon_rules"][0]["id"] not in public_text
 
 
 def test_merchant_workbench_summarizes_only_current_package_children(client: TestClient):
