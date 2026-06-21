@@ -35,7 +35,11 @@ def test_reset_demo_state_seeds_event_summary_and_demo_accounts():
         assert user.status == "active"
 
 
-def test_reset_demo_state_clears_event_runtime_records_created_by_api():
+def test_reset_demo_state_clears_event_runtime_records_created_by_api(monkeypatch):
+    monkeypatch.setenv("AGENT_BACKEND", "deterministic")
+    monkeypatch.delenv("DASHSCOPE_API_KEY", raising=False)
+    monkeypatch.delenv("AGENT_DRAFT_BACKEND", raising=False)
+
     reset_demo_state()
     client = TestClient(app)
 
