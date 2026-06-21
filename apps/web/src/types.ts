@@ -95,6 +95,146 @@ export interface ReviewReport {
   human_approvals: string[];
   lessons_learned: string[];
   next_event_recommendations: string[];
+  touchpoint_summary?: Record<string, unknown>;
+  merchant_outcomes?: Array<Record<string, unknown>>;
+  extension_tasks?: Array<Record<string, unknown>>;
+}
+
+export type EventPageStatus = "draft" | "published" | "archived";
+export type TouchpointType =
+  | "event_page"
+  | "in_shop_qr"
+  | "coupon"
+  | "redemption"
+  | "status_report"
+  | "display";
+export type CouponRuleStatus = "active" | "paused" | "expired";
+export type CouponRedemptionStatus = "claimed" | "redeemed" | "expired" | "cancelled";
+export type OperationSuggestionStatus =
+  | "draft"
+  | "pending_approval"
+  | "approved"
+  | "rejected"
+  | "applied";
+export type OperationSuggestionType =
+  | "route_adjustment"
+  | "merchant_capacity"
+  | "coupon_rebalance"
+  | "public_notice"
+  | "extension_task";
+
+export interface EventPage {
+  id: string;
+  event_id: string;
+  plan_version: number;
+  status: EventPageStatus;
+  title: string;
+  subtitle: string;
+  story_sections: Array<Record<string, unknown>>;
+  route_highlights: Array<Record<string, unknown>>;
+  merchant_highlights: Array<Record<string, unknown>>;
+  notices: Array<Record<string, unknown>>;
+  generated_from_run_id?: string | null;
+  published_at?: string | null;
+  updated_at: string;
+}
+
+export interface EventPageProjection {
+  id?: string;
+  event_id?: string;
+  plan_version?: number;
+  current_plan_version?: number;
+  status?: EventPageStatus;
+  title?: string;
+  subtitle?: string;
+  story_sections?: Array<Record<string, unknown>>;
+  route_highlights?: Array<Record<string, unknown>>;
+  merchant_highlights?: Array<Record<string, unknown>>;
+  notices?: Array<Record<string, unknown>>;
+  interaction_status?: Record<string, unknown>;
+}
+
+export interface InShopTouchpoint {
+  id: string;
+  event_id: string;
+  merchant_id?: string | null;
+  package_id?: string | null;
+  touchpoint_type: TouchpointType;
+  label: string;
+  public_copy: string;
+  token: string;
+  status: "active" | "paused";
+  metrics: Record<string, number>;
+  created_at: string;
+}
+
+export interface CouponRule {
+  id: string;
+  event_id: string;
+  merchant_id: string;
+  package_id: string;
+  title: string;
+  description: string;
+  max_redemptions: number;
+  per_anonymous_interaction_limit: number;
+  status: CouponRuleStatus;
+  created_at: string;
+}
+
+export interface MerchantInteractionPackage {
+  id: string;
+  event_id: string;
+  merchant_id: string;
+  plan_version: number;
+  status: "draft" | "active" | "paused";
+  operator_brief: string;
+  visitor_pitch: string;
+  task_ids: string[];
+  touchpoints: InShopTouchpoint[];
+  coupon_rules: CouponRule[];
+  evidence_refs: string[];
+  generated_from_run_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TouchpointInteraction {
+  id: string;
+  event_id: string;
+  touchpoint_id: string;
+  merchant_id?: string | null;
+  interaction_type: "view" | "scan" | "claim" | "redeem" | "status_check";
+  source: string;
+  anonymous_interaction_id: string;
+  created_at: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface CouponRedemption {
+  id: string;
+  event_id: string;
+  coupon_rule_id: string;
+  merchant_id: string;
+  anonymous_interaction_id: string;
+  status: CouponRedemptionStatus;
+  claimed_at: string;
+  redeemed_at?: string | null;
+}
+
+export interface OperationSuggestion {
+  id: string;
+  event_id: string;
+  suggestion_type: OperationSuggestionType;
+  status: OperationSuggestionStatus;
+  title: string;
+  rationale: string;
+  recommended_actions: Array<Record<string, unknown>>;
+  impacted_merchants: string[];
+  impacted_route_points: string[];
+  evidence_refs: string[];
+  agent_run_id?: string | null;
+  created_at: string;
+  approved_at?: string | null;
 }
 
 export interface PublicEvent {
@@ -210,6 +350,7 @@ export interface PublicNotice {
 
 export type AgentRunTrigger =
   | "planning_generation"
+  | "merchant_edge_package_generation"
   | "incident_recovery"
   | "public_notice_draft"
   | "review_generation";
@@ -344,6 +485,7 @@ export interface GeneratePlanResponse extends EventPlan {
 
 export interface MerchantWorkbench {
   merchant?: {
+    id?: string;
     merchant_id: string;
     name: string;
     type?: string;
@@ -351,6 +493,9 @@ export interface MerchantWorkbench {
   };
   runtime_state?: MerchantRuntimeState;
   tasks: MerchantTask[];
+  interaction_package?: MerchantInteractionPackage | null;
+  touchpoint_summary?: Record<string, unknown>;
+  coupon_summary?: Record<string, unknown>;
 }
 
 export interface RuntimeStateUpdateResponse extends MerchantRuntimeState {
@@ -371,4 +516,16 @@ export interface PublicEventV2 extends PublicEvent {
   current_plan_version?: number;
   route_points?: RoutePoint[];
   public_notices?: PublicNotice[];
+  event_page?: EventPageProjection;
+  merchant_highlights?: Array<Record<string, unknown>>;
+}
+
+export interface MerchantEdgePackagesResponse {
+  packages: MerchantInteractionPackage[];
+  agent_run?: AgentRun;
+  agent_trace?: AgentTrace;
+}
+
+export interface OperationSuggestionsResponse {
+  suggestions: OperationSuggestion[];
 }

@@ -2,15 +2,22 @@
 
 ## Recommended Next Step
 
-Review the v1.1 live Qwen smoke result and the competition material documents. The current recorded smoke outcome is `blocked`, so keep the claim to optional controlled draft architecture plus safe fallback evidence.
+Start a v1.3 live demo hardening phase.
 
-If a real provider-key shell is prepared later, rerun the guarded smoke script from that shell. Only if the outcome becomes `live_success` should the slide deck claim live Qwen controlled draft verification or use v1.1 live model-evidence screenshots.
+v1.2 now has the event-page and merchant-edge loop in place: backend contracts, frontend exposure, mocked visual smoke, screenshots, and verification all pass. The next gap is not another UI feature; it is demo credibility under a real local run:
+
+- Add a live FastAPI + Vite route smoke with real demo login, not only mocked Playwright API responses.
+- Create a short operator demo script for the v1.2 loop: organizer publish -> merchant package -> sold-out update -> operation suggestion -> public Event Page -> review.
+- Decide whether to keep regenerated historical screenshots or clean them before the next commit.
+- Re-run the optional Qwen live smoke only through process environment credentials, then record whether it is success or blocked without storing any key.
+- Convert the v1.2 loop into competition-facing material: architecture diagram, Agent capability evidence list, and slide-ready screenshots.
 
 ## Do Not Do Yet
 
 - Do not make Qwen or DashScope required for the demo.
 - Do not claim QwenPaw workflow orchestration until it is implemented and verified.
-- Do not let model output approve plans, publish notices, mutate merchant state, or create route versions.
+- Do not let model output approve plans, publish notices, mutate merchant state, create coupon/redemption authority, or create route versions.
 - Do not expose raw model/backend terms on merchant, tourist, or public H5 pages.
-- Do not use v1.1 live screenshot paths while the smoke outcome is `blocked`.
+- Do not use v1.1 live screenshot paths while the smoke outcome remains `blocked`.
 - Do not start real merchant, hardware, POS, payment, map, weather, or traffic integrations.
+- Do not run backend pytest in parallel against the default SQLite database; use serial runs or isolated database paths.

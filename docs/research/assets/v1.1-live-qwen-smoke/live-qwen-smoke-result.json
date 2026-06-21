@@ -1,25 +1,152 @@
 {
-  "date": "2026-06-14",
+  "date": "2026-06-15",
   "config": {
     "agent_draft_backend": "qwen",
     "qwen_model": "qwen-plus",
     "qwen_timeout_seconds": "30"
   },
-  "outcome": "blocked",
-  "blocked_reason": "DASHSCOPE_API_KEY is required",
+  "outcome": "live_completed_without_success_model_call",
   "recovery": {
-    "run": {},
-    "model_calls": [],
-    "evaluations": [],
-    "drafts": []
+    "run": {
+      "mode": "qwen_draft",
+      "run_id": "run_demo-night-tour_incident_inc_demo-night-tour_m001_inventory",
+      "fallback_reason": "schema_failed",
+      "final_output_ref": "draft:draft_run_demo-night-tour_incident_inc_demo-night-tour_m001_inventory_public_notice",
+      "status": "fallback_completed",
+      "event_id": "demo-night-tour",
+      "completed_at": "2026-06-15T07:26:42.445356+00:00",
+      "started_at": "2026-06-15T07:26:30.303485+00:00",
+      "trigger": "incident_recovery",
+      "fallback_used": true,
+      "error_summary": null
+    },
+    "model_calls": [
+      {
+        "run_id": "run_demo-night-tour_incident_inc_demo-night-tour_m001_inventory",
+        "created_at": "2026-06-15T07:26:42.445356+00:00",
+        "model_call_id": "model_run_demo-night-tour_incident_inc_demo-night-tour_m001_inventory_qwen_public_notice_v1",
+        "input_refs": [
+          "incident:inc_demo-night-tour_m001_inventory",
+          "draft:draft_run_demo-night-tour_incident_inc_demo-night-tour_m001_inventory_recovery_explanation"
+        ],
+        "model": "qwen-plus",
+        "response_status": "schema_failed",
+        "provider": "dashscope",
+        "prompt_template_id": "qwen_public_notice_v1",
+        "fallback_used": true,
+        "error_summary": "unsafe mutation fields: approval_status"
+      },
+      {
+        "run_id": "run_demo-night-tour_incident_inc_demo-night-tour_m001_inventory",
+        "created_at": "2026-06-15T07:26:36.653856+00:00",
+        "model_call_id": "model_run_demo-night-tour_incident_inc_demo-night-tour_m001_inventory_qwen_recovery_explanation_v1",
+        "input_refs": [
+          "incident:inc_demo-night-tour_m001_inventory",
+          "recovery_proposal_payload"
+        ],
+        "model": "qwen-plus",
+        "response_status": "schema_failed",
+        "provider": "dashscope",
+        "prompt_template_id": "qwen_recovery_explanation_v1",
+        "fallback_used": true,
+        "error_summary": "unsafe mutation fields: approval_status"
+      }
+    ],
+    "evaluations": [
+      {
+        "public_copy_ready": true,
+        "evaluation_id": "eval_run_demo-night-tour_incident_inc_demo-night-tour_m001_inventory_public_copy",
+        "notes": [
+          "public copy passed"
+        ],
+        "run_id": "run_demo-night-tour_incident_inc_demo-night-tour_m001_inventory",
+        "human_approval_required": true,
+        "forbidden_public_terms_present": false,
+        "schema_pass": true,
+        "fallback_used": true,
+        "unsafe_mutation_attempted": false
+      }
+    ],
+    "drafts": [
+      {
+        "draft_id": "draft_run_demo-night-tour_incident_inc_demo-night-tour_m001_inventory_public_notice",
+        "source_run_id": "run_demo-night-tour_incident_inc_demo-night-tour_m001_inventory",
+        "draft_type": "public_notice",
+        "locale": "zh-Hans",
+        "status": "draft",
+        "content_preview": "福隆老饼家库存售罄，路线临时调整至新街手信铺。",
+        "structured_payload_keys": [
+          "affected_merchants",
+          "affected_route_points",
+          "requires_organizer_approval"
+        ],
+        "created_at": "2026-06-15T07:26:42.445356+00:00"
+      }
+    ]
+  },
+  "recovery_approval": {
+    "proposal_id": "rec_inc_demo-night-tour_m001_inventory",
+    "current_plan_version": 2,
+    "notice_id": "notice_rec_inc_demo-night-tour_m001_inventory"
   },
   "review": {
-    "run": {},
-    "model_calls": [],
+    "run": {
+      "mode": "qwen_draft",
+      "run_id": "run_demo-night-tour_review",
+      "fallback_reason": "schema_failed",
+      "final_output_ref": "draft:draft_run_demo-night-tour_review_review_summary",
+      "status": "fallback_completed",
+      "event_id": "demo-night-tour",
+      "completed_at": "2026-06-15T07:26:49.014346+00:00",
+      "started_at": "2026-06-15T07:26:43.148959+00:00",
+      "trigger": "review_generation",
+      "fallback_used": true,
+      "error_summary": null
+    },
+    "model_calls": [
+      {
+        "run_id": "run_demo-night-tour_review",
+        "created_at": "2026-06-15T07:26:49.013824+00:00",
+        "model_call_id": "model_run_demo-night-tour_review_qwen_review_summary_v1",
+        "input_refs": [
+          "metrics",
+          "incidents",
+          "public_notices",
+          "recovery_proposals"
+        ],
+        "model": "qwen-plus",
+        "response_status": "schema_failed",
+        "provider": "dashscope",
+        "prompt_template_id": "qwen_review_summary_v1",
+        "fallback_used": true,
+        "error_summary": "3 validation errors for QwenDraftCandidate\ncontent\n  Field required [type=missing, input_value={'agent_draft': {'templat...条游客提示）。'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nlocale\n  Field required [type=missing, input_value={'agent_draft': {'templat...条游客提示）。'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nstructured_payload\n  Field required [type=missing, input_value={'agent_draft': {'templat...条游客提示）。'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing"
+      }
+    ],
     "evaluations": [],
-    "drafts": []
+    "drafts": [
+      {
+        "draft_id": "draft_run_demo-night-tour_review_review_summary",
+        "source_run_id": "run_demo-night-tour_review",
+        "draft_type": "review_summary",
+        "locale": "mixed",
+        "status": "draft",
+        "content_preview": "Evidence: metrics=avg_queue_minutes,budget_spent_mop,checkins_completed,h5_visits,incident_response_minutes; incidents=1; notices=1. Recommendation: keep backup",
+        "structured_payload_keys": [
+          "evidence_backed",
+          "incident_ids",
+          "metrics",
+          "notice_ids",
+          "proposal_ids"
+        ],
+        "created_at": "2026-06-15T07:26:49.013824+00:00"
+      }
+    ]
   },
-  "public_projection": {},
+  "public_projection": {
+    "event_id": "demo-night-tour",
+    "current_plan_version": 2,
+    "notice_count": 1
+  },
   "deterministic_fallback_probe": {
     "agent_run_mode": "deterministic",
     "agent_run_status": "completed",

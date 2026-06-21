@@ -297,3 +297,91 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 - The current v1.1 evidence does not prove live Qwen provider success. It proves the guarded live path exists, safely blocks without a process key, writes sanitized blocked evidence, and verifies deterministic fallback.
 - Do not use v1.1 live screenshot paths in slides while the outcome remains `blocked`.
 - Full Playwright regenerated several historical screenshots during verification; those generated diffs were cleaned because they were not v1.1 plan outputs.
+
+## v1.2 Backend P0 Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python -m pytest apps/api/tests/test_v12_event_page_merchant_edge.py -q` | project root | 0 | 12 v1.2 event page, merchant edge, touchpoint, coupon, review, and operation suggestion tests passed. |
+| `python -m pytest apps/api/tests/test_v12_qwen_schema_success.py apps/api/tests/test_v10_draft_generation.py apps/api/tests/test_v10_qwen_draft_runtime.py -q` | project root | 0 | 16 Qwen parser/sanitizer and existing controlled-draft runtime tests passed. |
+| `python -m pytest apps/api/tests/test_v12_store_models.py apps/api/tests/test_v12_event_page_merchant_edge.py apps/api/tests/test_v12_qwen_schema_success.py apps/api/tests/test_v08_planning_agent.py apps/api/tests/test_v08_recovery_agent.py apps/api/tests/test_v10_draft_generation.py apps/api/tests/test_v10_qwen_draft_runtime.py -q` | project root | 0 | 47 Task 1-7 backend core tests passed. |
+| `python -m pytest tests/test_review.py::test_review_report_mentions_approved_actions -q` | `apps/api` | 0 | Existing review responsibility-boundary regression passed after restoring the Chinese lesson text. |
+| `python -m pytest -q` | `apps/api` | 0 | 101 backend tests passed; 3 existing FastAPI/Starlette deprecation warnings. |
+
+### Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Default deterministic demo still does not require `DASHSCOPE_API_KEY` | pass |
+| Event page draft/publish requires approved current plan | pass |
+| Stale event page is not attached after recovery creates current v2 | pass |
+| Merchant workbench exposes only the merchant's current package children | pass |
+| Touchpoint interactions strip visitor identity metadata | pass |
+| Coupon claim/redeem metrics appear in review report | pass |
+| Operation suggestions use current approved plan merchant/route scope | pass |
+| Stale operation suggestions disappear after runtime condition resolves | pass |
+| Stale operation suggestion approval is rejected | pass |
+| Queue notice suggestion payload refreshes when runtime queue state changes | pass |
+| Qwen prompt sanitizer removes control fields without mutating input | pass |
+| Unsafe Qwen output inside `agent_draft` wrapper is still rejected | pass |
+| No real Qwen live call was run for v1.2 Task 1-7 | pass |
+
+### v1.2 Verification Notes
+
+- Backend pytest must be run serially against the default SQLite store. A parallel pytest attempt created a `database is locked` failure; after stopping the stale Python process and rerunning serially, the full backend suite passed.
+- Task 8-10 frontend exposure and smoke were completed after this backend P0 checkpoint; see the full v1.2 verification section below.
+- The existing FastAPI/Starlette deprecation warnings remain unchanged.
+
+## v1.2 Event Page And Merchant Edge Full Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `npm.cmd run test -- tests/v09-agent-boundaries.test.ts tests/public-review.test.tsx tests/v05-ui-contracts.test.tsx --reporter=verbose` | `apps/web` | 0 | Focused regression rerun passed: 3 files, 10 tests. This verified the public source gate, public Event Page language switching, and Ant Design test cleanup fix. |
+| `npm.cmd run test` | `apps/web` | 0 | 26 frontend test files passed, 90 tests passed. |
+| `npm.cmd run build` | `apps/web` | 0 | `tsc -b && vite build` passed; 3216 modules transformed. Existing >500 kB chunk warning remains. |
+| `npm.cmd exec playwright test tests/e2e/v12-event-page-merchant-edge.spec.ts` | `apps/web` | 0 | 1 v1.2 Playwright visual smoke passed and generated five v1.2 screenshots. |
+| `npm.cmd exec playwright test` | `apps/web` | 0 | 22 active Playwright tests passed, 6 tests skipped. Skips were historical v0.4 and v1.1 live-success-only evidence tests. Initial sandboxed attempt hit Windows `EPERM` writing `test-results/.last-run.json`; rerun with approved project write access passed. |
+| `python -m pytest -q` | `apps/api` | 0 | 101 backend tests passed; 3 existing FastAPI/Starlette deprecation warnings. |
+| `rg -n "sk-[A-Za-z0-9]{16,}\|Authorization[: ]+Bearer\|DASHSCOPE_API_KEY\\s*=" apps docs .gitignore README.md` | project root | 0 | Broad scan matched documentation examples and test assertions only; no real key or bearer token was found. |
+| `rg -n "sk-[A-Za-z0-9._-]{20,}\|Bearer\\s+sk-[A-Za-z0-9._-]{20,}\|DASHSCOPE_API_KEY\\s*=\\s*sk-" apps docs README.md .gitignore` | project root | 1 | Strict real-key scan found no matches; `rg` exit 1 is expected for no matches. |
+| `rg -n "([A-Z]:\\\\Users\\\\[^\\\\]+\|[A-Z]:\\\\rz\\\\\|[A-Z]:/rz/)" docs apps README.md` | project root | 1 | No local absolute path matches; `rg` exit 1 is expected for no matches. |
+| `rg -n "AgentDraft\|AgentRun\|PlanVersion\|RecoveryProposal\|qwen\|dashscope\|schema_failed\|approval_status" apps\\web\\src\\pages\\public apps\\web\\src\\pages\\merchant apps\\web\\src\\i18n\\dictionaries` | project root | 1 | Public/merchant pages and dictionaries do not expose the listed internal terms; `rg` exit 1 is expected for no matches. |
+
+### v1.2 Screenshot Evidence
+
+| Surface | Path |
+| --- | --- |
+| Organizer event page status | `docs/research/assets/v1.2-event-page-merchant-edge/01-organizer-event-page-status.png` |
+| Merchant edge package | `docs/research/assets/v1.2-event-page-merchant-edge/02-merchant-edge-package.png` |
+| Public Event Page mobile | `docs/research/assets/v1.2-event-page-merchant-edge/03-public-event-page-mobile.png` |
+| Exception center operation suggestion | `docs/research/assets/v1.2-event-page-merchant-edge/04-exception-operation-suggestion.png` |
+| Review touchpoint summary | `docs/research/assets/v1.2-event-page-merchant-edge/05-review-touchpoint-summary.png` |
+
+### v1.2 Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Public H5 remains unauthenticated | pass |
+| Public H5 is framed as Event Page rather than backend preview | pass |
+| Merchant package is merchant-scoped in backend and UI | pass |
+| Scan, claim, and redeem interactions remain anonymous demo interactions | pass |
+| Merchant sold-out quick action still triggers runtime/incident path | pass |
+| Operation suggestions cite evidence and do not bypass recovery plan approval semantics | pass |
+| Review report includes touchpoint summary, merchant outcomes, and extension tasks | pass |
+| Optional Qwen parser accepts a single `agent_draft` wrapper | pass |
+| Unsafe Qwen output fields remain rejected | pass |
+| No Qwen/DashScope key is required for deterministic demo | pass |
+| No QwenPaw workflow orchestration is claimed | pass |
+| Public/merchant source does not expose raw model/backend terms | pass |
+| No real key or local absolute path was found by final scans | pass |
+
+### v1.2 Verification Notes
+
+- The v1.2 Playwright spec is a deterministic mocked-API visual/product-flow smoke. It verifies route-level UI, screenshots, and public-copy boundaries without needing a running backend.
+- Backend integration and authority are verified by the FastAPI pytest suite. A future live E2E can add real demo login plus running FastAPI/Vite if needed.
+- Full Playwright regenerated several historical screenshot artifacts in addition to the new v1.2 screenshots.
+- The existing frontend bundle-size warning remains unchanged and is not a v1.2 regression.

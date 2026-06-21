@@ -31,6 +31,18 @@ from app.schemas import (
 )
 from app.seed import seed_demo, seed_demo_accounts
 from app.services.incidents import incident_from_runtime_state
+from app.services.event_page import (
+    build_event_page_draft,
+    build_event_page_projection,
+    publish_event_page as mark_event_page_published,
+)
+from app.services.merchant_edge import generate_merchant_interaction_packages
+from app.services.operation_suggestions import (
+    OperationSuggestionError,
+    approve_operation_suggestion,
+    generate_operation_suggestions,
+    list_current_operation_suggestions,
+)
 from app.services.planning import (
     generate_event_plan,
     generate_merchant_packs,
@@ -45,6 +57,12 @@ from app.services.recovery import (
     build_weather_recovery,
 )
 from app.services.review import generate_review_report
+from app.services.touchpoints import (
+    claim_coupon,
+    record_touchpoint_interaction,
+    redeem_coupon,
+    summarize_touchpoint_metrics,
+)
 from app.store import STORE
 
 app = FastAPI(title="智引濠江 MVP API", version="0.1.0")
@@ -90,6 +108,33 @@ def persist_agent_runtime_result(result) -> None:
         STORE.save_agent_model_call(model_call)
     for evaluation in result.evaluations:
         STORE.save_agent_evaluation(evaluation)
+
+
+def current_event_and_plan(event_id: str):
+    event = STORE.get_event_summary(event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="event not found")
+    plan = STORE.get_plan_version(event_id, event.current_plan_version)
+    if not plan:
+        raise HTTPException(status_code=404, detail="current plan not found")
+    return event, plan
+
+
+def latest_published_event_page(event_id: str, plan_version: int | None = None):
+    pages = [page for page in STORE.list_event_pages(event_id) if page.status == "published"]
+    if plan_version is not None:
+        pages = [page for page in pages if page.plan_version == plan_version]
+    if not pages:
+        return None
+    return max(
+        pages,
+        key=lambda page: (
+            page.plan_version,
+            page.published_at or "",
+            page.updated_at or "",
+            page.id,
+        ),
+    )
 
 
 @app.get("/api/health")
@@ -308,7 +353,7 @@ def agent_tool_calls(
     run_id: str,
     user: AuthUserRecord = Depends(require_organizer),
 ):
-    run = STORE.get_agent_run(run_id)
+    run = STORE.get_agent_run(run_id, event_id=event_id)
     if not run or run.event_id != event_id:
         raise HTTPException(status_code=404, detail="agent run not found")
     return STORE.list_agent_tool_calls(run_id)
@@ -320,7 +365,7 @@ def agent_model_calls(
     run_id: str,
     user: AuthUserRecord = Depends(require_organizer),
 ):
-    run = STORE.get_agent_run(run_id)
+    run = STORE.get_agent_run(run_id, event_id=event_id)
     if not run or run.event_id != event_id:
         raise HTTPException(status_code=404, detail="agent run not found")
     return STORE.list_agent_model_calls(run_id)
@@ -332,7 +377,7 @@ def agent_evaluations(
     run_id: str,
     user: AuthUserRecord = Depends(require_organizer),
 ):
-    run = STORE.get_agent_run(run_id)
+    run = STORE.get_agent_run(run_id, event_id=event_id)
     if not run or run.event_id != event_id:
         raise HTTPException(status_code=404, detail="agent run not found")
     return STORE.list_agent_evaluations(run_id)
@@ -346,6 +391,104 @@ def merchant_tasks(event_id: str, user: AuthUserRecord = Depends(require_organiz
 @app.get("/api/events/{event_id}/merchant-packs")
 def merchant_packs(event_id: str, user: AuthUserRecord = Depends(require_organizer)):
     return STORE.list_packs(event_id)
+
+
+@app.post("/api/events/{event_id}/merchant-edge-packages/generate")
+def generate_merchant_edge_packages(
+    request: Request,
+    event_id: str,
+    user: AuthUserRecord = Depends(require_organizer),
+):
+    verify_mutation_origin(request)
+    _, plan_version = current_event_and_plan(event_id)
+    if plan_version.status != "approved":
+        raise HTTPException(status_code=400, detail="current plan is not approved")
+    run_id = f"run_{event_id}_merchant_edge_v{plan_version.version}"
+    packages = generate_merchant_interaction_packages(
+        event_id=event_id,
+        plan_version=plan_version,
+        merchants=STORE.list_merchants(),
+        tasks=STORE.list_merchant_tasks(event_id),
+        run_id=run_id,
+    )
+    runtime_result = AgentRuntime(mode="deterministic").run_merchant_edge_package_generation(
+        event_id=event_id,
+        plan=plan_version,
+        merchants=STORE.list_merchants(),
+        tasks=STORE.list_merchant_tasks(event_id),
+        packages=packages,
+    )
+    persist_agent_runtime_result(runtime_result)
+    trace = build_trace_from_steps(
+        event_id=event_id,
+        trigger="merchant_edge_package_generation",
+        steps=runtime_result.steps,
+        final_output_ref=runtime_result.run.final_output_ref
+        or f"merchant_interaction_packages:{event_id}:v{plan_version.version}",
+        trace_id=f"trace_{event_id}_merchant_edge_v{plan_version.version}",
+    )
+    STORE.save_agent_trace(trace)
+    for package in packages:
+        for touchpoint in package.touchpoints:
+            STORE.save_touchpoint(touchpoint)
+        for coupon_rule in package.coupon_rules:
+            STORE.save_coupon_rule(coupon_rule)
+        STORE.save_merchant_interaction_package(package)
+    audit_user(event_id, user, "generate_merchant_edge_packages", f"generated {len(packages)} packages")
+    return {"packages": packages, "agent_run": runtime_result.run, "agent_trace": trace}
+
+
+@app.get("/api/events/{event_id}/merchant-edge-packages")
+def list_merchant_edge_packages(event_id: str, user: AuthUserRecord = Depends(require_organizer)):
+    return {"packages": STORE.list_merchant_interaction_packages(event_id)}
+
+
+@app.post("/api/events/{event_id}/operation-suggestions/generate")
+def generate_operation_suggestions_endpoint(
+    request: Request,
+    event_id: str,
+    user: AuthUserRecord = Depends(require_organizer),
+):
+    verify_mutation_origin(request)
+    if not STORE.get_event_summary(event_id):
+        raise HTTPException(status_code=404, detail="event not found")
+    try:
+        suggestions = generate_operation_suggestions(event_id)
+    except OperationSuggestionError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    audit_user(event_id, user, "generate_operation_suggestions", f"generated {len(suggestions)} suggestions")
+    return {"suggestions": suggestions}
+
+
+@app.get("/api/events/{event_id}/operation-suggestions")
+def list_operation_suggestions(event_id: str, user: AuthUserRecord = Depends(require_organizer)):
+    if not STORE.get_event_summary(event_id):
+        raise HTTPException(status_code=404, detail="event not found")
+    try:
+        suggestions = list_current_operation_suggestions(event_id)
+    except OperationSuggestionError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    return {"suggestions": suggestions}
+
+
+@app.post("/api/events/{event_id}/operation-suggestions/{suggestion_id}/approve")
+def approve_operation_suggestion_endpoint(
+    request: Request,
+    event_id: str,
+    suggestion_id: str,
+    user: AuthUserRecord = Depends(require_organizer),
+):
+    verify_mutation_origin(request)
+    if not STORE.get_event_summary(event_id):
+        raise HTTPException(status_code=404, detail="event not found")
+    try:
+        suggestion = approve_operation_suggestion(event_id, suggestion_id)
+    except OperationSuggestionError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    audit_user(event_id, user, "approve_operation_suggestion", suggestion_id)
+    return suggestion
 
 
 @app.get("/api/merchants")
@@ -411,10 +554,63 @@ def merchant_workbench(
     state = STORE.get_runtime_state(merchant_id)
     if not merchant or not state:
         raise HTTPException(status_code=404, detail="merchant not found")
+    merchant_payload = merchant.model_dump()
+    merchant_payload["id"] = merchant.merchant_id
+    interaction_package = STORE.get_merchant_interaction_package(event_id, merchant_id)
+    if interaction_package:
+        touchpoints = [
+            touchpoint
+            for touchpoint in STORE.list_touchpoints(event_id, merchant_id=merchant_id)
+            if touchpoint.package_id == interaction_package.id
+        ]
+        coupon_rules = [
+            rule
+            for rule in STORE.list_coupon_rules(event_id, merchant_id=merchant_id)
+            if rule.package_id == interaction_package.id
+        ]
+    else:
+        touchpoints = []
+        coupon_rules = []
+    touchpoint_metrics = summarize_touchpoint_metrics(event_id, merchant_id=merchant_id)
+    current_touchpoint_ids = {touchpoint.id for touchpoint in touchpoints}
+    current_coupon_rule_ids = {rule.id for rule in coupon_rules}
+    current_interactions = [
+        interaction
+        for interaction in STORE.list_touchpoint_interactions(event_id, merchant_id=merchant_id)
+        if interaction.touchpoint_id in current_touchpoint_ids
+    ]
+    current_redemptions = [
+        redemption
+        for redemption in STORE.list_coupon_redemptions(event_id, merchant_id=merchant_id)
+        if redemption.coupon_rule_id in current_coupon_rule_ids
+    ]
     return {
-        "merchant": merchant,
+        "merchant": merchant_payload,
         "runtime_state": state,
         "tasks": STORE.list_merchant_tasks(event_id, merchant_id=merchant_id),
+        "interaction_package": interaction_package,
+        "touchpoint_summary": {
+            "total": len(touchpoints),
+            "active": len([touchpoint for touchpoint in touchpoints if touchpoint.status == "active"]),
+            "types": sorted({touchpoint.touchpoint_type for touchpoint in touchpoints}),
+            "total_interactions": touchpoint_metrics["total_interactions"],
+            "interaction_types": touchpoint_metrics["interaction_types"],
+            "current_package_interactions": len(current_interactions),
+            "event_merchant_interactions": touchpoint_metrics["total_interactions"],
+        },
+        "coupon_summary": {
+            "total": len(coupon_rules),
+            "active": len([rule for rule in coupon_rules if rule.status == "active"]),
+            "max_redemptions": sum(rule.max_redemptions for rule in coupon_rules),
+            "current_package_claims": len(
+                [redemption for redemption in current_redemptions if redemption.status in {"claimed", "redeemed"}]
+            ),
+            "current_package_redemptions": len(
+                [redemption for redemption in current_redemptions if redemption.status == "redeemed"]
+            ),
+            "event_merchant_claims": touchpoint_metrics["coupon_claims"],
+            "event_merchant_redemptions": touchpoint_metrics["coupon_redemptions"],
+        },
     }
 
 
@@ -499,7 +695,7 @@ def create_recovery_proposal(
     user: AuthUserRecord = Depends(require_organizer),
 ):
     verify_mutation_origin(request)
-    incident = STORE.get_incident(incident_id)
+    incident = STORE.get_incident(incident_id, event_id=event_id)
     if not incident:
         raise HTTPException(status_code=404, detail="incident not found")
     proposal = build_recovery_proposal(incident)
@@ -518,7 +714,7 @@ def approve_recovery_proposal(
     user: AuthUserRecord = Depends(require_organizer),
 ):
     verify_mutation_origin(request)
-    proposal = STORE.get_recovery_proposal(proposal_id)
+    proposal = STORE.get_recovery_proposal(proposal_id, event_id=event_id)
     event = STORE.get_event_summary(event_id)
     if not proposal or not event:
         raise HTTPException(status_code=404, detail="proposal or event not found")
@@ -541,7 +737,7 @@ def approve_recovery_proposal(
     STORE.save_merchant_tasks(event_id, next_tasks)
     STORE.save_public_notice(notice)
     STORE.save_recovery_proposal(proposal)
-    incident = STORE.get_incident(proposal.incident_id)
+    incident = STORE.get_incident(proposal.incident_id, event_id=event_id)
     if incident:
         incident.status = "approved"
         STORE.save_incident(incident)
@@ -567,18 +763,86 @@ def approve_recovery_action(
     return action
 
 
+@app.post("/api/events/{event_id}/event-page/draft")
+def draft_event_page(
+    request: Request,
+    event_id: str,
+    user: AuthUserRecord = Depends(require_organizer),
+):
+    verify_mutation_origin(request)
+    event, plan_version = current_event_and_plan(event_id)
+    if plan_version.status != "approved":
+        raise HTTPException(status_code=400, detail="current plan is not approved")
+    page = build_event_page_draft(
+        event=event,
+        plan_version=plan_version,
+        route_points=plan_version.route_points,
+        merchants=STORE.list_merchants(),
+        notices=STORE.list_public_notices(event_id),
+    )
+    STORE.save_event_page(page)
+    audit_user(event_id, user, "draft_event_page", page.id)
+    return page
+
+
+@app.post("/api/events/{event_id}/event-page/publish")
+def publish_event_page_endpoint(
+    request: Request,
+    event_id: str,
+    user: AuthUserRecord = Depends(require_organizer),
+):
+    verify_mutation_origin(request)
+    event, plan_version = current_event_and_plan(event_id)
+    if plan_version.status != "approved":
+        raise HTTPException(status_code=400, detail="current plan is not approved")
+    page = STORE.get_latest_event_page(event_id)
+    if not page:
+        raise HTTPException(status_code=404, detail="event page not found")
+    if page.plan_version != plan_version.version:
+        page = build_event_page_draft(
+            event=event,
+            plan_version=plan_version,
+            route_points=plan_version.route_points,
+            merchants=STORE.list_merchants(),
+            notices=STORE.list_public_notices(event_id),
+        )
+    published = mark_event_page_published(page)
+    STORE.save_event_page(published)
+    audit_user(event_id, user, "publish_event_page", published.id)
+    return published
+
+
+@app.get("/api/events/{event_id}/event-page")
+def get_event_page(event_id: str, user: AuthUserRecord = Depends(require_organizer)):
+    page = STORE.get_latest_event_page(event_id)
+    if not page:
+        raise HTTPException(status_code=404, detail="event page not found")
+    return page
+
+
 @app.get("/api/public/events/{event_id}")
 def public_event(event_id: str):
     event = STORE.get_event_summary(event_id)
     if event and event.current_plan_version:
         plan_version = STORE.get_plan_version(event_id, event.current_plan_version)
         if plan_version:
-            return build_public_event(
+            public_payload = build_public_event(
                 event=event,
                 plan=plan_version,
                 notices=STORE.list_public_notices(event_id),
                 legacy_notices=STORE.list_notices(event_id),
             )
+            page = latest_published_event_page(event_id, plan_version=plan_version.version)
+            if page:
+                event_page = build_event_page_projection(
+                    event=event,
+                    page=page,
+                    plan_version=plan_version,
+                    notices=STORE.list_public_notices(event_id),
+                )
+                public_payload["event_page"] = event_page
+                public_payload["merchant_highlights"] = event_page["merchant_highlights"]
+            return public_payload
     plan = STORE.get_plan(event_id)
     if not plan:
         raise HTTPException(status_code=404, detail="plan not found")
@@ -596,6 +860,60 @@ def public_event(event_id: str):
     )
 
 
+@app.post("/api/public/events/{event_id}/touchpoints/{touchpoint_id}/interactions")
+def public_touchpoint_interaction(
+    request: Request,
+    event_id: str,
+    touchpoint_id: str,
+    payload: dict | None = None,
+):
+    verify_mutation_origin(request)
+    body = payload or {}
+    try:
+        return record_touchpoint_interaction(
+            event_id=event_id,
+            touchpoint_id=touchpoint_id,
+            interaction_type=body.get("interaction_type", "scan"),
+            source=body.get("source", "demo"),
+            anonymous_interaction_id=body.get("anonymous_interaction_id"),
+            metadata=body.get("metadata") or {},
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/public/events/{event_id}/coupons/{coupon_rule_id}/claim")
+def public_coupon_claim(
+    request: Request,
+    event_id: str,
+    coupon_rule_id: str,
+    payload: dict | None = None,
+):
+    verify_mutation_origin(request)
+    body = payload or {}
+    try:
+        return claim_coupon(
+            event_id=event_id,
+            coupon_rule_id=coupon_rule_id,
+            anonymous_interaction_id=body.get("anonymous_interaction_id", ""),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/api/public/events/{event_id}/coupon-redemptions/{redemption_id}/redeem")
+def public_coupon_redeem(
+    request: Request,
+    event_id: str,
+    redemption_id: str,
+):
+    verify_mutation_origin(request)
+    try:
+        return redeem_coupon(event_id=event_id, redemption_id=redemption_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @app.post("/api/events/{event_id}/review-report")
 def review_report(
     request: Request,
@@ -606,11 +924,15 @@ def review_report(
     plan = STORE.get_plan(event_id)
     if not plan:
         raise HTTPException(status_code=404, detail="plan not found")
+    touchpoint_summary = summarize_touchpoint_metrics(event_id)
     report = generate_review_report(
         plan=plan,
         recovery_actions=STORE.list_recovery_actions(event_id),
         audit_logs=STORE.list_audit_logs(event_id),
         metrics=STORE.list_operational_metrics(event_id),
+        touchpoint_summary=touchpoint_summary,
+        merchant_outcomes=touchpoint_summary["merchant_outcomes"],
+        extension_tasks=touchpoint_summary["extension_tasks"],
     )
     runtime_result = AgentRuntime().run_review_generation(
         event_id=event_id,

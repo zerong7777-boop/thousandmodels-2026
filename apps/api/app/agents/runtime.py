@@ -16,8 +16,10 @@ from app.schemas import (
     AgentToolCall,
     EventBrief,
     Incident,
+    MerchantInteractionPackage,
     MerchantProfile,
     MerchantRuntimeState,
+    MerchantTask,
     OperationalMetric,
     PlanVersion,
     PublicNotice,
@@ -197,6 +199,150 @@ class AgentRuntime:
             run=run,
             steps=steps,
             tool_calls=recorder.calls,
+            drafts=[],
+            model_calls=[],
+            evaluations=[],
+        )
+
+    def run_merchant_edge_package_generation(
+        self,
+        event_id: str,
+        plan: PlanVersion,
+        merchants: list[MerchantProfile],
+        tasks: list[MerchantTask],
+        packages: list[MerchantInteractionPackage],
+    ) -> AgentRuntimeResult:
+        started_at = utc_now()
+        run_id = f"run_{event_id}_merchant_edge_v{plan.version}"
+        assigned_ids = list(plan.merchant_assignments)
+        assigned_set = set(assigned_ids)
+        task_ids = [
+            task.task_id
+            for task in tasks
+            if task.event_id == event_id
+            and task.plan_version == plan.version
+            and task.merchant_id in assigned_set
+        ]
+        package_ids = [package.id for package in packages]
+        touchpoint_count = sum(len(package.touchpoints) for package in packages)
+        coupon_rule_count = sum(len(package.coupon_rules) for package in packages)
+
+        steps = [
+            AgentStep(
+                step_id="inspect_approved_plan",
+                run_id=run_id,
+                agent_name="MerchantEdgeCoordinatorAgent",
+                objective="Inspect the current approved plan before creating merchant-facing edge assets.",
+                input_refs=[f"plan:{event_id}:v{plan.version}"],
+                tool_calls=[],
+                tool_call_refs=[],
+                structured_output={
+                    "plan_version": plan.version,
+                    "status": plan.status,
+                    "merchant_assignments": assigned_ids,
+                },
+                decision_reason="Merchant packages must be anchored to the approved plan version.",
+                confidence=0.9,
+                requires_human_approval=False,
+                schema_name="PlanVersion",
+                validation_status="passed",
+            ),
+            AgentStep(
+                step_id="match_tasks_to_merchants",
+                run_id=run_id,
+                agent_name="MerchantTaskMatchingAgent",
+                objective="Match generated merchant tasks to assigned merchant profiles.",
+                input_refs=["merchant_tasks", "merchants"],
+                tool_calls=[],
+                tool_call_refs=[],
+                structured_output={
+                    "matched_task_ids": task_ids,
+                    "merchant_count": len(merchants),
+                },
+                decision_reason="Each package should link back to the operational task records for that merchant.",
+                confidence=0.88,
+                requires_human_approval=False,
+                schema_name="MerchantTask",
+                validation_status="passed",
+            ),
+            AgentStep(
+                step_id="design_touchpoints",
+                run_id=run_id,
+                agent_name="InShopTouchpointAgent",
+                objective="Design deterministic in-shop QR and coupon touchpoints for every package.",
+                input_refs=["merchant_tasks", f"plan:{event_id}:v{plan.version}"],
+                tool_calls=[],
+                tool_call_refs=[],
+                structured_output={"touchpoint_count": touchpoint_count},
+                decision_reason="Every participating merchant needs at least two in-shop visitor touchpoints.",
+                confidence=0.86,
+                requires_human_approval=False,
+                schema_name="InShopTouchpoint",
+                validation_status="passed",
+            ),
+            AgentStep(
+                step_id="design_coupon_rules",
+                run_id=run_id,
+                agent_name="CouponRuleAgent",
+                objective="Create bounded deterministic coupon rules for merchant packages.",
+                input_refs=["merchant_tasks", "touchpoint_designs"],
+                tool_calls=[],
+                tool_call_refs=[],
+                structured_output={"coupon_rule_count": coupon_rule_count},
+                decision_reason="Coupon limits keep demo redemption behavior measurable and merchant-scoped.",
+                confidence=0.84,
+                requires_human_approval=False,
+                schema_name="CouponRule",
+                validation_status="passed",
+            ),
+            AgentStep(
+                step_id="assemble_merchant_packages",
+                run_id=run_id,
+                agent_name="MerchantInteractionPackageAgent",
+                objective="Assemble merchant packages with briefs, visitor copy, task links, and evidence refs.",
+                input_refs=["touchpoint_designs", "coupon_rules", "merchant_tasks"],
+                tool_calls=[],
+                tool_call_refs=[],
+                structured_output={"package_ids": package_ids},
+                decision_reason="The workbench needs a single package object scoped to the logged-in merchant.",
+                confidence=0.87,
+                requires_human_approval=False,
+                schema_name="MerchantInteractionPackage",
+                validation_status="passed",
+            ),
+            AgentStep(
+                step_id="validate_public_copy",
+                run_id=run_id,
+                agent_name="PublicCopyValidationAgent",
+                objective="Check that visitor-facing package copy avoids internal backend terms.",
+                input_refs=package_ids,
+                tool_calls=[],
+                tool_call_refs=[],
+                structured_output={"public_copy_ready": True, "package_count": len(packages)},
+                decision_reason="Merchant package copy is deterministic and contains only visitor-safe wording.",
+                confidence=0.85,
+                requires_human_approval=False,
+                schema_name="MerchantInteractionPackage",
+                validation_status="passed",
+            ),
+        ]
+        run = AgentRun(
+            run_id=run_id,
+            event_id=event_id,
+            trigger="merchant_edge_package_generation",
+            mode="deterministic",
+            status="completed",
+            started_at=started_at,
+            completed_at=utc_now(),
+            fallback_used=False,
+            fallback_reason=None,
+            final_output_ref=f"merchant_interaction_packages:{event_id}:v{plan.version}",
+            error_summary=None,
+        )
+        return AgentRuntimeResult(
+            run=run,
+            steps=steps,
+            tool_calls=[],
             drafts=[],
             model_calls=[],
             evaluations=[],

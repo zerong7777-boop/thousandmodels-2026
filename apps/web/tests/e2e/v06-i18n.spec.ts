@@ -325,7 +325,7 @@ test("v0.6 Simplified Chinese public H5 screenshot", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await mockApi(page, null);
   await page.goto("/public/events/demo-night-tour");
-  await expect(page.getByText("今晚路线")).toBeVisible();
+  await expect(page.getByText("今晚活动")).toBeVisible();
   await expect(page.getByText("实时更新")).toBeVisible();
   await expectNoPublicBackendTerms(page);
   await snap(page, "04-public-h5-zh-Hans-mobile.png");
@@ -364,7 +364,7 @@ test("v0.6 Traditional Chinese public H5 screenshot", async ({ page }) => {
   await mockApi(page, null);
   await page.goto("/public/events/demo-night-tour");
   await switchLocale(page, /繁體中文/);
-  await expect(page.getByText("今晚路線")).toBeVisible();
+  await expect(page.getByText("今晚活動")).toBeVisible();
   await expect(page.getByText("即時更新")).toBeVisible();
   await expectNoPublicBackendTerms(page);
   await snap(page, "08-public-h5-zh-Hant-mobile.png");

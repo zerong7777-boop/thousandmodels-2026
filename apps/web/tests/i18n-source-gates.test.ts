@@ -25,7 +25,10 @@ describe("i18n source gates", () => {
     const translatedPages = [
       "pages/login/LoginPage.tsx",
       "pages/organizer/OrganizerDashboardPage.tsx",
+      "pages/organizer/OrganizerEventWorkspacePage.tsx",
       "pages/organizer/OrganizerExceptionCenterPage.tsx",
+      "pages/organizer/OrganizerReviewPage.tsx",
+      "pages/merchant/MerchantDashboardPage.tsx",
       "pages/merchant/MerchantStatusPage.tsx",
       "pages/tourist/TouristRoutePage.tsx",
       "pages/public/PublicEventPage.tsx"
@@ -65,6 +68,31 @@ describe("i18n source gates", () => {
       const source = readFileSync(file, "utf8");
       for (const term of forbidden) {
         expect(source).not.toContain(term);
+      }
+    }
+  });
+
+  test("task 8 Chinese dictionaries do not keep obvious English labels", () => {
+    const chineseDictionaries = [
+      path.resolve(__dirname, "../src/i18n/dictionaries/zh-Hans.ts"),
+      path.resolve(__dirname, "../src/i18n/dictionaries/zh-Hant.ts")
+    ];
+    const forbiddenPhrases = [
+      "Visitor event page",
+      "Merchant interaction packs",
+      "Operation suggestions",
+      "Touchpoint summary",
+      "Merchant outcomes",
+      "Follow-up tasks",
+      "Tonight's story",
+      "Merchant highlights",
+      "Route highlights"
+    ];
+
+    for (const file of chineseDictionaries) {
+      const source = readFileSync(file, "utf8");
+      for (const phrase of forbiddenPhrases) {
+        expect(source).not.toContain(phrase);
       }
     }
   });

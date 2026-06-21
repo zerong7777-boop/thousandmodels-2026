@@ -40,6 +40,18 @@ class QwenDraftCandidate(BaseModel):
     safety_notes: list[str] = Field(default_factory=list)
 
 
+UNSAFE_PROMPT_KEYS = {
+    "approval_status",
+    "approved_by",
+    "plan_patch",
+    "merchant_task_patch",
+    "publish_status",
+    "status_transition",
+    "approved_at",
+    "published_at",
+}
+
+
 @dataclass
 class CandidateParseResult:
     candidate: QwenDraftCandidate | None
@@ -136,14 +148,45 @@ def reject_unsafe_mutation(payload: object) -> None:
         raise UnsafeModelMutationError(str(exc)) from exc
 
 
+def sanitize_qwen_prompt_payload(payload: object) -> object:
+    if isinstance(payload, dict):
+        sanitized: dict = {}
+        for key, value in payload.items():
+            normalized_key = key.lower() if isinstance(key, str) else key
+            if key in UNSAFE_PROMPT_KEYS or normalized_key in UNSAFE_PROMPT_KEYS:
+                continue
+            sanitized[key] = sanitize_qwen_prompt_payload(value)
+        return sanitized
+    if isinstance(payload, list):
+        return [sanitize_qwen_prompt_payload(item) for item in payload]
+    return payload
+
+
+def normalize_qwen_candidate_payload(parsed: object) -> object:
+    if (
+        isinstance(parsed, dict)
+        and set(parsed.keys()) == {"agent_draft"}
+        and isinstance(parsed["agent_draft"], dict)
+    ):
+        return parsed["agent_draft"]
+    return parsed
+
+
 def parse_qwen_candidate(raw: str) -> CandidateParseResult:
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError as exc:
         return CandidateParseResult(None, "invalid_json", f"JSON parse failed: {exc.msg}")
+    normalized = normalize_qwen_candidate_payload(parsed)
+    if isinstance(parsed, dict) and "agent_draft" in parsed and normalized is parsed:
+        return CandidateParseResult(
+            None,
+            "schema_failed",
+            "ambiguous agent_draft wrapper must not include top-level candidate fields",
+        )
     try:
-        reject_unsafe_mutation(parsed)
-        return CandidateParseResult(QwenDraftCandidate.model_validate(parsed), "success", None)
+        reject_unsafe_mutation(normalized)
+        return CandidateParseResult(QwenDraftCandidate.model_validate(normalized), "success", None)
     except UnsafeModelMutationError as exc:
         return CandidateParseResult(None, "schema_failed", f"unsafe mutation fields: {exc}")
     except ValidationError as exc:
@@ -248,9 +291,8 @@ class QwenDraftGenerator:
                 fallback_method=fallback_method,
             )
         try:
-            raw = self._provider().complete_json(
-                prompt_template_id=prompt_template_id,
-                payload={
+            payload = sanitize_qwen_prompt_payload(
+                {
                     "event_id": context.event_id,
                     "draft_type": context.draft_type,
                     "input_refs": context.input_refs,
@@ -260,7 +302,11 @@ class QwenDraftGenerator:
                     "incidents": [incident.model_dump() for incident in context.incidents or []],
                     "notices": [notice.model_dump() for notice in context.notices or []],
                     "proposals": [proposal.model_dump() for proposal in context.proposals or []],
-                },
+                }
+            )
+            raw = self._provider().complete_json(
+                prompt_template_id=prompt_template_id,
+                payload=payload,
             )
         except Exception as exc:
             return self._fallback_result(
