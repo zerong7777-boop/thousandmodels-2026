@@ -1,12 +1,33 @@
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Any
 
 from app.agents.draft_generation import (
     DraftGenerationContext,
     DraftGenerationResult,
     choose_draft_generator,
 )
+from app.agents.guards import find_forbidden_public_terms
+from app.agents.qwenpaw_adapter import (
+    FakeQwenPawWorkflowAdapter,
+    QwenPawWorkflowContext,
+    QwenPawWorkflowResult,
+)
+from app.agents.tool_registry import (
+    ToolDefinition,
+    ToolPermission,
+    ToolRegistry,
+    ToolRequest,
+)
 from app.agents.tool_recorder import ToolRecorder
+from app.agents.workflow import (
+    WorkflowExecutor,
+    WorkflowNode,
+    WorkflowNodeResult,
+    WorkflowSpec,
+    WorkflowState,
+)
 from app.schemas import (
     AgentDraft,
     AgentEvaluation,
@@ -26,6 +47,7 @@ from app.schemas import (
     RecoveryProposal,
 )
 from app.services.recovery import build_recovery_proposal
+from app.store import STORE
 from app.tools.budget import split_budget
 from app.tools.merchant import select_night_merchants
 from app.tools.route import build_static_route
@@ -45,17 +67,452 @@ def utc_now() -> str:
     return datetime.now(UTC).isoformat()
 
 
+QWENPAW_WORKER_ORDER = [
+    "MerchantEdgeWorker",
+    "FieldOpsWorker",
+    "PublicNoticeWorker",
+    "ReviewEvidenceWorker",
+]
+QWENPAW_STEP_IDS = {
+    "CentralOpsLeader": "qwenpaw_central_ops_leader",
+    "MerchantEdgeWorker": "qwenpaw_merchant_edge_worker",
+    "FieldOpsWorker": "qwenpaw_field_ops_worker",
+    "PublicNoticeWorker": "qwenpaw_public_notice_worker",
+    "ReviewEvidenceWorker": "qwenpaw_review_evidence_worker",
+    "SafetyGateWorker": "qwenpaw_safety_gate_worker",
+}
+UNSAFE_QWENPAW_MUTATION_PATHS = {
+    "approval_status",
+    "publish_status",
+    "approved_by",
+    "approved_at",
+    "inventory_status",
+    "queue_status",
+    "available_for_visitors",
+    "plan_patch",
+    "merchant_task_patch",
+    "public_notice.publish_status",
+    "apply_suggestion",
+    "create_plan_version",
+    "approve_recovery",
+    "publish_notice",
+    "coupon_redemption",
+    "coupon_claim",
+    "claim_coupon",
+    "coupon_claim_status",
+    "redeem_coupon",
+    "redemption_status",
+    "payment",
+    "pos_transaction",
+    "visitor_identity",
+}
+
+
+def _path_is_unsafe(path: str, key: str) -> bool:
+    lowered_path = path.lower()
+    lowered_key = key.lower()
+    for unsafe_path in UNSAFE_QWENPAW_MUTATION_PATHS:
+        lowered_unsafe = unsafe_path.lower()
+        if lowered_key == lowered_unsafe:
+            return True
+        if lowered_path == lowered_unsafe or lowered_path.endswith(f".{lowered_unsafe}"):
+            return True
+    return False
+
+
+def _find_unsafe_qwenpaw_paths(payload: Any) -> list[str]:
+    found: set[str] = set()
+
+    def visit(value: Any, path: str = "") -> None:
+        if isinstance(value, dict):
+            for key, child in value.items():
+                key_text = str(key)
+                next_path = f"{path}.{key_text}" if path else key_text
+                if _path_is_unsafe(next_path, key_text):
+                    found.add(next_path)
+                visit(child, next_path)
+        elif isinstance(value, list):
+            for index, item in enumerate(value):
+                next_path = f"{path}.{index}" if path else str(index)
+                visit(item, next_path)
+
+    visit(payload)
+    return sorted(found)
+
+
+def _fallback_qwenpaw_result(context: QwenPawWorkflowContext) -> QwenPawWorkflowResult:
+    incident_ref = f"incident:{context.incident_id}"
+    notice = "Some offers may be limited. Please follow the latest event page guidance."
+    return QwenPawWorkflowResult(
+        leader_decision={
+            "assigned_workers": QWENPAW_WORKER_ORDER + ["SafetyGateWorker"],
+            "input_refs": [incident_ref, *context.input_refs],
+            "decision": "Unsafe shadow output was replaced with advisory-only fallback.",
+        },
+        worker_outputs=[
+            {
+                "agent_name": "MerchantEdgeWorker",
+                "content": "Merchant impact requires organizer review before any live action.",
+                "structured_payload": {
+                    "merchant_impact_note": "Merchant capacity issue remains advisory-only.",
+                    "evidence_refs": [incident_ref],
+                },
+            },
+            {
+                "agent_name": "FieldOpsWorker",
+                "content": "Prepare backup capacity recommendation for organizer review.",
+                "structured_payload": {
+                    "recovery_rationale": "Fallback keeps the incident visible without applying changes.",
+                    "recommended_action": "organizer_review_required",
+                    "authoritative_mutation": False,
+                },
+            },
+            {
+                "agent_name": "PublicNoticeWorker",
+                "content": notice,
+                "structured_payload": {
+                    "visitor_safe_notice_draft": notice,
+                    "public_copy_ready": True,
+                },
+            },
+            {
+                "agent_name": "ReviewEvidenceWorker",
+                "content": "Review should cite the incident and fallback safety evaluation.",
+                "structured_payload": {
+                    "review_evidence_refs": [incident_ref, f"touchpoint_metrics:{context.event_id}"],
+                },
+            },
+        ],
+        advisory_bundle={
+            "recovery_rationale": "Unsafe shadow output was replaced before any operational action.",
+            "visitor_safe_notice_draft": notice,
+            "merchant_impact_note": "Organizer review is required before any live operational change.",
+            "review_evidence_refs": [incident_ref, f"touchpoint_metrics:{context.event_id}"],
+            "human_approval_required": True,
+            "authoritative_mutation": False,
+        },
+        permission_requests=[],
+        safety_notes=["unsafe qwenpaw output replaced by deterministic fallback"],
+    )
+
+
 class AgentRuntime:
     def __init__(self, mode: str | None = None, draft_generator=None):
         self.draft_generator = draft_generator or choose_draft_generator()
         selected_mode = mode or getattr(self.draft_generator, "mode", "deterministic")
-        self.mode = selected_mode if selected_mode in {"deterministic", "qwen_draft"} else "deterministic"
+        self.mode = (
+            selected_mode
+            if selected_mode in {"deterministic", "qwen_draft", "qwenpaw_workflow"}
+            else "deterministic"
+        )
 
     def _draft_fallback_state(self, results: list[DraftGenerationResult]) -> tuple[bool, str | None, str]:
         fallback_reasons = sorted({result.fallback_reason for result in results if result.fallback_reason})
         fallback_used = any(result.fallback_used for result in results)
         status = "fallback_completed" if fallback_used and self.mode == "qwen_draft" else "completed"
         return fallback_used, ",".join(fallback_reasons) if fallback_reasons else None, status
+
+    def _qwenpaw_tool_registry(
+        self,
+        incident: Incident,
+        runtime_state: MerchantRuntimeState | None,
+    ) -> ToolRegistry:
+        registry = ToolRegistry()
+        registry.register(
+            ToolDefinition(
+                name="incident.get_active_incident_snapshot",
+                permission=ToolPermission.READ_ONLY,
+                input_schema_name="IncidentSnapshotInput",
+                output_schema_name="IncidentSnapshot",
+                handler=lambda payload: incident.model_dump(),
+            )
+        )
+        registry.register(
+            ToolDefinition(
+                name="merchant.get_runtime_snapshot",
+                permission=ToolPermission.READ_ONLY,
+                input_schema_name="MerchantRuntimeSnapshotInput",
+                output_schema_name="MerchantRuntimeSnapshot",
+                handler=lambda payload: runtime_state.model_dump() if runtime_state else {},
+            )
+        )
+        registry.register(
+            ToolDefinition(
+                name="operation.apply_suggestion",
+                permission=ToolPermission.APPROVAL_REQUIRED,
+                input_schema_name="OperationSuggestionApplyInput",
+                output_schema_name="OperationSuggestionApplyResult",
+                handler=lambda payload: {"applied": True},
+            )
+        )
+        return registry
+
+    def _qwenpaw_agent_for_tool_request(self, request_payload: dict[str, Any]) -> str:
+        requested_by_agent = request_payload.get("requested_by_agent")
+        if isinstance(requested_by_agent, str) and requested_by_agent:
+            return requested_by_agent
+        tool_name = str(request_payload.get("tool_name", ""))
+        if tool_name == "merchant.get_runtime_snapshot":
+            return "MerchantEdgeWorker"
+        if tool_name == "operation.apply_suggestion":
+            return "FieldOpsWorker"
+        return "FieldOpsWorker"
+
+    def _qwenpaw_step_for_agent(self, agent_name: str) -> str:
+        return QWENPAW_STEP_IDS.get(agent_name, f"qwenpaw_{agent_name.lower()}")
+
+    def run_qwenpaw_shadow_orchestration(
+        self,
+        event_id: str,
+        incident: Incident,
+    ) -> AgentRuntimeResult:
+        started_at = utc_now()
+        run_id = f"run_{event_id}_qwenpaw_shadow_{incident.incident_id}"
+        merchant_id = incident.affected_merchants[0] if incident.affected_merchants else None
+        runtime_state = STORE.get_runtime_state(merchant_id) if merchant_id else None
+        input_refs = [f"incident:{incident.incident_id}"]
+        if merchant_id:
+            input_refs.append(f"merchant_runtime:{merchant_id}")
+        snapshots = {
+            "incident": incident.model_dump(),
+            "merchant_runtime": runtime_state.model_dump() if runtime_state else None,
+        }
+        context = QwenPawWorkflowContext(
+            event_id=event_id,
+            incident_id=incident.incident_id,
+            input_refs=input_refs,
+            snapshots=snapshots,
+        )
+
+        adapter_result = FakeQwenPawWorkflowAdapter().run_shadow_incident_workflow(context)
+        unsafe_paths = _find_unsafe_qwenpaw_paths(
+            {
+                "leader_decision": adapter_result.leader_decision,
+                "worker_outputs": adapter_result.worker_outputs,
+                "advisory_bundle": adapter_result.advisory_bundle,
+                "permission_requests": adapter_result.permission_requests,
+            }
+        )
+        fallback_used = bool(unsafe_paths)
+        if fallback_used:
+            adapter_result = _fallback_qwenpaw_result(context)
+
+        registry = self._qwenpaw_tool_registry(incident=incident, runtime_state=runtime_state)
+        tool_calls: list[AgentToolCall] = []
+        for permission_request in adapter_result.permission_requests:
+            tool_name = str(permission_request["tool_name"])
+            requested_by_agent = self._qwenpaw_agent_for_tool_request(permission_request)
+            step_id = self._qwenpaw_step_for_agent(requested_by_agent)
+            execution = registry.request(
+                run_id=run_id,
+                step_id=step_id,
+                request=ToolRequest(
+                    tool_name=tool_name,
+                    requested_by_agent=requested_by_agent,
+                    input_payload=dict(permission_request.get("input_payload") or {}),
+                ),
+            )
+            tool_calls.append(execution.tool_call)
+
+        calls_by_agent: dict[str, list[AgentToolCall]] = defaultdict(list)
+        for call in tool_calls:
+            requested_by_agent = call.input_payload.get("requested_by_agent", "FieldOpsWorker")
+            calls_by_agent[str(requested_by_agent)].append(call)
+
+        worker_outputs = {
+            str(output.get("agent_name")): output
+            for output in adapter_result.worker_outputs
+            if output.get("agent_name")
+        }
+        permission_decisions = [
+            call.output_payload.get("permission_decision", {})
+            for call in tool_calls
+        ]
+        advisory_bundle = {
+            **adapter_result.advisory_bundle,
+            "permission_decisions": permission_decisions,
+        }
+        notice_content = str(
+            advisory_bundle.get("visitor_safe_notice_draft")
+            or "Some offers may be limited. Please follow the latest event page guidance."
+        )
+        forbidden_public_terms = find_forbidden_public_terms(notice_content)
+
+        def calls_payload(agent_name: str) -> tuple[list[dict[str, Any]], list[str]]:
+            calls = calls_by_agent.get(agent_name, [])
+            return [call.model_dump() for call in calls], [call.tool_call_id for call in calls]
+
+        def leader_node(state: WorkflowState) -> WorkflowNodeResult:
+            tool_payloads, tool_refs = calls_payload("CentralOpsLeader")
+            return WorkflowNodeResult(
+                step_id=QWENPAW_STEP_IDS["CentralOpsLeader"],
+                agent_name="CentralOpsLeader",
+                objective="Decompose one merchant incident into advisory-only specialist work.",
+                input_refs=input_refs,
+                tool_calls=tool_payloads,
+                tool_call_refs=tool_refs,
+                structured_output={
+                    "leader_decision": adapter_result.leader_decision,
+                    "assigned_workers": adapter_result.leader_decision.get("assigned_workers", []),
+                },
+                decision_reason="A merchant incident affects capacity, visitor copy, and review evidence.",
+                confidence=0.9,
+                requires_human_approval=False,
+                schema_name="QwenPawLeaderDecision",
+            )
+
+        def worker_node(agent_name: str, objective: str, reason: str, confidence: float) -> WorkflowNode:
+            def run(state: WorkflowState) -> WorkflowNodeResult:
+                output = worker_outputs.get(agent_name, {})
+                structured_payload = dict(output.get("structured_payload") or {})
+                tool_payloads, tool_refs = calls_payload(agent_name)
+                return WorkflowNodeResult(
+                    step_id=QWENPAW_STEP_IDS[agent_name],
+                    agent_name=agent_name,
+                    objective=objective,
+                    input_refs=input_refs,
+                    tool_calls=tool_payloads,
+                    tool_call_refs=tool_refs,
+                    structured_output={
+                        **structured_payload,
+                        "content": output.get("content"),
+                    },
+                    decision_reason=reason,
+                    confidence=confidence,
+                    requires_human_approval=True,
+                    schema_name="QwenPawWorkerOutput",
+                    validation_status="fallback" if fallback_used else "passed",
+                )
+
+            return WorkflowNode(node_id=QWENPAW_STEP_IDS[agent_name], run=run)
+
+        def safety_node(state: WorkflowState) -> WorkflowNodeResult:
+            tool_payloads, tool_refs = calls_payload("SafetyGateWorker")
+            return WorkflowNodeResult(
+                step_id=QWENPAW_STEP_IDS["SafetyGateWorker"],
+                agent_name="SafetyGateWorker",
+                objective="Validate the advisory bundle and enforce non-mutation boundaries.",
+                input_refs=input_refs,
+                tool_calls=tool_payloads,
+                tool_call_refs=tool_refs,
+                structured_output={
+                    "advisory_bundle": advisory_bundle,
+                    "permission_decisions": permission_decisions,
+                    "safety_notes": adapter_result.safety_notes,
+                    "unsafe_mutation_attempted": fallback_used,
+                    "unsafe_paths": unsafe_paths,
+                },
+                decision_reason=(
+                    "Unsafe adapter output was replaced with deterministic fallback."
+                    if fallback_used
+                    else "All requested mutation-capable tools were denied and output stayed advisory."
+                ),
+                confidence=0.92,
+                requires_human_approval=True,
+                schema_name="QwenPawSafetyEvaluation",
+                validation_status="fallback" if fallback_used else "passed",
+            )
+
+        workflow_state = WorkflowState(
+            run_id=run_id,
+            event_id=event_id,
+            trigger="incident_recovery",
+            input_refs=input_refs,
+            snapshots=snapshots,
+            tool_calls=tool_calls,
+        )
+        workflow = WorkflowSpec(
+            workflow_id="qwenpaw_shadow_incident_v1",
+            trigger="incident_recovery",
+            nodes=[
+                WorkflowNode(node_id=QWENPAW_STEP_IDS["CentralOpsLeader"], run=leader_node),
+                worker_node(
+                    "MerchantEdgeWorker",
+                    "Assess merchant-facing impact without changing merchant runtime state.",
+                    "Merchant package guidance can be prepared, but live state remains untouched.",
+                    0.86,
+                ),
+                worker_node(
+                    "FieldOpsWorker",
+                    "Assess field recovery options and request only permissioned tools.",
+                    "Backup capacity advice requires organizer approval before action.",
+                    0.87,
+                ),
+                worker_node(
+                    "PublicNoticeWorker",
+                    "Draft visitor-safe notice copy for organizer review.",
+                    "Visitors need clear guidance without internal operational terms.",
+                    0.85,
+                ),
+                worker_node(
+                    "ReviewEvidenceWorker",
+                    "Identify evidence references for post-incident review.",
+                    "Review output should cite incident and touchpoint evidence.",
+                    0.84,
+                ),
+                WorkflowNode(node_id=QWENPAW_STEP_IDS["SafetyGateWorker"], run=safety_node),
+            ],
+            edges=[
+                (QWENPAW_STEP_IDS["CentralOpsLeader"], QWENPAW_STEP_IDS["MerchantEdgeWorker"]),
+                (QWENPAW_STEP_IDS["CentralOpsLeader"], QWENPAW_STEP_IDS["FieldOpsWorker"]),
+                (QWENPAW_STEP_IDS["CentralOpsLeader"], QWENPAW_STEP_IDS["PublicNoticeWorker"]),
+                (QWENPAW_STEP_IDS["CentralOpsLeader"], QWENPAW_STEP_IDS["ReviewEvidenceWorker"]),
+                (QWENPAW_STEP_IDS["ReviewEvidenceWorker"], QWENPAW_STEP_IDS["SafetyGateWorker"]),
+            ],
+        )
+        execution = WorkflowExecutor().execute(workflow, workflow_state)
+
+        draft = AgentDraft(
+            draft_id=f"draft_{run_id}_public_notice",
+            event_id=event_id,
+            source_run_id=run_id,
+            draft_type="public_notice",
+            locale="en",
+            content=notice_content,
+            structured_payload={
+                "advisory_bundle": advisory_bundle,
+                "source": "qwenpaw_shadow",
+                "authoritative_mutation": False,
+            },
+            status="draft",
+            created_at=utc_now(),
+        )
+        evaluation = AgentEvaluation(
+            evaluation_id=f"eval_{run_id}_qwenpaw_shadow",
+            run_id=run_id,
+            schema_pass=not fallback_used,
+            fallback_used=fallback_used,
+            unsafe_mutation_attempted=fallback_used,
+            human_approval_required=True,
+            forbidden_public_terms_present=bool(forbidden_public_terms),
+            public_copy_ready=bool(notice_content.strip()) and not forbidden_public_terms,
+            notes=[
+                f"unsafe_paths={','.join(unsafe_paths)}" if unsafe_paths else "unsafe_paths=none",
+                f"permission_decisions={len(permission_decisions)}",
+                "advisory_only=true",
+            ],
+        )
+        run = AgentRun(
+            run_id=run_id,
+            event_id=event_id,
+            trigger="incident_recovery",
+            mode="qwenpaw_workflow",
+            status="fallback_completed" if fallback_used else "completed",
+            started_at=started_at,
+            completed_at=utc_now(),
+            fallback_used=fallback_used,
+            fallback_reason="unsafe_qwenpaw_output" if fallback_used else None,
+            final_output_ref=f"qwenpaw_shadow_advisory:{event_id}:{incident.incident_id}",
+            error_summary=None,
+        )
+        return AgentRuntimeResult(
+            run=run,
+            steps=execution.steps,
+            tool_calls=tool_calls,
+            drafts=[draft],
+            model_calls=[],
+            evaluations=[evaluation],
+        )
 
     def run_planning(
         self,
