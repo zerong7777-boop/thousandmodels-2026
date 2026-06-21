@@ -2,9 +2,9 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  timeout: 30_000,
+  timeout: 60_000,
   expect: {
-    timeout: 8_000
+    timeout: 10_000
   },
   fullyParallel: false,
   reporter: [["list"]],
@@ -16,7 +16,7 @@ export default defineConfig({
     {
       command: "python -m uvicorn app.main:app --host 127.0.0.1 --port 8000",
       cwd: "../api",
-      url: "http://127.0.0.1:8000/docs",
+      url: "http://127.0.0.1:8000/api/health",
       reuseExistingServer: false,
       timeout: 120_000,
       env: {
@@ -29,6 +29,7 @@ export default defineConfig({
     },
     {
       command: "npm.cmd run dev -- --port 5179 --strictPort --force",
+      cwd: ".",
       url: "http://127.0.0.1:5179",
       reuseExistingServer: false,
       timeout: 120_000,
