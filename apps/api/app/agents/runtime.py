@@ -140,6 +140,40 @@ def _find_unsafe_qwenpaw_paths(payload: Any) -> list[str]:
     return sorted(found)
 
 
+def _find_unsafe_qwenpaw_value_flags(result: QwenPawWorkflowResult) -> list[str]:
+    found: set[str] = set()
+
+    def visit(value: Any, path: str = "") -> None:
+        if isinstance(value, dict):
+            for key, child in value.items():
+                key_text = str(key)
+                next_path = f"{path}.{key_text}" if path else key_text
+                lowered_key = key_text.lower()
+                if lowered_key == "authoritative_mutation" and child is not False:
+                    found.add(next_path)
+                if lowered_key == "human_approval_required" and child is not True:
+                    found.add(next_path)
+                visit(child, next_path)
+        elif isinstance(value, list):
+            for index, item in enumerate(value):
+                next_path = f"{path}.{index}" if path else str(index)
+                visit(item, next_path)
+
+    visit(
+        {
+            "leader_decision": result.leader_decision,
+            "worker_outputs": result.worker_outputs,
+            "advisory_bundle": result.advisory_bundle,
+            "permission_requests": result.permission_requests,
+        }
+    )
+    if result.advisory_bundle.get("authoritative_mutation") is not False:
+        found.add("advisory_bundle.authoritative_mutation")
+    if result.advisory_bundle.get("human_approval_required") is not True:
+        found.add("advisory_bundle.human_approval_required")
+    return sorted(found)
+
+
 def _fallback_qwenpaw_result(context: QwenPawWorkflowContext) -> QwenPawWorkflowResult:
     incident_ref = f"incident:{context.incident_id}"
     notice = "Some offers may be limited. Please follow the latest event page guidance."
@@ -285,12 +319,17 @@ class AgentRuntime:
         )
 
         adapter_result = FakeQwenPawWorkflowAdapter().run_shadow_incident_workflow(context)
-        unsafe_paths = _find_unsafe_qwenpaw_paths(
+        unsafe_paths = sorted(
             {
-                "leader_decision": adapter_result.leader_decision,
-                "worker_outputs": adapter_result.worker_outputs,
-                "advisory_bundle": adapter_result.advisory_bundle,
-                "permission_requests": adapter_result.permission_requests,
+                *_find_unsafe_qwenpaw_paths(
+                    {
+                        "leader_decision": adapter_result.leader_decision,
+                        "worker_outputs": adapter_result.worker_outputs,
+                        "advisory_bundle": adapter_result.advisory_bundle,
+                        "permission_requests": adapter_result.permission_requests,
+                    }
+                ),
+                *_find_unsafe_qwenpaw_value_flags(adapter_result),
             }
         )
         fallback_used = bool(unsafe_paths)

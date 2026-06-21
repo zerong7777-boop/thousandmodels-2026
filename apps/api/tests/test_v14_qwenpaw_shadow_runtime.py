@@ -130,3 +130,42 @@ def test_qwenpaw_shadow_runtime_falls_back_on_unsafe_adapter_output(monkeypatch)
     assert result.run.fallback_used is True
     assert result.run.fallback_reason == "unsafe_qwenpaw_output"
     assert any(evaluation.unsafe_mutation_attempted for evaluation in result.evaluations)
+
+
+def test_qwenpaw_shadow_runtime_falls_back_on_non_authoritative_bundle_flags(monkeypatch):
+    incident_id = prepare_sold_out_incident()
+    incident = STORE.get_incident(incident_id, event_id="demo-night-tour")
+
+    from app.agents import qwenpaw_adapter
+
+    def unsafe_result(self, context):
+        return qwenpaw_adapter.QwenPawWorkflowResult(
+            leader_decision={"assigned_workers": ["FieldOpsWorker"]},
+            worker_outputs=[
+                {
+                    "agent_name": "FieldOpsWorker",
+                    "content": "This looks advisory but the bundle flags are unsafe.",
+                    "structured_payload": {"recommended_action": "organizer_review_required"},
+                }
+            ],
+            advisory_bundle={
+                "authoritative_mutation": True,
+                "human_approval_required": False,
+                "visitor_safe_notice_draft": "Please follow organizer guidance.",
+            },
+            permission_requests=[],
+            safety_notes=["unsafe advisory flags"],
+        )
+
+    monkeypatch.setattr(qwenpaw_adapter.FakeQwenPawWorkflowAdapter, "run_shadow_incident_workflow", unsafe_result)
+
+    result = AgentRuntime(mode="qwenpaw_workflow").run_qwenpaw_shadow_orchestration(
+        event_id="demo-night-tour",
+        incident=incident,
+    )
+
+    assert result.run.status == "fallback_completed"
+    assert result.run.fallback_used is True
+    assert result.run.fallback_reason == "unsafe_qwenpaw_output"
+    assert result.drafts[0].structured_payload["advisory_bundle"]["authoritative_mutation"] is False
+    assert result.drafts[0].structured_payload["advisory_bundle"]["human_approval_required"] is True
