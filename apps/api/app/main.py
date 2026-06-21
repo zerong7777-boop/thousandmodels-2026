@@ -13,6 +13,7 @@ from app.auth import (
     create_login_session,
     get_current_user,
     hash_session_token,
+    is_allowed_local_dev_origin,
     public_user,
     require_merchant,
     require_organizer,
@@ -70,6 +71,8 @@ from app.services.touchpoints import (
 )
 from app.store import STORE
 
+STRICT_MUTATION_ORIGINS = {"http://127.0.0.1:5173", "http://localhost:5173"}
+
 app = FastAPI(title="智引濠江 MVP API", version="0.1.0")
 
 app.add_middleware(
@@ -101,6 +104,13 @@ def audit(event_id: str, actor_type: str, actor_id: str, action_type: str, note:
 
 def audit_user(event_id: str, user: AuthUserRecord, action_type: str, note: str) -> None:
     audit(event_id, user.role, user.user_id, action_type, note)
+
+
+def verify_strict_mutation_origin(request: Request) -> None:
+    origin = request.headers.get("origin")
+    if origin in STRICT_MUTATION_ORIGINS or is_allowed_local_dev_origin(origin):
+        return
+    raise HTTPException(status_code=403, detail="invalid mutation origin")
 
 
 def persist_agent_runtime_result(result) -> None:
@@ -507,6 +517,7 @@ def run_qwenpaw_shadow_orchestration_endpoint(
     user: AuthUserRecord = Depends(require_organizer),
 ):
     verify_mutation_origin(request)
+    verify_strict_mutation_origin(request)
     try:
         runtime_result, advisory_bundle = run_qwenpaw_shadow(
             event_id=event_id,

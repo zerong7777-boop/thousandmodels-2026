@@ -76,6 +76,20 @@ def test_organizer_without_mutation_origin_cannot_run_qwenpaw_shadow_orchestrati
     assert response.status_code == 403, response.text
 
 
+def test_organizer_without_origin_but_with_demo_csrf_cannot_run_qwenpaw_shadow_orchestration():
+    reset_demo_state(event_id=EVENT_ID)
+    with TestClient(app) as client:
+        login_as(client, "organizer.demo")
+
+        response = client.post(
+            ENDPOINT,
+            json={},
+            headers={"x-zhiyin-csrf": "demo"},
+        )
+
+    assert response.status_code == 403, response.text
+
+
 def test_organizer_run_returns_advisory_bundle_and_persists_shadow_evidence():
     incident_id = prepare_sold_out_incident()
     with TestClient(app) as client:
