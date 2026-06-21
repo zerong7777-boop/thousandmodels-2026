@@ -136,6 +136,21 @@ shadcn/ui-inspired local component layer
 - Broad secret-pattern scanning only matched documentation examples and test assertions, not a real key or bearer token.
 - QwenPaw remains unimplemented and must not be claimed as active workflow orchestration.
 
+## v1.3 Live Demo Hardening State
+
+- v1.3 adds a deterministic local demo reset command under `apps/api/scripts/reset_demo_state.py`.
+- v1.3 adds a separate live Playwright config under `apps/web/playwright.live.config.ts`.
+- v1.3 keeps the default mocked Playwright suite separate from the live-only smoke; `v13-live-demo-smoke.spec.ts` is excluded from `apps/web/playwright.config.ts` and runs through the live config.
+- v1.3 live smoke starts FastAPI and Vite together and exercises real backend state.
+- The live smoke covers organizer login, merchant login, public H5, merchant sold-out reporting, organizer operation suggestions, public UI scan/claim/redeem, and review metrics.
+- Public interaction controls expose only visitor-safe touchpoint/coupon fields for the current plan version.
+- Screenshot evidence is under `docs/research/assets/v1.3-live-demo-smoke/`.
+- Smoke documentation is in `docs/research/v1.3-live-demo-smoke.md`.
+- Operator demo script is in `docs/research/v1.3-operator-demo-script.md`.
+- Optional Qwen live smoke is currently classified as `blocked` because `DASHSCOPE_API_KEY` was not present in the process environment.
+- Qwen remains optional and non-authoritative.
+- QwenPaw remains unimplemented and must not be claimed as active workflow orchestration.
+
 ## Demo Accounts
 
 - organizer: `organizer.demo`

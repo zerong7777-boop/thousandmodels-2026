@@ -385,3 +385,54 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 - Backend integration and authority are verified by the FastAPI pytest suite. A future live E2E can add real demo login plus running FastAPI/Vite if needed.
 - Full Playwright regenerated several historical screenshot artifacts in addition to the new v1.2 screenshots.
 - The existing frontend bundle-size warning remains unchanged and is not a v1.2 regression.
+
+## v1.3 Live Demo Hardening Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python scripts\reset_demo_state.py` | `apps/api` | 0 | Reset `demo-night-tour` and printed demo accounts `organizer.demo`, `merchant.m001.demo`, and `tourist.demo`. |
+| `python -m pytest -q` | `apps/api` | 0 | 105 backend tests passed; 3 existing FastAPI/Starlette deprecation warnings. |
+| `npm.cmd run test` | `apps/web` | 0 | 26 frontend test files passed, 90 tests passed. |
+| `npm.cmd run build` | `apps/web` | 0 | `tsc -b && vite build` passed; 3216 modules transformed; existing >500 kB chunk warning remains for `assets/index-D2XlfyTl.js` at 837.35 kB. |
+| `npm.cmd exec -- playwright test --list` | `apps/web` | 0 | Listed 28 default Playwright tests in 7 files; the live-only `v13-live-demo-smoke.spec.ts` is excluded from the mocked suite. |
+| `npm.cmd exec -- playwright test` | `apps/web` | 0 | Default mocked Playwright suite passed: 22 passed, 6 skipped. |
+| `npm.cmd exec -- playwright test tests/e2e/v13-live-demo-smoke.spec.ts --config playwright.live.config.ts` | `apps/web` | 0 | v1.3 live smoke passed: 1 test passed and 5 screenshots generated. |
+| `python scripts\live_qwen_smoke.py` with guarded Qwen env and no `DASHSCOPE_API_KEY` | `apps/api` | 1 | Wrote sanitized `blocked` optional Qwen evidence; blocked reason is missing process environment key. Initial sandboxed attempt hit SQLite readonly access, then the same non-secret command wrote evidence with approved project write access. |
+| `rg -n "sk-[A-Za-z0-9._-]{20,}\|Bearer\s+sk-[A-Za-z0-9._-]{20,}\|DASHSCOPE_API_KEY\s*=\s*sk-" apps docs README.md .gitignore` | project root | 1 | Strict secret scan found no real key or bearer-token matches; `rg` exit 1 is expected for no matches. |
+| `rg -n "([A-Z]:\\Users\\[^\\]+\|[A-Z]:\\rz\\\|[A-Z]:/rz/)" docs apps README.md` | project root | 1 | Local absolute path scan found no matches; `rg` exit 1 is expected for no matches. |
+| `rg -n "AgentDraft\|AgentRun\|PlanVersion\|RecoveryProposal\|qwen\|dashscope\|schema_failed\|approval_status" apps\web\src\pages\public apps\web\src\pages\merchant apps\web\src\i18n\dictionaries` | project root | 1 | Public/merchant pages and dictionaries do not expose the listed internal terms; `rg` exit 1 is expected for no matches. |
+
+### v1.3 Screenshot Evidence
+
+| Surface | Path |
+| --- | --- |
+| Organizer workspace | `docs/research/assets/v1.3-live-demo-smoke/01-live-organizer-workspace.png` |
+| Merchant package | `docs/research/assets/v1.3-live-demo-smoke/02-live-merchant-package.png` |
+| Exception suggestion | `docs/research/assets/v1.3-live-demo-smoke/03-live-exception-suggestion.png` |
+| Public event page | `docs/research/assets/v1.3-live-demo-smoke/04-live-public-event-page.png` |
+| Review metrics | `docs/research/assets/v1.3-live-demo-smoke/05-live-review-metrics.png` |
+
+### v1.3 Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Reset command seeds deterministic demo accounts and event | pass |
+| Live Playwright config starts real FastAPI and Vite | pass |
+| Default mocked Playwright suite remains separate from live-only smoke | pass |
+| Live smoke uses real backend API and no Playwright route mocks | pass |
+| Public H5 remains unauthenticated | pass |
+| Public scan, claim, and redeem use actual H5 UI controls | pass |
+| Public interaction controls expose only visitor-safe current-plan fields | pass |
+| Review report reflects public touchpoint metrics and merchant outcomes | pass |
+| Qwen live smoke remains optional and is honestly classified as `blocked` without a process key | pass |
+| No real key or local absolute path was found by final scans | pass |
+| Public/merchant source does not expose raw model/backend terms | pass |
+| QwenPaw workflow orchestration remains unimplemented | pass |
+
+### v1.3 Verification Notes
+
+- The first Task 7 default Playwright run failed because the default mocked config picked up the live-only v1.3 spec without starting FastAPI. This was fixed by excluding `v13-live-demo-smoke.spec.ts` from `apps/web/playwright.config.ts`; the live spec remains covered by `apps/web/playwright.live.config.ts`.
+- Full Playwright verification regenerated several historical screenshot artifacts. Only v1.3 evidence screenshots are part of v1.3 outputs.
+- The current optional Qwen evidence does not prove live provider success. It proves the guarded path blocks safely without a process key, writes sanitized evidence, and leaves the deterministic live demo valid.
