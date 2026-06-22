@@ -57,6 +57,7 @@ export function OrganizerExceptionCenterPage({ eventId = "demo-night-tour" }: { 
   const [shadowBusy, setShadowBusy] = useState(false);
   const suggestionsRequestRef = useRef(0);
   const proposalRequestRef = useRef(0);
+  const shadowRequestRef = useRef(0);
   const selectedIncident = useMemo(
     () => incidents.find((item) => item.incident_id === selectedIncidentId) ?? incidents[0],
     [incidents, selectedIncidentId]
@@ -145,16 +146,23 @@ export function OrganizerExceptionCenterPage({ eventId = "demo-night-tour" }: { 
   };
 
   const runShadowOrchestration = async () => {
+    const requestId = ++shadowRequestRef.current;
     setShadowBusy(true);
     setShadowError(null);
     try {
       const response = await api.runQwenPawShadowOrchestration(eventId, selectedIncident?.incident_id);
-      setShadowRun(response);
+      if (requestId === shadowRequestRef.current) {
+        setShadowRun(response);
+      }
     } catch {
-      setShadowRun(null);
-      setShadowError(t("organizer.qwenpaw.failed"));
+      if (requestId === shadowRequestRef.current) {
+        setShadowRun(null);
+        setShadowError(t("organizer.qwenpaw.failed"));
+      }
     } finally {
-      setShadowBusy(false);
+      if (requestId === shadowRequestRef.current) {
+        setShadowBusy(false);
+      }
     }
   };
 
@@ -344,6 +352,7 @@ export function OrganizerExceptionCenterPage({ eventId = "demo-night-tour" }: { 
                 key={item.incident_id ?? item.event_id}
                 onClick={() => {
                   ++proposalRequestRef.current;
+                  ++shadowRequestRef.current;
                   setSelectedIncidentId(item.incident_id);
                   setProposal(null);
                   setConfirmationMessage(null);

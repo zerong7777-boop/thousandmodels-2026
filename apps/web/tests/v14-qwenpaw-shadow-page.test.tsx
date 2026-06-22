@@ -49,6 +49,41 @@ function setupExceptionCenter() {
   mockApi.getOperationSuggestions.mockResolvedValue({ suggestions: [] });
 }
 
+function setupTwoIncidentExceptionCenter() {
+  mockApi.getIncidents.mockResolvedValue([
+    {
+      incident_id: "incident_demo_m001_inventory",
+      event_id: "demo-night-tour",
+      type: "inventory",
+      severity: "high",
+      source: "merchant",
+      trigger_detail: "Merchant m001 reported sold out.",
+      affected_route_points: ["rp001"],
+      affected_merchants: ["m001"],
+      status: "proposal_ready",
+      created_at: "2026-06-21T00:00:00Z"
+    },
+    {
+      incident_id: "incident_demo_m002_queue",
+      event_id: "demo-night-tour",
+      type: "queue",
+      severity: "medium",
+      source: "merchant",
+      trigger_detail: "Merchant m002 queue is busy.",
+      affected_route_points: ["rp002"],
+      affected_merchants: ["m002"],
+      status: "open",
+      created_at: "2026-06-21T00:01:00Z"
+    }
+  ]);
+  mockApi.getAgentRuns.mockResolvedValue([]);
+  mockApi.getAgentDrafts.mockResolvedValue([]);
+  mockApi.getAgentToolCalls.mockResolvedValue([]);
+  mockApi.getAgentModelCalls.mockResolvedValue([]);
+  mockApi.getAgentEvaluations.mockResolvedValue([]);
+  mockApi.getOperationSuggestions.mockResolvedValue({ suggestions: [] });
+}
+
 afterEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
@@ -130,4 +165,52 @@ test("organizer sees fallback shadow orchestration status", async () => {
   fireEvent.click(await screen.findByRole("button", { name: /run shadow orchestration/i }));
 
   expect(await screen.findByText(/fallback used/i)).toBeInTheDocument();
+});
+
+test("stale shadow orchestration response does not overwrite a newly selected incident", async () => {
+  setupTwoIncidentExceptionCenter();
+  let resolveFirst: (value: unknown) => void = () => undefined;
+  mockApi.runQwenPawShadowOrchestration.mockReturnValue(
+    new Promise((resolve) => {
+      resolveFirst = resolve;
+    })
+  );
+
+  renderWithI18n(<OrganizerExceptionCenterPage eventId="demo-night-tour" />);
+
+  fireEvent.click(await screen.findByRole("button", { name: /run shadow orchestration/i }));
+  await waitFor(() => {
+    expect(mockApi.runQwenPawShadowOrchestration).toHaveBeenCalledWith(
+      "demo-night-tour",
+      "incident_demo_m001_inventory"
+    );
+  });
+
+  fireEvent.click(screen.getByText("Merchant m002 queue is busy."));
+  resolveFirst({
+    agent_run: {
+      run_id: "run_demo-night-tour_qwenpaw_shadow_incident_demo_m001_inventory",
+      event_id: "demo-night-tour",
+      trigger: "incident_recovery",
+      mode: "qwenpaw_workflow",
+      status: "completed",
+      started_at: "2026-06-21T00:00:00Z",
+      completed_at: "2026-06-21T00:00:01Z",
+      fallback_used: false,
+      fallback_reason: null,
+      final_output_ref: "stale-shadow-run-for-m001",
+      error_summary: null
+    },
+    advisory_bundle: {
+      authoritative_mutation: false,
+      human_approval_required: true
+    },
+    steps: [],
+    permission_decisions: []
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  expect(screen.queryByText(/stale-shadow-run-for-m001/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/qwenpaw shadow orchestration/i)).not.toBeInTheDocument();
 });
