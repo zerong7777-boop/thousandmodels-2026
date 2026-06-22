@@ -1,0 +1,68 @@
+{
+  "outcome": "shadow_success",
+  "event_id": "demo-night-tour",
+  "backend": "qwenpaw_fake",
+  "agent_run_mode": "qwenpaw_workflow",
+  "authoritative_mutation": false,
+  "human_approval_required": true,
+  "permission_decision_count": 3,
+  "denied_permission_count": 1,
+  "agent_run": {
+    "run_id": "run_demo-night-tour_qwenpaw_shadow_inc_demo-night-tour_m001_inventory",
+    "event_id": "demo-night-tour",
+    "trigger": "incident_recovery",
+    "mode": "qwenpaw_workflow",
+    "status": "completed",
+    "started_at": "2026-06-22T00:44:32.365989+00:00",
+    "completed_at": "2026-06-22T00:44:32.366494+00:00",
+    "fallback_used": false,
+    "fallback_reason": null,
+    "final_output_ref": "qwenpaw_shadow_advisory:demo-night-tour:inc_demo-night-tour_m001_inventory",
+    "error_summary": null
+  },
+  "advisory_bundle": {
+    "recovery_rationale": "m001 reported sold-out inventory and should be reviewed before receiving more visitor flow.",
+    "visitor_safe_notice_draft": "Some offers may be limited. Please follow the latest event page guidance.",
+    "merchant_impact_note": "m001 should prepare backup wording and wait for organizer approval.",
+    "review_evidence_refs": [
+      "incident:inc_demo-night-tour_m001_inventory",
+      "touchpoint_metrics:demo-night-tour"
+    ],
+    "human_approval_required": true,
+    "authoritative_mutation": false,
+    "permission_decisions": [
+      {
+        "allowed": true,
+        "permission": "read_only",
+        "reason": "tool permission read_only is allowed for shadow orchestration"
+      },
+      {
+        "allowed": true,
+        "permission": "read_only",
+        "reason": "tool permission read_only is allowed for shadow orchestration"
+      },
+      {
+        "allowed": false,
+        "permission": "approval_required",
+        "reason": "tool permission approval_required is denied in shadow orchestration"
+      }
+    ]
+  },
+  "permission_decisions": [
+    {
+      "allowed": true,
+      "permission": "read_only",
+      "reason": "tool permission read_only is allowed for shadow orchestration"
+    },
+    {
+      "allowed": true,
+      "permission": "read_only",
+      "reason": "tool permission read_only is allowed for shadow orchestration"
+    },
+    {
+      "allowed": false,
+      "permission": "approval_required",
+      "reason": "tool permission approval_required is denied in shadow orchestration"
+    }
+  ]
+}
