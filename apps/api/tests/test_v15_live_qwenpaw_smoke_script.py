@@ -176,6 +176,38 @@ def test_live_success_with_fake_http_transport(monkeypatch, tmp_path):
     assert (tmp_path / "smoke.md").exists()
 
 
+def test_run_smoke_disables_httpx_proxy_environment(monkeypatch, tmp_path):
+    original_client = httpx.Client
+    captured_client_kwargs = {}
+
+    def recording_client(*args, **kwargs):
+        captured_client_kwargs.update(kwargs)
+        return original_client(*args, **kwargs)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            headers={"content-type": "text/event-stream"},
+            text='data: {"content":"Direct localhost response"}\n\n',
+        )
+
+    monkeypatch.setattr(live_qwenpaw_smoke.httpx, "Client", recording_client)
+    monkeypatch.setattr(live_qwenpaw_smoke, "ASSET_DIR", tmp_path)
+    monkeypatch.setattr(live_qwenpaw_smoke, "RESULT_JSON", tmp_path / "result.json")
+    monkeypatch.setattr(live_qwenpaw_smoke, "SMOKE_DOC", tmp_path / "smoke.md")
+
+    result = live_qwenpaw_smoke.run_smoke(
+        env={
+            "RUN_LIVE_QWENPAW_SMOKE": "1",
+            "QWENPAW_BASE_URL": "http://127.0.0.1:8088",
+        },
+        transport=httpx.MockTransport(handler),
+    )
+
+    assert result["outcome"] == "live_success"
+    assert captured_client_kwargs.get("trust_env") is False
+
+
 def test_session_id_is_sanitized_and_bounded_in_request_and_evidence(monkeypatch, tmp_path):
     fake_key = "sk-" + "a" * 32
     raw_session_id = (

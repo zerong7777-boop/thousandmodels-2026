@@ -307,7 +307,7 @@ def run_smoke(
     result = base_result(env=source, base_url=base_url, request_sent=True)
     result["sanitized_prompt_preview"] = bound_preview(prompt, max_chars=500)
     try:
-        with httpx.Client(timeout=timeout, transport=transport) as client:
+        with httpx.Client(timeout=timeout, transport=transport, trust_env=False) as client:
             with client.stream(
                 "POST",
                 f"{base_url}{ENDPOINT}",
