@@ -82,7 +82,8 @@ def test_redact_sensitive_text_removes_standalone_sensitive_labels_and_spaced_pa
         "DASHSCOPE_API_KEY "
         "QWENPAW_AUTH_PASSWORD "
         "Authorization "
-        "path=C:\\Users\\Jane Doe\\project\\file.txt"
+        "path=C:\\Users\\Jane Doe\\project\\file.txt "
+        "debug=D:\\Program Files\\Qwen Paw\\debug.log"
     )
 
     redacted = live_qwenpaw_smoke.redact_sensitive_text(raw)
@@ -93,6 +94,9 @@ def test_redact_sensitive_text_removes_standalone_sensitive_labels_and_spaced_pa
     assert "C:\\Users" not in redacted
     assert "Jane Doe" not in redacted
     assert "Doe\\project" not in redacted
+    assert "D:\\Program Files" not in redacted
+    assert "Qwen Paw" not in redacted
+    assert "debug.log" not in redacted
     assert "[REDACTED_SECRET]" in redacted
     assert "[REDACTED_LOCAL_PATH]" in redacted
 
@@ -178,6 +182,7 @@ def test_session_id_is_sanitized_and_bounded_in_request_and_evidence(monkeypatch
         "session "
         "Bearer "
         + fake_key
+        + " debug=D:\\Program Files\\Qwen Paw\\debug.log "
         + " path=E:\\rz\\competitions\\thousandmodels-2026\\apps\\api "
         + ("x" * 160)
     )
@@ -213,6 +218,9 @@ def test_session_id_is_sanitized_and_bounded_in_request_and_evidence(monkeypatch
     ):
         assert fake_key not in session_id
         assert "Bearer" not in session_id
+        assert "D:\\Program Files" not in session_id
+        assert "Qwen Paw" not in session_id
+        assert "debug.log" not in session_id
         assert "E:\\rz" not in session_id
         assert len(session_id) <= 96
 

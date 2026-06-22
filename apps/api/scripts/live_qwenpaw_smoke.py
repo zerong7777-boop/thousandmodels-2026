@@ -42,8 +42,7 @@ SECRET_PATTERNS = [
     re.compile(r"\b(?:DASHSCOPE_API_KEY|QWENPAW_AUTH_PASSWORD|Authorization)\b", re.IGNORECASE),
 ]
 LOCAL_PATH_PATTERNS = [
-    re.compile(r"[A-Z]:[\\/](?:Users|rz)[\\/][^\r\n,;`|]+", re.IGNORECASE),
-    re.compile(r"[A-Z]:[\\/][^\s]+", re.IGNORECASE),
+    re.compile(r"[A-Z]:[\\/][^\r\n,;`|\"']+", re.IGNORECASE),
     re.compile(r"\\\\[^\s\\]+\\[^\r\n,;`|]+", re.IGNORECASE),
 ]
 
