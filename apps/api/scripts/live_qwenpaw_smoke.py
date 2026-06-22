@@ -32,6 +32,7 @@ READ_TIMEOUT_SECONDS = 20.0
 
 SECRET_PATTERNS = [
     re.compile(r"Bearer\s+sk-[A-Za-z0-9._-]{20,}", re.IGNORECASE),
+    re.compile(r"Bearer\s+[^\s]+", re.IGNORECASE),
     re.compile(r"sk-[A-Za-z0-9._-]{20,}"),
     re.compile(r"DASHSCOPE_API_KEY\s*=\s*[^\s]+", re.IGNORECASE),
     re.compile(r"QWENPAW_AUTH_PASSWORD\s*=\s*[^\s]+", re.IGNORECASE),
