@@ -27,6 +27,8 @@ DEFAULT_SESSION_ID = "zhiyin-v15-qwenpaw-smoke"
 ENDPOINT = "/api/agent/process"
 ALLOWED_HOSTS = {"127.0.0.1", "localhost", "::1"}
 MAX_PREVIEW_CHARS = 1200
+MAX_SESSION_ID_CHARS = 96
+MAX_RESPONSE_BYTES = 65536
 CONNECT_TIMEOUT_SECONDS = 3.0
 READ_TIMEOUT_SECONDS = 20.0
 
@@ -37,10 +39,12 @@ SECRET_PATTERNS = [
     re.compile(r"DASHSCOPE_API_KEY\s*=\s*[^\s]+", re.IGNORECASE),
     re.compile(r"QWENPAW_AUTH_PASSWORD\s*=\s*[^\s]+", re.IGNORECASE),
     re.compile(r"Authorization\s*:\s*[^\s]+", re.IGNORECASE),
+    re.compile(r"\b(?:DASHSCOPE_API_KEY|QWENPAW_AUTH_PASSWORD|Authorization)\b", re.IGNORECASE),
 ]
 LOCAL_PATH_PATTERNS = [
+    re.compile(r"[A-Z]:[\\/](?:Users|rz)[\\/][^\r\n,;`|]+", re.IGNORECASE),
     re.compile(r"[A-Z]:[\\/][^\s]+", re.IGNORECASE),
-    re.compile(r"\\\\[^\s\\]+\\[^\s]+", re.IGNORECASE),
+    re.compile(r"\\\\[^\s\\]+\\[^\r\n,;`|]+", re.IGNORECASE),
 ]
 
 
@@ -91,6 +95,33 @@ def bound_preview(value: str, max_chars: int = MAX_PREVIEW_CHARS) -> str:
     if max_chars <= len("\n[TRUNCATED]"):
         return cleaned[:max_chars]
     return cleaned[: max_chars - len("\n[TRUNCATED]")].rstrip() + "\n[TRUNCATED]"
+
+
+def sanitize_session_id(value: str | None) -> str:
+    if not value:
+        return DEFAULT_SESSION_ID
+    sanitized = bound_preview(value, max_chars=MAX_SESSION_ID_CHARS)
+    sanitized = re.sub(r"\s+", " ", sanitized).strip()
+    return sanitized or DEFAULT_SESSION_ID
+
+
+def read_bounded_response_text(
+    response: httpx.Response,
+    max_bytes: int = MAX_RESPONSE_BYTES,
+) -> str:
+    chunks: list[bytes] = []
+    total = 0
+    for chunk in response.iter_bytes():
+        if not chunk:
+            continue
+        remaining = max_bytes - total
+        if remaining <= 0:
+            break
+        chunks.append(chunk[:remaining])
+        total += min(len(chunk), remaining)
+        if len(chunk) >= remaining:
+            break
+    return b"".join(chunks).decode("utf-8", errors="replace")
 
 
 def _extract_json_text(payload: Any) -> str:
@@ -199,7 +230,7 @@ def write_evidence(result: dict[str, Any]) -> None:
 
 def base_result(*, env: dict[str, str], base_url: str | None, request_sent: bool) -> dict[str, Any]:
     parsed = urlparse(base_url or DEFAULT_BASE_URL)
-    session_id = env.get("QWENPAW_SMOKE_SESSION_ID") or DEFAULT_SESSION_ID
+    session_id = sanitize_session_id(env.get("QWENPAW_SMOKE_SESSION_ID"))
     return {
         "outcome": "blocked",
         "base_url_host": parsed.hostname or "",
@@ -256,7 +287,7 @@ def run_smoke(
             failure_kind="invalid_base_url",
         )
 
-    session_id = source.get("QWENPAW_SMOKE_SESSION_ID") or DEFAULT_SESSION_ID
+    session_id = sanitize_session_id(source.get("QWENPAW_SMOKE_SESSION_ID"))
     prompt = build_sanitized_prompt()
     request_body = {
         "input": [
@@ -278,11 +309,15 @@ def run_smoke(
     result["sanitized_prompt_preview"] = bound_preview(prompt, max_chars=500)
     try:
         with httpx.Client(timeout=timeout, transport=transport) as client:
-            response = client.post(
+            with client.stream(
+                "POST",
                 f"{base_url}{ENDPOINT}",
                 json=request_body,
                 headers={"Content-Type": "application/json"},
-            )
+            ) as response:
+                response_status_code = response.status_code
+                content_type = response.headers.get("content-type", "")
+                response_text = read_bounded_response_text(response)
     except httpx.ConnectError:
         result["outcome"] = "blocked"
         result["blocked_reason"] = "QwenPaw service is not reachable"
@@ -305,11 +340,10 @@ def run_smoke(
         write_evidence(result)
         return result
 
-    content_type = response.headers.get("content-type", "")
-    preview = parse_response_preview(content_type=content_type, text=response.text)
+    preview = parse_response_preview(content_type=content_type, text=response_text)
     result.update(
         {
-            "response_status_code": response.status_code,
+            "response_status_code": response_status_code,
             "response_content_type": content_type,
             "latency_ms": int((time.perf_counter() - started) * 1000),
             "sanitized_response_preview": preview,
@@ -318,20 +352,20 @@ def run_smoke(
             ),
         }
     )
-    if response.status_code == 200 and preview:
+    if response_status_code == 200 and preview:
         result["outcome"] = "live_success"
-    elif response.status_code in {401, 403}:
+    elif response_status_code in {401, 403}:
         result["outcome"] = "blocked"
         result["blocked_reason"] = "QwenPaw authentication is required"
         result["failure_kind"] = "auth_required"
-    elif response.status_code in {404, 405}:
+    elif response_status_code in {404, 405}:
         result["outcome"] = "blocked"
         result["blocked_reason"] = "QwenPaw agent process endpoint is unavailable"
         result["failure_kind"] = "endpoint_unavailable"
     else:
         result["outcome"] = "blocked"
         result["blocked_reason"] = "QwenPaw returned no usable response"
-        result["failure_kind"] = f"http_{response.status_code}"
+        result["failure_kind"] = f"http_{response_status_code}"
     write_evidence(result)
     return result
 

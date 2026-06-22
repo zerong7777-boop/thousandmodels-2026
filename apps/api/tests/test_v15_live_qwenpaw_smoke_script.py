@@ -1,8 +1,14 @@
 import json
 
 import httpx
+import pytest
 
 from scripts import live_qwenpaw_smoke
+
+
+@pytest.fixture(autouse=True)
+def reset_store():
+    yield
 
 
 def test_requires_explicit_live_smoke_flag(monkeypatch, tmp_path):
@@ -67,6 +73,26 @@ def test_redact_sensitive_text_removes_keys_bearers_passwords_and_local_paths():
     assert "Bearer" not in redacted
     assert "secret" not in redacted
     assert "E:\\rz" not in redacted
+    assert "[REDACTED_SECRET]" in redacted
+    assert "[REDACTED_LOCAL_PATH]" in redacted
+
+
+def test_redact_sensitive_text_removes_standalone_sensitive_labels_and_spaced_paths():
+    raw = (
+        "DASHSCOPE_API_KEY "
+        "QWENPAW_AUTH_PASSWORD "
+        "Authorization "
+        "path=C:\\Users\\Jane Doe\\project\\file.txt"
+    )
+
+    redacted = live_qwenpaw_smoke.redact_sensitive_text(raw)
+
+    assert "DASHSCOPE_API_KEY" not in redacted
+    assert "QWENPAW_AUTH_PASSWORD" not in redacted
+    assert "Authorization" not in redacted
+    assert "C:\\Users" not in redacted
+    assert "Jane Doe" not in redacted
+    assert "Doe\\project" not in redacted
     assert "[REDACTED_SECRET]" in redacted
     assert "[REDACTED_LOCAL_PATH]" in redacted
 
@@ -144,6 +170,117 @@ def test_live_success_with_fake_http_transport(monkeypatch, tmp_path):
     assert result["response_preview_sha256"]
     assert (tmp_path / "result.json").exists()
     assert (tmp_path / "smoke.md").exists()
+
+
+def test_session_id_is_sanitized_and_bounded_in_request_and_evidence(monkeypatch, tmp_path):
+    fake_key = "sk-" + "a" * 32
+    raw_session_id = (
+        "session "
+        "Bearer "
+        + fake_key
+        + " path=E:\\rz\\competitions\\thousandmodels-2026\\apps\\api "
+        + ("x" * 160)
+    )
+    captured_payload = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured_payload.update(json.loads(request.content.decode("utf-8")))
+        return httpx.Response(
+            200,
+            headers={"content-type": "application/json"},
+            json={"message": {"content": "Advisory only response from QwenPaw"}},
+        )
+
+    monkeypatch.setattr(live_qwenpaw_smoke, "ASSET_DIR", tmp_path)
+    monkeypatch.setattr(live_qwenpaw_smoke, "RESULT_JSON", tmp_path / "result.json")
+    monkeypatch.setattr(live_qwenpaw_smoke, "SMOKE_DOC", tmp_path / "smoke.md")
+
+    result = live_qwenpaw_smoke.run_smoke(
+        env={
+            "RUN_LIVE_QWENPAW_SMOKE": "1",
+            "QWENPAW_BASE_URL": "http://127.0.0.1:8088",
+            "QWENPAW_SMOKE_SESSION_ID": raw_session_id,
+        },
+        transport=httpx.MockTransport(handler),
+    )
+    evidence = json.loads((tmp_path / "result.json").read_text(encoding="utf-8"))
+
+    assert result["outcome"] == "live_success"
+    for session_id in (
+        result["session_id"],
+        evidence["session_id"],
+        captured_payload["session_id"],
+    ):
+        assert fake_key not in session_id
+        assert "Bearer" not in session_id
+        assert "E:\\rz" not in session_id
+        assert len(session_id) <= 96
+
+
+class _ExplodingAfterFirstChunkStream(httpx.SyncByteStream):
+    def __init__(self, first_chunk: bytes, sentinel: bytes):
+        self.first_chunk = first_chunk
+        self.sentinel = sentinel
+
+    def __iter__(self):
+        yield self.first_chunk
+        raise AssertionError(
+            f"response read exceeded cap and reached {self.sentinel.decode('utf-8')}"
+        )
+
+
+@pytest.mark.parametrize(
+    ("content_type", "first_chunk", "expected_preview"),
+    [
+        (
+            "text/event-stream",
+            b'data: {"content":"bounded sse response"}\n\n',
+            "bounded sse response",
+        ),
+        (
+            "application/json",
+            json.dumps({"message": {"content": "bounded json response"}}).encode("utf-8"),
+            "bounded json response",
+        ),
+    ],
+)
+def test_run_smoke_reads_bounded_response_stream_without_sentinel(
+    monkeypatch,
+    tmp_path,
+    content_type,
+    first_chunk,
+    expected_preview,
+):
+    sentinel = b"SHOULD_NOT_BE_READ_AFTER_RESPONSE_CAP"
+    padded_first_chunk = first_chunk + (
+        b" " * (65536 - len(first_chunk))
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            headers={"content-type": content_type},
+            stream=_ExplodingAfterFirstChunkStream(padded_first_chunk, sentinel),
+        )
+
+    monkeypatch.setattr(live_qwenpaw_smoke, "ASSET_DIR", tmp_path)
+    monkeypatch.setattr(live_qwenpaw_smoke, "RESULT_JSON", tmp_path / "result.json")
+    monkeypatch.setattr(live_qwenpaw_smoke, "SMOKE_DOC", tmp_path / "smoke.md")
+
+    result = live_qwenpaw_smoke.run_smoke(
+        env={
+            "RUN_LIVE_QWENPAW_SMOKE": "1",
+            "QWENPAW_BASE_URL": "http://127.0.0.1:8088",
+        },
+        transport=httpx.MockTransport(handler),
+    )
+    evidence_text = (tmp_path / "result.json").read_text(encoding="utf-8")
+
+    assert result["outcome"] == "live_success"
+    assert expected_preview in result["sanitized_response_preview"]
+    assert len(result["sanitized_response_preview"]) <= 1200
+    assert sentinel.decode("utf-8") not in evidence_text
+    assert sentinel.decode("utf-8") not in result["sanitized_response_preview"]
 
 
 def test_connection_failure_records_blocked(monkeypatch, tmp_path):
