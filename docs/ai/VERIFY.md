@@ -480,3 +480,56 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 - The first v1.3 live smoke attempt found a stale local Vite process on port 5179 from an earlier run. After stopping that process and the failed-run Python residue, the live smoke passed.
 - Full Playwright and live smoke regenerated several historical screenshot artifacts. They are verification byproducts and are not part of the v1.4 documentation commit.
 - v1.4 does not prove live QwenPaw provider execution. It proves a guarded QwenPaw-style shadow orchestration contract, fake-adapter evidence path, organizer UI exposure, and non-authoritative safety boundary.
+
+## v1.5 Real QwenPaw Guarded Smoke Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python -m pytest tests/test_v15_live_qwenpaw_smoke_script.py -q` | `apps/api` | 0 | 13 v1.5 script tests passed; tests cover live flag guard, localhost guard, redaction, bounded response/session handling, `trust_env=False`, fake success, and blocked connection failure. |
+| `python -m pytest tests/test_v14_workflow_contract.py tests/test_v14_tool_registry.py tests/test_v14_qwenpaw_shadow_runtime.py tests/test_v14_qwenpaw_shadow_api.py tests/test_v15_live_qwenpaw_smoke_script.py -q` | `apps/api` | 0 | 27 focused v1.4/v1.5 backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `python -m pytest -q` | `apps/api` | 0 | 132 backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `npm.cmd run test` | `apps/web` | 0 | 28 frontend test files passed, 94 tests passed. |
+| `npm.cmd run build` | `apps/web` | 0 | `tsc -b && vite build` passed; 3216 modules transformed; existing >500 kB chunk warning remains for `assets/index-DwOVRZL_.js` at 841.37 kB. |
+| `npm.cmd exec -- playwright test` | `apps/web` | 0 | Default mocked Playwright suite passed: 22 passed, 6 skipped. |
+| `npm.cmd exec -- playwright test tests/e2e/v13-live-demo-smoke.spec.ts --config playwright.live.config.ts` | `apps/web` | 0 | v1.3 live smoke passed: 1 test passed. |
+| `where.exe qwenpaw` | project root | 1 | No local `qwenpaw` executable was found. |
+| `Test-NetConnection -ComputerName 127.0.0.1 -Port 8088` | project root | 0 | Command completed with `TcpTestSucceeded=False`; no local QwenPaw service was listening on port 8088. |
+| `python scripts\live_qwenpaw_smoke.py` without `RUN_LIVE_QWENPAW_SMOKE` | `apps/api` | 1 | Wrote sanitized `blocked` evidence with `blocked_reason=RUN_LIVE_QWENPAW_SMOKE is required` and `request_sent=false`. Initial sandboxed attempt could not write `docs/research`; rerun with approved project write access succeeded. |
+| `python scripts\live_qwenpaw_smoke.py` with `RUN_LIVE_QWENPAW_SMOKE=1`, `QWENPAW_BASE_URL=http://127.0.0.1:8088` | `apps/api` | 1 | Wrote sanitized `blocked` evidence with `request_sent=true`, `blocked_reason=QwenPaw service is not reachable`, and `failure_kind=connect_error`. |
+| strict secret/password scan | project root | 1 | `rg` found no real key, bearer-token, `DASHSCOPE_API_KEY=sk-*`, or QwenPaw password matches in `apps`, `docs`, `README.md`, or `.gitignore`; exit 1 is expected for no matches. |
+| local-path scan | project root | 1 | `rg` found no local absolute path matches in `docs`, `apps`, or `README.md`; exit 1 is expected for no matches. |
+| public/merchant/tourist boundary scan | project root | 1 | `rg` found no raw QwenPaw/model/backend/internal terms in public, merchant, or tourist page source; exit 1 is expected for no matches. |
+
+### Evidence Artifacts
+
+| Artifact | Summary |
+| --- | --- |
+| `apps/api/scripts/live_qwenpaw_smoke.py` | Manual localhost-only smoke script guarded by `RUN_LIVE_QWENPAW_SMOKE=1`, with `trust_env=False`, bounded response reads, bounded session IDs, and redaction for secrets and local paths. |
+| `apps/api/tests/test_v15_live_qwenpaw_smoke_script.py` | Contract tests for guard rails, prompt sanitization, response parsing, redaction, bounded evidence, fake live success, connection blocking, and proxy/environment isolation. |
+| `docs/research/v1.5-real-qwenpaw-guarded-smoke.md` | Sanitized smoke report. Current outcome is `blocked`, not `live_success`. |
+| `docs/research/assets/v1.5-real-qwenpaw-guarded-smoke/live-qwenpaw-smoke-result.json` | Sanitized JSON evidence with `outcome=blocked`, `request_sent=true`, `failure_kind=connect_error`, and no raw response stream. |
+
+### v1.5 Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Smoke refuses to send a request unless `RUN_LIVE_QWENPAW_SMOKE=1` | pass |
+| Smoke rejects non-localhost `QWENPAW_BASE_URL` values | pass |
+| Smoke disables environment/proxy routing with `trust_env=False` | pass |
+| Fake transport can prove `live_success` without real network access | pass |
+| Missing local QwenPaw service is classified as `blocked`, not a product failure | pass |
+| Current recorded evidence is honest `blocked/connect_error`, not live success | pass |
+| Evidence stores bounded sanitized previews only | pass |
+| v1.4 fake QwenPaw adapter remains the accepted product path | pass |
+| v1.3 deterministic live demo remains verified | pass |
+| No real key, password, bearer token, or local absolute path was found by final scans | pass |
+| Public, merchant, and tourist pages do not expose raw QwenPaw/model/backend terms | pass |
+
+### v1.5 Verification Notes
+
+- The local machine did not have a reachable QwenPaw service during verification, so v1.5 proves guarded reachability plumbing and safe blocked evidence, not real QwenPaw model success.
+- During the first live-flag smoke attempt, the authorized process recorded an HTTP 502 while port 8088 was not listening. Root-cause probing showed `httpx` with default environment trust could be influenced by the execution environment, while `trust_env=False` produced direct localhost connection failure. The script was patched and tested to always use `trust_env=False`.
+- Full Playwright and v1.3 live smoke regenerated several historical screenshot PNGs. Those PNG diffs are verification byproducts and are not part of the v1.5 documentation commits.
+- Backend pytest was run serially against the default SQLite store.

@@ -162,6 +162,17 @@ shadcn/ui-inspired local component layer
 - Merchant, tourist, and public H5 pages do not expose raw QwenPaw/model/backend terms.
 - v1.3 deterministic live demo remains the required reliable demo path.
 
+## v1.5 Real QwenPaw Guarded Smoke State
+
+- v1.5 adds a manual guarded smoke script for a real locally running QwenPaw service under `apps/api/scripts/live_qwenpaw_smoke.py`.
+- The smoke script is gated by `RUN_LIVE_QWENPAW_SMOKE=1` and defaults to `http://127.0.0.1:8088`.
+- The script calls only `POST /api/agent/process`, rejects non-localhost hosts, disables environment/proxy trust with `trust_env=False`, and records bounded sanitized evidence.
+- The current recorded smoke outcome is `blocked`: localhost `127.0.0.1:8088` was probed with the live flag, but the local QwenPaw service was not reachable (`failure_kind=connect_error`).
+- Missing QwenPaw service, missing model configuration, or auth/configuration issues are classified as `blocked`, not deterministic-demo failures.
+- v1.4 fake QwenPaw shadow orchestration remains the accepted organizer product path.
+- v1.3 deterministic live demo remains the required reliable demo path.
+- Live smoke success, if achieved later, still does not mean production QwenPaw orchestration.
+
 ## Demo Accounts
 
 - organizer: `organizer.demo`
@@ -171,6 +182,6 @@ shadcn/ui-inspired local component layer
 
 ## Current Boundary
 
-This is a stronger productized multilingual MVP, not a final commercial UI. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview. v1.4 adds optional organizer-only QwenPaw shadow evidence, while the reliable demo path remains deterministic.
+This is a stronger productized multilingual MVP, not a final commercial UI. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview. v1.4 adds optional organizer-only QwenPaw shadow evidence, and v1.5 adds guarded local QwenPaw smoke evidence, while the reliable demo path remains deterministic.
 
-Do not continue into live-provider QwenPaw integration, real merchant connections, hardware, real traffic prediction, model training, payment/POS integrations, open registration, real map APIs, or a marketing landing page without a new plan.
+Do not continue into production QwenPaw orchestration, real merchant connections, hardware, real traffic prediction, model training, payment/POS integrations, open registration, real map APIs, or a marketing landing page without a new plan.
