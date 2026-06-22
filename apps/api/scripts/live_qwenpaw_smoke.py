@@ -28,6 +28,7 @@ ENDPOINT = "/api/agent/process"
 ALLOWED_HOSTS = {"127.0.0.1", "localhost", "::1"}
 MAX_PREVIEW_CHARS = 1200
 MAX_SESSION_ID_CHARS = 96
+MAX_AGENT_ID_CHARS = 96
 MAX_RESPONSE_BYTES = 65536
 CONNECT_TIMEOUT_SECONDS = 3.0
 READ_TIMEOUT_SECONDS = 20.0
@@ -104,6 +105,14 @@ def sanitize_session_id(value: str | None) -> str:
     return sanitized or DEFAULT_SESSION_ID
 
 
+def sanitize_agent_id(value: str | None) -> str | None:
+    if not value:
+        return None
+    sanitized = bound_preview(value, max_chars=MAX_AGENT_ID_CHARS)
+    sanitized = re.sub(r"\s+", " ", sanitized).strip()
+    return sanitized or None
+
+
 def read_bounded_response_text(
     response: httpx.Response,
     max_bytes: int = MAX_RESPONSE_BYTES,
@@ -124,6 +133,8 @@ def read_bounded_response_text(
 
 
 def _extract_json_text(payload: Any) -> str:
+    if payload is None:
+        return ""
     if isinstance(payload, str):
         return payload
     if isinstance(payload, list):
@@ -156,8 +167,12 @@ def _extract_sse_text(text: str) -> str:
         except json.JSONDecodeError:
             chunks.append(data)
             continue
-        chunks.append(_extract_json_text(payload))
-    return "\n".join(chunk for chunk in chunks if chunk)
+        chunk = _extract_json_text(payload)
+        if chunk:
+            chunks.append(chunk)
+    if len(chunks) > 3:
+        return "".join(chunks)
+    return "\n".join(chunks)
 
 
 def _iter_sse_payloads(text: str) -> list[dict[str, Any]]:
@@ -203,14 +218,20 @@ def classify_qwenpaw_failure(
         elif error:
             error_message = str(error)
         status = str(payload.get("status") or "").lower()
+        payload_type = str(payload.get("type") or "").lower()
         is_failed_payload = status == "failed"
+        is_error_payload = payload_type == "error"
         is_provider_error = error_code.upper() == "PROVIDER_ERROR"
         is_missing_model = "no active model configured" in error_message.lower()
-        if not (is_failed_payload or is_provider_error or is_missing_model):
+        if not (is_failed_payload or is_error_payload or is_provider_error or is_missing_model):
             continue
         preview = bound_preview(error_message or json.dumps(payload, ensure_ascii=False))
         if is_missing_model:
             return ("QwenPaw model is not configured", "provider_error", preview)
+        if is_provider_error:
+            return ("QwenPaw returned provider error", "provider_error", preview)
+        if is_error_payload or is_failed_payload:
+            return ("QwenPaw returned error", "qwenpaw_error", preview)
         return ("QwenPaw returned provider error", "provider_error", preview)
     return None
 
@@ -234,6 +255,10 @@ def parse_response_preview(
 
 
 def render_smoke_doc(result: dict[str, Any]) -> str:
+    response_preview = "\n".join(
+        line.rstrip()
+        for line in (result.get("sanitized_response_preview") or "").splitlines()
+    )
     return "\n".join(
         [
             "# v1.5 Real QwenPaw Guarded Smoke",
@@ -243,6 +268,7 @@ def render_smoke_doc(result: dict[str, Any]) -> str:
             f"- Outcome: `{result['outcome']}`",
             f"- Endpoint: `{result['endpoint']}`",
             f"- Host: `{result['base_url_host']}`",
+            f"- Agent ID: `{result.get('agent_id') or 'active/default'}`",
             f"- Request sent: `{result['request_sent']}`",
             f"- HTTP status: `{result.get('response_status_code')}`",
             f"- Latency ms: `{result.get('latency_ms')}`",
@@ -254,13 +280,14 @@ def render_smoke_doc(result: dict[str, Any]) -> str:
             "- This smoke is manual and guarded by `RUN_LIVE_QWENPAW_SMOKE=1`.",
             "- It calls only a localhost QwenPaw service.",
             "- It does not approve plans, publish notices, mutate merchant runtime, or create coupon/redemption records.",
+            "- `live_success` means localhost model reachability plus a non-empty sanitized response; it does not prove structured advisory-field completion or production orchestration.",
             "- The v1.4 fake adapter remains the accepted product path.",
             "- The v1.3 deterministic live demo remains the reliable demo path.",
             "",
             "## Sanitized Response Preview",
             "",
             "```text",
-            result.get("sanitized_response_preview") or "",
+            response_preview,
             "```",
             "",
             "## Evidence",
@@ -285,10 +312,12 @@ def write_evidence(result: dict[str, Any]) -> None:
 def base_result(*, env: dict[str, str], base_url: str | None, request_sent: bool) -> dict[str, Any]:
     parsed = urlparse(base_url or DEFAULT_BASE_URL)
     session_id = sanitize_session_id(env.get("QWENPAW_SMOKE_SESSION_ID"))
+    agent_id = sanitize_agent_id(env.get("QWENPAW_AGENT_ID"))
     return {
         "outcome": "blocked",
         "base_url_host": parsed.hostname or "",
         "endpoint": ENDPOINT,
+        "agent_id": agent_id,
         "session_id": session_id,
         "request_sent": request_sent,
         "response_status_code": None,
@@ -342,6 +371,7 @@ def run_smoke(
         )
 
     session_id = sanitize_session_id(source.get("QWENPAW_SMOKE_SESSION_ID"))
+    agent_id = sanitize_agent_id(source.get("QWENPAW_AGENT_ID"))
     prompt = build_sanitized_prompt()
     request_body = {
         "input": [
@@ -352,6 +382,9 @@ def run_smoke(
         ],
         "session_id": session_id,
     }
+    headers = {"Content-Type": "application/json"}
+    if agent_id:
+        headers["X-Agent-Id"] = agent_id
 
     timeout = httpx.Timeout(
         timeout=READ_TIMEOUT_SECONDS,
@@ -367,7 +400,7 @@ def run_smoke(
                 "POST",
                 f"{base_url}{ENDPOINT}",
                 json=request_body,
-                headers={"Content-Type": "application/json"},
+                headers=headers,
             ) as response:
                 response_status_code = response.status_code
                 content_type = response.headers.get("content-type", "")

@@ -64,7 +64,7 @@ def test_redact_sensitive_text_removes_keys_bearers_passwords_and_local_paths():
         f"Authorization: Bearer {fake_key} "
         f"DASHSCOPE_API_KEY={fake_key} "
         "QWENPAW_AUTH_PASSWORD" + "=secret "
-        "path=E:\\rz\\competitions\\thousandmodels-2026\\apps"
+        "path=Z:\\private\\workspace\\project\\apps"
     )
 
     redacted = live_qwenpaw_smoke.redact_sensitive_text(raw)
@@ -72,7 +72,7 @@ def test_redact_sensitive_text_removes_keys_bearers_passwords_and_local_paths():
     assert fake_key not in redacted
     assert "Bearer" not in redacted
     assert "secret" not in redacted
-    assert "E:\\rz" not in redacted
+    assert "Z:\\private" not in redacted
     assert "[REDACTED_SECRET]" in redacted
     assert "[REDACTED_LOCAL_PATH]" in redacted
 
@@ -82,7 +82,7 @@ def test_redact_sensitive_text_removes_standalone_sensitive_labels_and_spaced_pa
         "DASHSCOPE_API_KEY "
         "QWENPAW_AUTH_PASSWORD "
         "Authorization "
-        "path=C:\\Users\\Jane Doe\\project\\file.txt "
+        "path=Z:\\Private Users\\Jane Doe\\project\\file.txt "
         "debug=D:\\Program Files\\Qwen Paw\\debug.log"
     )
 
@@ -91,7 +91,7 @@ def test_redact_sensitive_text_removes_standalone_sensitive_labels_and_spaced_pa
     assert "DASHSCOPE_API_KEY" not in redacted
     assert "QWENPAW_AUTH_PASSWORD" not in redacted
     assert "Authorization" not in redacted
-    assert "C:\\Users" not in redacted
+    assert "Z:\\Private Users" not in redacted
     assert "Jane Doe" not in redacted
     assert "Doe\\project" not in redacted
     assert "D:\\Program Files" not in redacted
@@ -120,6 +120,27 @@ def test_parse_sse_response_bounds_and_sanitizes_preview():
     assert len(preview) <= 80
 
 
+def test_parse_qwenpaw_sse_token_stream_ignores_null_and_compacts_tokens():
+    text = (
+        'data: {"status":"created","output":null}\n\n'
+        'data: {"status":"in_progress","output":null}\n\n'
+        'data: {"output":"Ad"}\n\n'
+        'data: {"output":"visory"}\n\n'
+        'data: {"output":" Response"}\n\n'
+        'data: {"output":" with recovery_rationale"}\n\n'
+    )
+
+    preview = live_qwenpaw_smoke.parse_response_preview(
+        content_type="text/event-stream",
+        text=text,
+        max_chars=120,
+    )
+
+    assert "None" not in preview
+    assert "Advisory Response" in preview
+    assert "recovery_rationale" in preview
+
+
 def test_parse_json_response_bounds_and_sanitizes_preview():
     fake_key = "sk-" + "a" * 32
     text = json.dumps(
@@ -144,6 +165,7 @@ def test_parse_json_response_bounds_and_sanitizes_preview():
 def test_live_success_with_fake_http_transport(monkeypatch, tmp_path):
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.url.path == "/api/agent/process"
+        assert "x-agent-id" not in request.headers
         payload = json.loads(request.content.decode("utf-8"))
         assert payload["session_id"] == "zhiyin-v15-qwenpaw-smoke"
         assert "demo-night-tour" in payload["input"][0]["content"][0]["text"]
@@ -174,6 +196,57 @@ def test_live_success_with_fake_http_transport(monkeypatch, tmp_path):
     assert result["response_preview_sha256"]
     assert (tmp_path / "result.json").exists()
     assert (tmp_path / "smoke.md").exists()
+
+
+def test_optional_agent_id_is_sent_as_header_and_written_to_evidence(monkeypatch, tmp_path):
+    captured_headers = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured_headers.update(request.headers)
+        return httpx.Response(
+            200,
+            headers={"content-type": "text/event-stream"},
+            text='data: {"content":"QA agent advisory response"}\n\n',
+        )
+
+    monkeypatch.setattr(live_qwenpaw_smoke, "ASSET_DIR", tmp_path)
+    monkeypatch.setattr(live_qwenpaw_smoke, "RESULT_JSON", tmp_path / "result.json")
+    monkeypatch.setattr(live_qwenpaw_smoke, "SMOKE_DOC", tmp_path / "smoke.md")
+
+    result = live_qwenpaw_smoke.run_smoke(
+        env={
+            "RUN_LIVE_QWENPAW_SMOKE": "1",
+            "QWENPAW_BASE_URL": "http://127.0.0.1:8088",
+            "QWENPAW_AGENT_ID": "QwenPaw_QA_Agent_0.2",
+        },
+        transport=httpx.MockTransport(handler),
+    )
+    evidence = json.loads((tmp_path / "result.json").read_text(encoding="utf-8"))
+
+    assert result["outcome"] == "live_success"
+    assert captured_headers["x-agent-id"] == "QwenPaw_QA_Agent_0.2"
+    assert result["agent_id"] == "QwenPaw_QA_Agent_0.2"
+    assert evidence["agent_id"] == "QwenPaw_QA_Agent_0.2"
+
+
+def test_render_smoke_doc_strips_response_preview_trailing_whitespace():
+    doc = live_qwenpaw_smoke.render_smoke_doc(
+        {
+            "outcome": "live_success",
+            "endpoint": "/api/agent/process",
+            "base_url_host": "127.0.0.1",
+            "agent_id": "QwenPaw_QA_Agent_0.2",
+            "request_sent": True,
+            "response_status_code": 200,
+            "latency_ms": 1234,
+            "blocked_reason": None,
+            "failure_kind": None,
+            "sanitized_response_preview": "first line  \nsecond line  ",
+        }
+    )
+
+    assert "  \n" not in doc
+    assert all(line == line.rstrip() for line in doc.splitlines())
 
 
 def test_run_smoke_disables_httpx_proxy_environment(monkeypatch, tmp_path):
@@ -215,7 +288,7 @@ def test_session_id_is_sanitized_and_bounded_in_request_and_evidence(monkeypatch
         "Bearer "
         + fake_key
         + " debug=D:\\Program Files\\Qwen Paw\\debug.log "
-        + " path=E:\\rz\\competitions\\thousandmodels-2026\\apps\\api "
+        + " path=Z:\\private\\workspace\\project\\apps\\api "
         + ("x" * 160)
     )
     captured_payload = {}
@@ -253,7 +326,7 @@ def test_session_id_is_sanitized_and_bounded_in_request_and_evidence(monkeypatch
         assert "D:\\Program Files" not in session_id
         assert "Qwen Paw" not in session_id
         assert "debug.log" not in session_id
-        assert "E:\\rz" not in session_id
+        assert "Z:\\private" not in session_id
         assert len(session_id) <= 96
 
 
@@ -407,6 +480,32 @@ def test_non_failed_sse_error_field_does_not_override_success(monkeypatch, tmp_p
     assert result["outcome"] == "live_success"
     assert result["failure_kind"] is None
     assert "Advisory only response" in result["sanitized_response_preview"]
+
+
+def test_qwenpaw_error_payload_records_blocked_instead_of_live_success(monkeypatch, tmp_path):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            headers={"content-type": "text/event-stream"},
+            text='data: {"type":"error","error":"Agent not found: missing-agent"}\n\n',
+        )
+
+    monkeypatch.setattr(live_qwenpaw_smoke, "ASSET_DIR", tmp_path)
+    monkeypatch.setattr(live_qwenpaw_smoke, "RESULT_JSON", tmp_path / "result.json")
+    monkeypatch.setattr(live_qwenpaw_smoke, "SMOKE_DOC", tmp_path / "smoke.md")
+
+    result = live_qwenpaw_smoke.run_smoke(
+        env={
+            "RUN_LIVE_QWENPAW_SMOKE": "1",
+            "QWENPAW_BASE_URL": "http://127.0.0.1:8088",
+        },
+        transport=httpx.MockTransport(handler),
+    )
+
+    assert result["outcome"] == "blocked"
+    assert result["blocked_reason"] == "QwenPaw returned error"
+    assert result["failure_kind"] == "qwenpaw_error"
+    assert "Agent not found" in result["sanitized_response_preview"]
 
 
 def test_provider_error_with_model_word_is_not_assumed_unconfigured(monkeypatch, tmp_path):

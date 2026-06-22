@@ -1,16 +1,17 @@
 {
-  "outcome": "blocked",
+  "outcome": "live_success",
   "base_url_host": "127.0.0.1",
   "endpoint": "/api/agent/process",
-  "session_id": "zhiyin-v15-qwenpaw-smoke",
+  "agent_id": "QwenPaw_QA_Agent_0.2",
+  "session_id": "zhiyin-v15-qwenpaw-smoke-qa-agent-v1",
   "request_sent": true,
   "response_status_code": 200,
   "response_content_type": "text/event-stream; charset=utf-8",
-  "latency_ms": 379,
+  "latency_ms": 7308,
   "sanitized_prompt_preview": "You are helping verify a local QwenPaw integration for a demo operations system.\nEvent: demo-night-tour\nIncident: merchant m001 reported sold_out.\nBoundary: advisory only. Do not claim that you approved, published, applied, or mutated any system state.\nReturn a concise advisory response with recovery_rationale, visitor_safe_notice_draft, and safety_notes.",
-  "sanitized_response_preview": "No active model configured.",
-  "response_preview_sha256": "81861e82c6155724bf7dd934fc746a3b06af26e436c5dc52bc44f60d559e4885",
-  "blocked_reason": "QwenPaw model is not configured",
-  "failure_kind": "provider_error",
-  "evidence_generated_at": "2026-06-22T04:20:47.222873+00:00"
+  "sanitized_response_preview": "The user wants me to act as an advisory agent for a demo operations system related to QwenPaw. Let me understand the scenario:\n\n- Event: demo-night-tour\n- Incident: merchant m001 reported sold_out\n- My role: advisory only (no operation/mutation claims)\n- Output: advisory response with recovery_rationale, visitor_safe_notice_draft, safety_notes\n\nSince this is a hypothetical/demo scenario, I'll provide a concise advisory response based on common operational patterns. The \"sold_out\" state for a merchant in a tour event typically means the merchant has run out of stock/capacity.\n\nLet me provide a clear advisory response with the three requested components, staying strictly within the \"advisory only\" boundary.Understood. Here is the advisory output for the demo operations system integration verification.\n\n---\n\n## Advisory Response — `demo-night-tour`\n\n**Origin:** QwenPaw QA Agent (advisory only)  \n**Incident:** Merchant `m001` — `sold_out`  \n**Boundary respected:** No system state mutated, no approvals claimed.\n\n---\n\n### recovery_rationale\n\n`sold_out` for merchant `m001` means no further allocations/orders can be fulfilled from this vendor for the remainder of `demo-night-to\n[TRUNCATED]",
+  "response_preview_sha256": "1deb03a18b37be3efc8423cb888bb8464d3c925d2b6666d1af66a42b44beb31b",
+  "blocked_reason": null,
+  "failure_kind": null,
+  "evidence_generated_at": "2026-06-22T05:29:54.908671+00:00"
 }
