@@ -458,6 +458,19 @@ export interface AgentStep {
   validation_status?: AgentValidationStatus;
 }
 
+export interface ToolPermissionDecision {
+  allowed: boolean;
+  permission: "read_only" | "draft_only" | "approval_required" | "forbidden";
+  reason: string;
+}
+
+export interface ShadowOrchestrationResponse {
+  agent_run: AgentRun;
+  advisory_bundle: Record<string, unknown>;
+  steps: AgentStep[];
+  permission_decisions: ToolPermissionDecision[];
+}
+
 export interface AgentTrace {
   trace_id: string;
   event_id: string;

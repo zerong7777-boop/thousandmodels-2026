@@ -28,6 +28,7 @@ import type {
   RecoveryProposal,
   RuntimeStateUpdateResponse,
   ReviewReport,
+  ShadowOrchestrationResponse,
   TouchpointInteraction
 } from "./types";
 
@@ -131,6 +132,13 @@ export const api = {
       fetch(
         `${API_BASE}/api/events/${eventId}/operation-suggestions/${suggestionId}/approve`,
         mutationOptions()
+      )
+    ),
+  runQwenPawShadowOrchestration: (eventId: string, incidentId?: string) =>
+    json<ShadowOrchestrationResponse>(
+      fetch(
+        `${API_BASE}/api/events/${eventId}/qwenpaw-shadow-orchestration/run`,
+        mutationOptions(incidentId ? { incident_id: incidentId } : {})
       )
     ),
   getRuntimeStates: () =>

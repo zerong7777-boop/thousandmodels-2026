@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../api";
-import type { AgentToolCall, Incident, OperationSuggestion, OperationSuggestionsResponse, RecoveryProposal } from "../../types";
+import type {
+  AgentToolCall,
+  Incident,
+  OperationSuggestion,
+  OperationSuggestionsResponse,
+  RecoveryProposal,
+  ShadowOrchestrationResponse
+} from "../../types";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
@@ -45,6 +52,9 @@ export function OrganizerExceptionCenterPage({ eventId = "demo-night-tour" }: { 
   const [recoveryError, setRecoveryError] = useState<string | null>(null);
   const [operationSuggestions, setOperationSuggestions] = useState<OperationSuggestion[]>([]);
   const [suggestionMessage, setSuggestionMessage] = useState<string | null>(null);
+  const [shadowRun, setShadowRun] = useState<ShadowOrchestrationResponse | null>(null);
+  const [shadowError, setShadowError] = useState<string | null>(null);
+  const [shadowBusy, setShadowBusy] = useState(false);
   const suggestionsRequestRef = useRef(0);
   const proposalRequestRef = useRef(0);
   const selectedIncident = useMemo(
@@ -98,6 +108,8 @@ export function OrganizerExceptionCenterPage({ eventId = "demo-night-tour" }: { 
     setSelectedIncidentId(incident.incident_id);
     setConfirmationMessage(null);
     setRecoveryError(null);
+    setShadowRun(null);
+    setShadowError(null);
     const requestId = ++proposalRequestRef.current;
     try {
       const nextProposal = await api.createRecoveryProposal(eventId, incident.incident_id);
@@ -129,6 +141,20 @@ export function OrganizerExceptionCenterPage({ eventId = "demo-night-tour" }: { 
         setConfirmationMessage(null);
         setRecoveryError(t("organizer.exceptions.confirmRecoveryError"));
       }
+    }
+  };
+
+  const runShadowOrchestration = async () => {
+    setShadowBusy(true);
+    setShadowError(null);
+    try {
+      const response = await api.runQwenPawShadowOrchestration(eventId, selectedIncident?.incident_id);
+      setShadowRun(response);
+    } catch {
+      setShadowRun(null);
+      setShadowError(t("organizer.qwenpaw.failed"));
+    } finally {
+      setShadowBusy(false);
     }
   };
 
@@ -190,12 +216,75 @@ export function OrganizerExceptionCenterPage({ eventId = "demo-night-tour" }: { 
               <CardTitle>{t("organizer.exceptions.operationSuggestionsTitle")}</CardTitle>
               <CardDescription>{t("organizer.exceptions.operationSuggestionsDescription")}</CardDescription>
             </div>
-            <Button size="sm" onClick={() => void generateOperationSuggestions()}>
-              {t("organizer.exceptions.generateOperationSuggestions")}
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button size="sm" onClick={() => void generateOperationSuggestions()}>
+                {t("organizer.exceptions.generateOperationSuggestions")}
+              </Button>
+              <Button
+                disabled={shadowBusy}
+                size="sm"
+                variant="secondary"
+                onClick={() => void runShadowOrchestration()}
+              >
+                {t("organizer.qwenpaw.run")}
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="grid gap-3 lg:grid-cols-2">
+          {shadowError ? (
+            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900 lg:col-span-2">
+              {shadowError}
+            </div>
+          ) : null}
+          {shadowRun ? (
+            <div className="rounded-md border border-slate-200 bg-slate-50 p-4 lg:col-span-2">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="font-medium text-ink">{t("organizer.qwenpaw.title")}</div>
+                  <div className="mt-1 truncate text-xs text-slate-500">
+                    {shadowRun.agent_run.final_output_ref ?? shadowRun.agent_run.run_id}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {shadowRun.advisory_bundle.authoritative_mutation === false ? (
+                    <StatusPill tone="info">{t("organizer.qwenpaw.advisoryOnly")}</StatusPill>
+                  ) : null}
+                  {shadowRun.advisory_bundle.human_approval_required === true ? (
+                    <StatusPill tone="warning">{t("organizer.qwenpaw.requiresApproval")}</StatusPill>
+                  ) : null}
+                  {shadowRun.advisory_bundle.authoritative_mutation === false ? (
+                    <StatusPill tone="success">{t("organizer.qwenpaw.noMutation")}</StatusPill>
+                  ) : null}
+                  {shadowRun.agent_run.fallback_used ? (
+                    <StatusPill tone="warning">{t("organizer.qwenpaw.fallbackUsed")}</StatusPill>
+                  ) : null}
+                </div>
+              </div>
+              <div className="mt-4">
+                <div className="text-xs font-semibold uppercase tracking-normal text-slate-500">
+                  {t("organizer.qwenpaw.permissionDecisions")}
+                </div>
+                {shadowRun.permission_decisions.length ? (
+                  <ul className="mt-2 grid gap-2">
+                    {shadowRun.permission_decisions.map((decision, index) => (
+                      <li
+                        className="flex flex-wrap items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+                        key={`${decision.permission}-${decision.reason}-${index}`}
+                      >
+                        <Badge variant={decision.allowed ? "success" : "danger"}>{decision.permission}</Badge>
+                        <span>{decision.reason}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="mt-2 rounded-md border border-dashed border-slate-200 bg-white p-3 text-sm text-slate-500">
+                    {t("organizer.qwenpaw.empty")}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
           {suggestionMessage ? (
             <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 lg:col-span-2">
               {suggestionMessage}
@@ -259,6 +348,8 @@ export function OrganizerExceptionCenterPage({ eventId = "demo-night-tour" }: { 
                   setProposal(null);
                   setConfirmationMessage(null);
                   setRecoveryError(null);
+                  setShadowRun(null);
+                  setShadowError(null);
                 }}
                 type="button"
               >
