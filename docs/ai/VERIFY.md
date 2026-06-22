@@ -436,3 +436,47 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 - The first Task 7 default Playwright run failed because the default mocked config picked up the live-only v1.3 spec without starting FastAPI. This was fixed by excluding `v13-live-demo-smoke.spec.ts` from `apps/web/playwright.config.ts`; the live spec remains covered by `apps/web/playwright.live.config.ts`.
 - Full Playwright verification regenerated several historical screenshot artifacts. Only v1.3 evidence screenshots are part of v1.3 outputs.
 - The current optional Qwen evidence does not prove live provider success. It proves the guarded path blocks safely without a process key, writes sanitized evidence, and leaves the deterministic live demo valid.
+
+## v1.4 QwenPaw Multi-Agent Orchestration Spike Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python -m pytest tests/test_v14_workflow_contract.py tests/test_v14_tool_registry.py tests/test_v14_qwenpaw_shadow_runtime.py tests/test_v14_qwenpaw_shadow_api.py -q` | `apps/api` | 0 | 14 focused v1.4 workflow, permissioned-tool, shadow-runtime, and API tests passed; 3 existing FastAPI/Starlette deprecation warnings. |
+| `python -m pytest -q` | `apps/api` | 0 | 119 backend tests passed; 3 existing FastAPI/Starlette deprecation warnings. |
+| `npm.cmd run test` | `apps/web` | 0 | 28 frontend test files passed, 94 tests passed. |
+| `npm.cmd run build` | `apps/web` | 0 | `tsc -b && vite build` passed; 3216 modules transformed; existing >500 kB chunk warning remains for `assets/index-DwOVRZL_.js` at 841.37 kB. |
+| `npm.cmd exec -- playwright test` | `apps/web` | 0 | Default mocked Playwright suite passed: 22 passed, 6 skipped. |
+| `npm.cmd exec -- playwright test tests/e2e/v13-live-demo-smoke.spec.ts --config playwright.live.config.ts` | `apps/web` | 0 | v1.3 live smoke passed after clearing a stale local Vite process on port 5179: 1 test passed. |
+| `rg -n 'sk-[A-Za-z0-9._-]{20,}\|Bearer\\s+sk-[A-Za-z0-9._-]{20,}\|DASHSCOPE_API_KEY\\s*=\\s*sk-' apps docs README.md .gitignore` | project root | 1 | Strict secret scan found no real key or bearer-token matches; `rg` exit 1 is expected for no matches. |
+| `rg -n '([A-Z]:\\\\Users\\\\[^\\\\]+\|[A-Z]:\\\\rz\\\\\|[A-Z]:/rz/)' docs apps README.md` | project root | 1 | Local absolute path scan found no matches; `rg` exit 1 is expected for no matches. |
+| `rg -n 'QwenPaw\|AgentRun\|AgentDraft\|AgentModelCall\|AgentEvaluation\|schema\|fallback\|backend\|deterministic\|PlanVersion\|RecoveryProposal' apps\\web\\src\\pages\\public apps\\web\\src\\pages\\merchant apps\\web\\src\\pages\\tourist` | project root | 1 | Public, merchant, and tourist page sources do not expose the listed internal QwenPaw/model/backend terms; `rg` exit 1 is expected for no matches. |
+
+### Evidence Artifacts
+
+| Artifact | Summary |
+| --- | --- |
+| `docs/research/v1.4-qwenpaw-orchestration-spike-smoke.md` | Documents the shadow run, advisory-only boundary, no required provider credentials, and optional live-provider status. |
+| `docs/research/assets/v1.4-qwenpaw-orchestration-spike/shadow-run-evidence.json` | Sanitized evidence with `outcome=shadow_success`, `backend=qwenpaw_fake`, `agent_run_mode=qwenpaw_workflow`, `authoritative_mutation=false`, `human_approval_required=true`, 3 permission decisions, and 1 denied permission. |
+
+### v1.4 Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| QwenPaw shadow path is organizer-only | pass |
+| Shadow run is advisory and cannot approve, publish, or mutate authoritative runtime/business state | pass |
+| Permissioned tool calls record allowed and denied decisions | pass |
+| Unsafe adapter output falls back to safe deterministic advisory output | pass |
+| Missing Origin plus demo CSRF is rejected for the QwenPaw shadow endpoint | pass |
+| Frontend ignores stale shadow orchestration responses when the selected incident changes | pass |
+| Merchant, tourist, and public pages do not expose raw QwenPaw/model/backend terms | pass |
+| v1.3 deterministic live demo remains verified after v1.4 | pass |
+| No real provider API key, bearer token, or local absolute path was found by final scans | pass |
+
+### v1.4 Verification Notes
+
+- Backend pytest must be run serially against the default SQLite store. An initial verification attempt ran focused and full pytest concurrently, which reproduced the known SQLite lock/seed-state failure. After stopping stale local Python services and rerunning serially, both focused and full backend suites passed.
+- The first v1.3 live smoke attempt found a stale local Vite process on port 5179 from an earlier run. After stopping that process and the failed-run Python residue, the live smoke passed.
+- Full Playwright and live smoke regenerated several historical screenshot artifacts. They are verification byproducts and are not part of the v1.4 documentation commit.
+- v1.4 does not prove live QwenPaw provider execution. It proves a guarded QwenPaw-style shadow orchestration contract, fake-adapter evidence path, organizer UI exposure, and non-authoritative safety boundary.

@@ -151,6 +151,17 @@ shadcn/ui-inspired local component layer
 - Qwen remains optional and non-authoritative.
 - QwenPaw remains unimplemented and must not be claimed as active workflow orchestration.
 
+## v1.4 QwenPaw Multi-Agent Orchestration Spike State
+
+- v1.4 adds an optional QwenPaw-style shadow orchestration path for a merchant incident.
+- The accepted path uses a deterministic fake QwenPaw adapter and does not require `DASHSCOPE_API_KEY`.
+- No real QwenPaw or DashScope provider API is executed in v1.4.
+- Shadow orchestration records `AgentRun(mode="qwenpaw_workflow")`, Leader/Worker step evidence through `AgentTrace.steps`, permissioned tool decisions, advisory drafts, and safety evaluations.
+- The shadow run is advisory only. It does not approve plans, publish notices, mutate merchant runtime state, or create coupon/redemption records.
+- Organizer pages may inspect shadow orchestration evidence.
+- Merchant, tourist, and public H5 pages do not expose raw QwenPaw/model/backend terms.
+- v1.3 deterministic live demo remains the required reliable demo path.
+
 ## Demo Accounts
 
 - organizer: `organizer.demo`
@@ -160,6 +171,6 @@ shadcn/ui-inspired local component layer
 
 ## Current Boundary
 
-This is a stronger productized multilingual MVP, not a final commercial UI. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview.
+This is a stronger productized multilingual MVP, not a final commercial UI. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview. v1.4 adds optional organizer-only QwenPaw shadow evidence, while the reliable demo path remains deterministic.
 
-Do not continue into QwenPaw integration, real merchant connections, hardware, real traffic prediction, model training, payment/POS integrations, open registration, real map APIs, or a marketing landing page without a new plan.
+Do not continue into live-provider QwenPaw integration, real merchant connections, hardware, real traffic prediction, model training, payment/POS integrations, open registration, real map APIs, or a marketing landing page without a new plan.
