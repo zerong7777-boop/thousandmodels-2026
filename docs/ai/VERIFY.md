@@ -487,9 +487,9 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 
 | Command | Working directory | Exit code | Summary |
 | --- | --- | --- | --- |
-| `python -m pytest tests/test_v15_live_qwenpaw_smoke_script.py -q` | `apps/api` | 0 | 13 v1.5 script tests passed; tests cover live flag guard, localhost guard, redaction, bounded response/session handling, `trust_env=False`, fake success, and blocked connection failure. |
-| `python -m pytest tests/test_v14_workflow_contract.py tests/test_v14_tool_registry.py tests/test_v14_qwenpaw_shadow_runtime.py tests/test_v14_qwenpaw_shadow_api.py tests/test_v15_live_qwenpaw_smoke_script.py -q` | `apps/api` | 0 | 27 focused v1.4/v1.5 backend tests passed; 3 existing FastAPI/Starlette warnings. |
-| `python -m pytest -q` | `apps/api` | 0 | 132 backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `python -m pytest tests/test_v15_live_qwenpaw_smoke_script.py -q` | `apps/api` | 0 | 17 v1.5 script tests passed; tests cover live flag guard, localhost guard, redaction, bounded response/session handling, `trust_env=False`, fake success, blocked connection failure, failed QwenPaw SSE provider responses, and provider-error classification boundaries. |
+| `python -m pytest tests/test_v14_workflow_contract.py tests/test_v14_tool_registry.py tests/test_v14_qwenpaw_shadow_runtime.py tests/test_v14_qwenpaw_shadow_api.py tests/test_v15_live_qwenpaw_smoke_script.py -q` | `apps/api` | 0 | 31 focused v1.4/v1.5 backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `python -m pytest -q` | `apps/api` | 0 | 136 backend tests passed; 3 existing FastAPI/Starlette warnings. |
 | `npm.cmd run test` | `apps/web` | 0 | 28 frontend test files passed, 94 tests passed. |
 | `npm.cmd run build` | `apps/web` | 0 | `tsc -b && vite build` passed; 3216 modules transformed; existing >500 kB chunk warning remains for `assets/index-DwOVRZL_.js` at 841.37 kB. |
 | `npm.cmd exec -- playwright test` | `apps/web` | 0 | Default mocked Playwright suite passed: 22 passed, 6 skipped. |
@@ -497,8 +497,8 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 | `where.exe qwenpaw` | project root | 1 | No local `qwenpaw` executable was found. |
 | `Test-NetConnection -ComputerName 127.0.0.1 -Port 8088` | project root | 0 | Command completed with `TcpTestSucceeded=False`; no local QwenPaw service was listening on port 8088. |
 | `python scripts\live_qwenpaw_smoke.py` without `RUN_LIVE_QWENPAW_SMOKE` | `apps/api` | 1 | Wrote sanitized `blocked` evidence with `blocked_reason=RUN_LIVE_QWENPAW_SMOKE is required` and `request_sent=false`. Initial sandboxed attempt could not write `docs/research`; rerun with approved project write access succeeded. |
-| `python scripts\live_qwenpaw_smoke.py` with `RUN_LIVE_QWENPAW_SMOKE=1`, `QWENPAW_BASE_URL=http://127.0.0.1:8088` | `apps/api` | 1 | Wrote sanitized `blocked` evidence with `request_sent=true`, `blocked_reason=QwenPaw service is not reachable`, and `failure_kind=connect_error`. |
-| strict secret/password scan | project root | 1 | `rg` found no real key, bearer-token, `DASHSCOPE_API_KEY=sk-*`, or QwenPaw password matches in `apps`, `docs`, `README.md`, or `.gitignore`; exit 1 is expected for no matches. |
+| `python scripts\live_qwenpaw_smoke.py` with `RUN_LIVE_QWENPAW_SMOKE=1`, `QWENPAW_BASE_URL=http://127.0.0.1:8088` against the local QwenPaw service | `apps/api` | 1 | Wrote sanitized `blocked` evidence with `request_sent=true`, `response_status_code=200`, `blocked_reason=QwenPaw model is not configured`, and `failure_kind=provider_error`. |
+| strict secret/password scan | project root | 1 | `rg` found no real key, bearer-token, provider key assignment, or QwenPaw password matches in `apps`, `docs`, `README.md`, or `.gitignore`; exit 1 is expected for no matches. |
 | local-path scan | project root | 1 | `rg` found no local absolute path matches in `docs`, `apps`, or `README.md`; exit 1 is expected for no matches. |
 | public/merchant/tourist boundary scan | project root | 1 | `rg` found no raw QwenPaw/model/backend/internal terms in public, merchant, or tourist page source; exit 1 is expected for no matches. |
 
@@ -509,7 +509,7 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 | `apps/api/scripts/live_qwenpaw_smoke.py` | Manual localhost-only smoke script guarded by `RUN_LIVE_QWENPAW_SMOKE=1`, with `trust_env=False`, bounded response reads, bounded session IDs, and redaction for secrets and local paths. |
 | `apps/api/tests/test_v15_live_qwenpaw_smoke_script.py` | Contract tests for guard rails, prompt sanitization, response parsing, redaction, bounded evidence, fake live success, connection blocking, and proxy/environment isolation. |
 | `docs/research/v1.5-real-qwenpaw-guarded-smoke.md` | Sanitized smoke report. Current outcome is `blocked`, not `live_success`. |
-| `docs/research/assets/v1.5-real-qwenpaw-guarded-smoke/live-qwenpaw-smoke-result.json` | Sanitized JSON evidence with `outcome=blocked`, `request_sent=true`, `failure_kind=connect_error`, and no raw response stream. |
+| `docs/research/assets/v1.5-real-qwenpaw-guarded-smoke/live-qwenpaw-smoke-result.json` | Sanitized JSON evidence with `outcome=blocked`, `request_sent=true`, `response_status_code=200`, `failure_kind=provider_error`, and no raw response stream. |
 
 ### v1.5 Boundary Checks
 
@@ -519,8 +519,8 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 | Smoke rejects non-localhost `QWENPAW_BASE_URL` values | pass |
 | Smoke disables environment/proxy routing with `trust_env=False` | pass |
 | Fake transport can prove `live_success` without real network access | pass |
-| Missing local QwenPaw service is classified as `blocked`, not a product failure | pass |
-| Current recorded evidence is honest `blocked/connect_error`, not live success | pass |
+| Missing local QwenPaw service or missing active model configuration is classified as `blocked`, not a product failure | pass |
+| Current recorded evidence is honest `blocked/provider_error`, not live success | pass |
 | Evidence stores bounded sanitized previews only | pass |
 | v1.4 fake QwenPaw adapter remains the accepted product path | pass |
 | v1.3 deterministic live demo remains verified | pass |
@@ -529,7 +529,35 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 
 ### v1.5 Verification Notes
 
-- The local machine did not have a reachable QwenPaw service during verification, so v1.5 proves guarded reachability plumbing and safe blocked evidence, not real QwenPaw model success.
+- A local QwenPaw service was later installed and reached on `127.0.0.1:8088`, but it returned `No active model configured.` The current evidence proves localhost service reachability plus safe provider-error classification, not real QwenPaw model success.
 - During the first live-flag smoke attempt, the authorized process recorded an HTTP 502 while port 8088 was not listening. Root-cause probing showed `httpx` with default environment trust could be influenced by the execution environment, while `trust_env=False` produced direct localhost connection failure. The script was patched and tested to always use `trust_env=False`.
 - Full Playwright and v1.3 live smoke regenerated several historical screenshot PNGs. Those PNG diffs are verification byproducts and are not part of the v1.5 documentation commits.
 - Backend pytest was run serially against the default SQLite store.
+
+## v1.6 Local QwenPaw Reachability Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `<TEMP_QWENPAW_VENV>\Scripts\qwenpaw.exe --version` | project root | 0 | Local isolated QwenPaw CLI reported `1.1.12.post1`. |
+| `qwenpaw init --defaults --accept-security --force` with isolated `QWENPAW_WORKING_DIR` and `QWENPAW_SECRET_DIR` | temp workspace | 0 | Initialized QwenPaw outside the repo and reported no default model configured. |
+| `Test-NetConnection -ComputerName 127.0.0.1 -Port 8088` while QwenPaw app was running | project root | 0 | Command completed with `TcpTestSucceeded=True`. |
+| `python scripts\live_qwenpaw_smoke.py` with `RUN_LIVE_QWENPAW_SMOKE=1`, `QWENPAW_BASE_URL=http://127.0.0.1:8088` | `apps/api` | 1 | Wrote sanitized blocked evidence for reachable QwenPaw SSE response: `failure_kind=provider_error`, `blocked_reason=QwenPaw model is not configured`. |
+| `python -m pytest tests/test_v14_workflow_contract.py tests/test_v14_tool_registry.py tests/test_v14_qwenpaw_shadow_runtime.py tests/test_v14_qwenpaw_shadow_api.py tests/test_v15_live_qwenpaw_smoke_script.py -q` | `apps/api` | 0 | 31 focused QwenPaw backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `python -m pytest -q` | `apps/api` | 0 | 136 backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| strict changed-file secret/password scan | project root | 1 | No real key, bearer token, provider key assignment, or QwenPaw password matches; exit 1 is expected for no matches. |
+| changed evidence/docs local-path scan | project root | 1 | No local absolute path matches in changed evidence/docs/script files; exit 1 is expected for no matches. |
+| changed evidence live-success claim scan | project root | 1 | No `live_success` claim in current QwenPaw smoke evidence or handoff docs; exit 1 is expected for no matches. |
+| `git diff --check` | project root | 0 | No whitespace errors; Git reported expected Windows line-ending warnings for touched text files. |
+
+### v1.6 Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Local QwenPaw service was reachable on localhost | pass |
+| QwenPaw provider/model failure was not misclassified as `live_success` | pass |
+| Evidence remains bounded and sanitized | pass |
+| No active model is configured yet, so true `live_success` is not established | pass |
+| v1.4 fake QwenPaw shadow path remains the accepted product path | pass |
+| v1.3 deterministic live demo remains the reliable demo path | pass |

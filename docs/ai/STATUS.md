@@ -167,11 +167,21 @@ shadcn/ui-inspired local component layer
 - v1.5 adds a manual guarded smoke script for a real locally running QwenPaw service under `apps/api/scripts/live_qwenpaw_smoke.py`.
 - The smoke script is gated by `RUN_LIVE_QWENPAW_SMOKE=1` and defaults to `http://127.0.0.1:8088`.
 - The script calls only `POST /api/agent/process`, rejects non-localhost hosts, disables environment/proxy trust with `trust_env=False`, and records bounded sanitized evidence.
-- The current recorded smoke outcome is `blocked`: localhost `127.0.0.1:8088` was probed with the live flag, but the local QwenPaw service was not reachable (`failure_kind=connect_error`).
+- The current recorded smoke outcome is `blocked`: localhost `127.0.0.1:8088` was reachable, but QwenPaw returned `No active model configured.` (`failure_kind=provider_error`).
 - Missing QwenPaw service, missing model configuration, or auth/configuration issues are classified as `blocked`, not deterministic-demo failures.
 - v1.4 fake QwenPaw shadow orchestration remains the accepted organizer product path.
 - v1.3 deterministic live demo remains the required reliable demo path.
 - Live smoke success, if achieved later, still does not mean production QwenPaw orchestration.
+
+## v1.6 Local QwenPaw Reachability State
+
+- A local QwenPaw service was installed in an isolated temp venv and initialized outside the repo.
+- Local CLI version observed: `qwenpaw 1.1.12.post1`.
+- The service started on `http://127.0.0.1:8088` and `POST /api/agent/process` returned an SSE response.
+- The SSE response ended with `status=failed`, `error.code=PROVIDER_ERROR`, and `message=No active model configured.`
+- The smoke script now treats failed QwenPaw SSE/provider responses as `blocked/provider_error`, not `live_success`.
+- The recorded evidence remains sanitized and bounded at `docs/research/assets/v1.5-real-qwenpaw-guarded-smoke/live-qwenpaw-smoke-result.json`.
+- No active QwenPaw model has been configured yet, so true `live_success` is still not established.
 
 ## Demo Accounts
 

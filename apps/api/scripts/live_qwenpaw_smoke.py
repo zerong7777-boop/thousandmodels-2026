@@ -160,6 +160,61 @@ def _extract_sse_text(text: str) -> str:
     return "\n".join(chunk for chunk in chunks if chunk)
 
 
+def _iter_sse_payloads(text: str) -> list[dict[str, Any]]:
+    payloads: list[dict[str, Any]] = []
+    for line in text.splitlines():
+        if not line.startswith("data:"):
+            continue
+        data = line.removeprefix("data:").strip()
+        if not data or data == "[DONE]":
+            continue
+        try:
+            payload = json.loads(data)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict):
+            payloads.append(payload)
+    return payloads
+
+
+def classify_qwenpaw_failure(
+    *,
+    content_type: str,
+    text: str,
+) -> tuple[str, str, str] | None:
+    lowered = content_type.lower()
+    payloads: list[dict[str, Any]] = []
+    if "text/event-stream" in lowered:
+        payloads = _iter_sse_payloads(text)
+    elif "json" in lowered:
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError:
+            payload = None
+        if isinstance(payload, dict):
+            payloads = [payload]
+    for payload in payloads:
+        error = payload.get("error")
+        error_code = ""
+        error_message = ""
+        if isinstance(error, dict):
+            error_code = str(error.get("code") or "")
+            error_message = str(error.get("message") or "")
+        elif error:
+            error_message = str(error)
+        status = str(payload.get("status") or "").lower()
+        is_failed_payload = status == "failed"
+        is_provider_error = error_code.upper() == "PROVIDER_ERROR"
+        is_missing_model = "no active model configured" in error_message.lower()
+        if not (is_failed_payload or is_provider_error or is_missing_model):
+            continue
+        preview = bound_preview(error_message or json.dumps(payload, ensure_ascii=False))
+        if is_missing_model:
+            return ("QwenPaw model is not configured", "provider_error", preview)
+        return ("QwenPaw returned provider error", "provider_error", preview)
+    return None
+
+
 def parse_response_preview(
     content_type: str,
     text: str,
@@ -339,6 +394,11 @@ def run_smoke(
         write_evidence(result)
         return result
 
+    failure = (
+        classify_qwenpaw_failure(content_type=content_type, text=response_text)
+        if response_status_code == 200
+        else None
+    )
     preview = parse_response_preview(content_type=content_type, text=response_text)
     result.update(
         {
@@ -351,7 +411,18 @@ def run_smoke(
             ),
         }
     )
-    if response_status_code == 200 and preview:
+    if failure:
+        blocked_reason, failure_kind, failure_preview = failure
+        result["outcome"] = "blocked"
+        result["blocked_reason"] = blocked_reason
+        result["failure_kind"] = failure_kind
+        result["sanitized_response_preview"] = failure_preview
+        result["response_preview_sha256"] = (
+            hashlib.sha256(failure_preview.encode("utf-8")).hexdigest()
+            if failure_preview
+            else ""
+        )
+    elif response_status_code == 200 and preview:
         result["outcome"] = "live_success"
     elif response_status_code in {401, 403}:
         result["outcome"] = "blocked"

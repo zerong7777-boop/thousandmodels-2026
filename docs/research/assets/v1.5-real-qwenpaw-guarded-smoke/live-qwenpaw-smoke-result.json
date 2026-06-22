@@ -4,13 +4,13 @@
   "endpoint": "/api/agent/process",
   "session_id": "zhiyin-v15-qwenpaw-smoke",
   "request_sent": true,
-  "response_status_code": null,
-  "response_content_type": null,
-  "latency_ms": 2324,
+  "response_status_code": 200,
+  "response_content_type": "text/event-stream; charset=utf-8",
+  "latency_ms": 379,
   "sanitized_prompt_preview": "You are helping verify a local QwenPaw integration for a demo operations system.\nEvent: demo-night-tour\nIncident: merchant m001 reported sold_out.\nBoundary: advisory only. Do not claim that you approved, published, applied, or mutated any system state.\nReturn a concise advisory response with recovery_rationale, visitor_safe_notice_draft, and safety_notes.",
-  "sanitized_response_preview": "",
-  "response_preview_sha256": "",
-  "blocked_reason": "QwenPaw service is not reachable",
-  "failure_kind": "connect_error",
-  "evidence_generated_at": "2026-06-22T02:48:40.975906+00:00"
+  "sanitized_response_preview": "No active model configured.",
+  "response_preview_sha256": "81861e82c6155724bf7dd934fc746a3b06af26e436c5dc52bc44f60d559e4885",
+  "blocked_reason": "QwenPaw model is not configured",
+  "failure_kind": "provider_error",
+  "evidence_generated_at": "2026-06-22T04:20:47.222873+00:00"
 }

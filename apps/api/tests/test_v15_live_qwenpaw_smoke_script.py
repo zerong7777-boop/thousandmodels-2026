@@ -323,6 +323,122 @@ def test_run_smoke_reads_bounded_response_stream_without_sentinel(
     assert sentinel.decode("utf-8") not in result["sanitized_response_preview"]
 
 
+def test_failed_qwenpaw_sse_response_records_blocked_provider_error(monkeypatch, tmp_path):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            headers={"content-type": "text/event-stream"},
+            text=(
+                'data: {"sequence_number":0,"status":"created","output":null}\n\n'
+                'data: {"sequence_number":1,"status":"in_progress","output":null}\n\n'
+                'data: {"sequence_number":2,"status":"failed",'
+                '"error":{"code":"PROVIDER_ERROR","message":"No active model configured."},'
+                '"output":null}\n\n'
+            ),
+        )
+
+    monkeypatch.setattr(live_qwenpaw_smoke, "ASSET_DIR", tmp_path)
+    monkeypatch.setattr(live_qwenpaw_smoke, "RESULT_JSON", tmp_path / "result.json")
+    monkeypatch.setattr(live_qwenpaw_smoke, "SMOKE_DOC", tmp_path / "smoke.md")
+
+    result = live_qwenpaw_smoke.run_smoke(
+        env={
+            "RUN_LIVE_QWENPAW_SMOKE": "1",
+            "QWENPAW_BASE_URL": "http://127.0.0.1:8088",
+        },
+        transport=httpx.MockTransport(handler),
+    )
+
+    assert result["outcome"] == "blocked"
+    assert result["blocked_reason"] == "QwenPaw model is not configured"
+    assert result["failure_kind"] == "provider_error"
+    assert "No active model configured" in result["sanitized_response_preview"]
+
+
+def test_auth_error_json_keeps_auth_required_classification(monkeypatch, tmp_path):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            401,
+            headers={"content-type": "application/json"},
+            json={"error": "unauthorized"},
+        )
+
+    monkeypatch.setattr(live_qwenpaw_smoke, "ASSET_DIR", tmp_path)
+    monkeypatch.setattr(live_qwenpaw_smoke, "RESULT_JSON", tmp_path / "result.json")
+    monkeypatch.setattr(live_qwenpaw_smoke, "SMOKE_DOC", tmp_path / "smoke.md")
+
+    result = live_qwenpaw_smoke.run_smoke(
+        env={
+            "RUN_LIVE_QWENPAW_SMOKE": "1",
+            "QWENPAW_BASE_URL": "http://127.0.0.1:8088",
+        },
+        transport=httpx.MockTransport(handler),
+    )
+
+    assert result["outcome"] == "blocked"
+    assert result["blocked_reason"] == "QwenPaw authentication is required"
+    assert result["failure_kind"] == "auth_required"
+    assert result["response_status_code"] == 401
+
+
+def test_non_failed_sse_error_field_does_not_override_success(monkeypatch, tmp_path):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            headers={"content-type": "text/event-stream"},
+            text=(
+                'data: {"status":"completed","error":"nonfatal warning",'
+                '"output":{"content":"Advisory only response from QwenPaw"}}\n\n'
+            ),
+        )
+
+    monkeypatch.setattr(live_qwenpaw_smoke, "ASSET_DIR", tmp_path)
+    monkeypatch.setattr(live_qwenpaw_smoke, "RESULT_JSON", tmp_path / "result.json")
+    monkeypatch.setattr(live_qwenpaw_smoke, "SMOKE_DOC", tmp_path / "smoke.md")
+
+    result = live_qwenpaw_smoke.run_smoke(
+        env={
+            "RUN_LIVE_QWENPAW_SMOKE": "1",
+            "QWENPAW_BASE_URL": "http://127.0.0.1:8088",
+        },
+        transport=httpx.MockTransport(handler),
+    )
+
+    assert result["outcome"] == "live_success"
+    assert result["failure_kind"] is None
+    assert "Advisory only response" in result["sanitized_response_preview"]
+
+
+def test_provider_error_with_model_word_is_not_assumed_unconfigured(monkeypatch, tmp_path):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            headers={"content-type": "text/event-stream"},
+            text=(
+                'data: {"status":"failed",'
+                '"error":{"code":"PROVIDER_ERROR","message":"Selected model timed out."},'
+                '"output":null}\n\n'
+            ),
+        )
+
+    monkeypatch.setattr(live_qwenpaw_smoke, "ASSET_DIR", tmp_path)
+    monkeypatch.setattr(live_qwenpaw_smoke, "RESULT_JSON", tmp_path / "result.json")
+    monkeypatch.setattr(live_qwenpaw_smoke, "SMOKE_DOC", tmp_path / "smoke.md")
+
+    result = live_qwenpaw_smoke.run_smoke(
+        env={
+            "RUN_LIVE_QWENPAW_SMOKE": "1",
+            "QWENPAW_BASE_URL": "http://127.0.0.1:8088",
+        },
+        transport=httpx.MockTransport(handler),
+    )
+
+    assert result["outcome"] == "blocked"
+    assert result["blocked_reason"] == "QwenPaw returned provider error"
+    assert result["failure_kind"] == "provider_error"
+    assert "Selected model timed out." in result["sanitized_response_preview"]
+
+
 def test_connection_failure_records_blocked(monkeypatch, tmp_path):
     def handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("connection refused", request=request)
