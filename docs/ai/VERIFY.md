@@ -568,3 +568,49 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 | Live success remains advisory-only and non-authoritative | pass |
 | v1.4 fake QwenPaw shadow path remains the accepted product path | pass |
 | v1.3 deterministic live demo remains the reliable demo path | pass |
+
+## v1.7 Real QwenPaw Guarded Adapter Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python -m pytest tests/test_v15_live_qwenpaw_smoke_script.py -q` | `apps/api` | 0 | 32 v1.5/v1.7 smoke script tests passed; tests cover strict advisory qualification, unqualified missing fields, unsafe authority claims, safe authority negation, coupon/redemption authority claims, provider-error blocking, evidence persistence, localhost guard, and `trust_env=False`. |
+| `python -m pytest tests/test_v14_workflow_contract.py tests/test_v14_tool_registry.py tests/test_v14_qwenpaw_shadow_runtime.py tests/test_v14_qwenpaw_shadow_api.py tests/test_v15_live_qwenpaw_smoke_script.py -q` | `apps/api` | 0 | 46 focused v1.4/v1.5/v1.7 QwenPaw backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `python -m pytest -q` | `apps/api` | 0 | 151 backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `python scripts\live_qwenpaw_smoke.py` with `RUN_LIVE_QWENPAW_SMOKE=1`, localhost QwenPaw, `QWENPAW_AGENT_ID=QwenPaw_QA_Agent_0.2`, and session `zhiyin-v17-qwenpaw-qualified-advisory-v1` | `apps/api` | 1 | Strict live smoke wrote sanitized evidence with `outcome=advisory_unqualified`, `provider_reachable=true`, `advisory_status=unqualified`, and `qualification_failure_kind=missing_fields`; QwenPaw returned HTTP 200 but did not provide the required advisory fields. |
+| strict secret/password scan | project root | 1 | `rg` found no real key, bearer-token, provider key assignment, OpenAI key assignment, or QwenPaw password matches in `apps`, `docs`, `README.md`, or `.gitignore`; exit 1 is expected for no matches. |
+| local-path scan | project root | 1 | `rg` found no local absolute path matches in `docs`, `apps`, or `README.md`; exit 1 is expected for no matches. |
+| public/merchant/tourist boundary scan | project root | 1 | `rg` found no raw QwenPaw/model/backend/internal terms in public, merchant, or tourist page source; exit 1 is expected for no matches. |
+| `git diff --check` | project root | 0 | No whitespace errors. |
+
+### Evidence Artifacts
+
+| Artifact | Summary |
+| --- | --- |
+| `apps/api/scripts/live_qwenpaw_smoke.py` | Manual localhost-only smoke script now records `provider_reachable`, `advisory_status`, field presence, sanitized advisory excerpts, and strict `advisory_qualified`/`advisory_unqualified` outcomes. |
+| `apps/api/tests/test_v15_live_qwenpaw_smoke_script.py` | Contract tests for guarded live flag, localhost guard, strict advisory fields, authority-claim rejection, safe negations, bounded evidence, and blocked provider/runtime failures. |
+| `docs/research/v1.5-real-qwenpaw-guarded-smoke.md` | Sanitized smoke report for the v1.7 contract. The current outcome is `advisory_unqualified`, not product orchestration. |
+| `docs/research/assets/v1.5-real-qwenpaw-guarded-smoke/live-qwenpaw-smoke-result.json` | Sanitized JSON evidence with `advisory_contract_version=v1.7`, `provider_reachable=true`, `advisory_status=unqualified`, and missing-field diagnostics. |
+
+### v1.7 Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Smoke refuses to send a request unless `RUN_LIVE_QWENPAW_SMOKE=1` | pass |
+| Smoke rejects non-localhost `QWENPAW_BASE_URL` values | pass |
+| Smoke disables environment/proxy routing with `trust_env=False` | pass |
+| Provider/runtime/QwenPaw error payloads remain `blocked` | pass |
+| A non-empty response alone no longer passes the smoke | pass |
+| `advisory_qualified` requires all three required advisory fields | pass |
+| Unsafe authority claims produce `advisory_unqualified` | pass |
+| Evidence contains only bounded sanitized previews and excerpts | pass |
+| `main()` exits 0 only for `advisory_qualified` | pass |
+| v1.4 fake adapter remains the accepted product path | pass |
+| Merchant, tourist, and public source files remain untouched by v1.7 product behavior | pass |
+
+### v1.7 Verification Notes
+
+- The strict live smoke used an isolated temporary QwenPaw workspace and stopped the local QwenPaw process after the run; port 8088 was confirmed closed afterward.
+- The live provider was reachable and returned HTTP 200, but the model output stayed in preamble/tool-introspection text and did not include the required advisory fields.
+- The correct next step is prompt and agent-selection hardening, not product wiring.

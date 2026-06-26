@@ -187,6 +187,17 @@ shadcn/ui-inspired local component layer
 - The recorded evidence remains sanitized and bounded at `docs/research/assets/v1.5-real-qwenpaw-guarded-smoke/live-qwenpaw-smoke-result.json`.
 - This proves manual local QwenPaw model reachability, not production QwenPaw orchestration or authoritative state mutation.
 
+## v1.7 Real QwenPaw Guarded Adapter State
+
+- v1.7 adds advisory qualification on top of the v1.6 local QwenPaw reachability smoke.
+- The smoke script now distinguishes provider reachability from advisory qualification.
+- `advisory_qualified` requires `recovery_rationale`, `visitor_safe_notice_draft`, and `safety_notes`.
+- `advisory_unqualified` means QwenPaw responded but the response did not pass adapter qualification.
+- Provider/runtime failures remain `blocked`, not deterministic-demo failures.
+- The current recorded v1.7 smoke outcome is `advisory_unqualified`: provider reachable, HTTP 200, but required advisory fields were missing.
+- v1.4 fake QwenPaw shadow orchestration remains the accepted product path.
+- v1.3 deterministic live demo remains the reliable demo path.
+
 ## Demo Accounts
 
 - organizer: `organizer.demo`
@@ -196,6 +207,6 @@ shadcn/ui-inspired local component layer
 
 ## Current Boundary
 
-This is a stronger productized multilingual MVP, not a final commercial UI. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview. v1.4 adds optional organizer-only QwenPaw shadow evidence, and v1.5 adds guarded local QwenPaw smoke evidence, while the reliable demo path remains deterministic.
+This is a stronger productized multilingual MVP, not a final commercial UI. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview. v1.4 adds optional organizer-only QwenPaw shadow evidence, and v1.7 adds strict guarded local QwenPaw advisory qualification evidence, while the reliable demo path remains deterministic.
 
 Do not continue into production QwenPaw orchestration, real merchant connections, hardware, real traffic prediction, model training, payment/POS integrations, open registration, real map APIs, or a marketing landing page without a new plan.
