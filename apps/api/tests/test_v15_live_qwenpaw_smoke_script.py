@@ -180,7 +180,18 @@ def _live_smoke_env(**overrides):
 def _assert_v17_evidence(tmp_path, result):
     evidence = json.loads((tmp_path / "result.json").read_text(encoding="utf-8"))
     assert result["advisory_contract_version"] == "v1.7"
-    assert evidence["advisory_contract_version"] == "v1.7"
+    assert evidence["advisory_contract_version"] == result["advisory_contract_version"]
+    assert evidence["outcome"] == result["outcome"]
+    assert evidence["advisory_status"] == result["advisory_status"]
+    assert (
+        evidence["qualification_failure_kind"]
+        == result["qualification_failure_kind"]
+    )
+    assert evidence["advisory_fields_present"] == result["advisory_fields_present"]
+    assert (
+        evidence["sanitized_advisory_excerpt"]
+        == result["sanitized_advisory_excerpt"]
+    )
     return evidence
 
 
@@ -296,6 +307,7 @@ def test_advisory_missing_required_fields_is_unqualified(monkeypatch, tmp_path):
         visitor_safe_notice_draft=False,
         safety_notes=False,
     )
+    _assert_v17_evidence(tmp_path, result)
 
 
 def test_preamble_only_response_is_unqualified_missing_fields(monkeypatch, tmp_path):
@@ -362,6 +374,14 @@ def test_main_returns_zero_only_for_advisory_qualified(monkeypatch, tmp_path):
     )
 
     assert live_qwenpaw_smoke.main() == 0
+
+    monkeypatch.setattr(
+        live_qwenpaw_smoke,
+        "run_smoke",
+        lambda: {"outcome": "live_success"},
+    )
+
+    assert live_qwenpaw_smoke.main() == 1
 
     monkeypatch.setattr(
         live_qwenpaw_smoke,
