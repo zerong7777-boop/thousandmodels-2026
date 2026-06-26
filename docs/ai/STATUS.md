@@ -151,6 +151,68 @@ shadcn/ui-inspired local component layer
 - Qwen remains optional and non-authoritative.
 - QwenPaw remains unimplemented and must not be claimed as active workflow orchestration.
 
+## v1.4 QwenPaw Multi-Agent Orchestration Spike State
+
+- v1.4 adds an optional QwenPaw-style shadow orchestration path for a merchant incident.
+- The accepted path uses a deterministic fake QwenPaw adapter and does not require `DASHSCOPE_API_KEY`.
+- No real QwenPaw or DashScope provider API is executed in v1.4.
+- Shadow orchestration records `AgentRun(mode="qwenpaw_workflow")`, Leader/Worker step evidence through `AgentTrace.steps`, permissioned tool decisions, advisory drafts, and safety evaluations.
+- The shadow run is advisory only. It does not approve plans, publish notices, mutate merchant runtime state, or create coupon/redemption records.
+- Organizer pages may inspect shadow orchestration evidence.
+- Merchant, tourist, and public H5 pages do not expose raw QwenPaw/model/backend terms.
+- v1.3 deterministic live demo remains the required reliable demo path.
+
+## v1.5 Real QwenPaw Guarded Smoke State
+
+- v1.5 adds a manual guarded smoke script for a real locally running QwenPaw service under `apps/api/scripts/live_qwenpaw_smoke.py`.
+- The smoke script is gated by `RUN_LIVE_QWENPAW_SMOKE=1` and defaults to `http://127.0.0.1:8088`.
+- The script calls only `POST /api/agent/process`, rejects non-localhost hosts, disables environment/proxy trust with `trust_env=False`, and records bounded sanitized evidence.
+- The original v1.5 recorded smoke outcome was `blocked`: localhost `127.0.0.1:8088` was reachable, but QwenPaw returned `No active model configured.` (`failure_kind=provider_error`).
+- The current recorded smoke outcome has since been updated by v1.6 to `live_success` after an active LLM model was configured.
+- Missing QwenPaw service, missing model configuration, or auth/configuration issues are classified as `blocked`, not deterministic-demo failures.
+- v1.4 fake QwenPaw shadow orchestration remains the accepted organizer product path.
+- v1.3 deterministic live demo remains the required reliable demo path.
+- Live smoke success still does not mean production QwenPaw orchestration.
+
+## v1.6 Local QwenPaw Reachability State
+
+- A local QwenPaw service was installed in an isolated temp venv and initialized outside the repo.
+- Local CLI version observed: `qwenpaw 1.1.12.post1`.
+- The service started on `http://127.0.0.1:8088` and `POST /api/agent/process` returned an SSE response.
+- Before model configuration, the SSE response ended with `status=failed`, `error.code=PROVIDER_ERROR`, and `message=No active model configured.`
+- The global active LLM was then configured as `opencode/deepseek-v4-flash-free`, which does not require a process API key in this local QwenPaw setup.
+- The smoke script now supports optional `QWENPAW_AGENT_ID`; the latest evidence uses `QwenPaw_QA_Agent_0.2` through the `X-Agent-Id` header.
+- A fresh guarded smoke session returned `outcome=live_success`, HTTP 200, and a bounded non-empty model response preview.
+- The smoke script treats failed QwenPaw SSE/provider responses and 200-level QwenPaw error payloads as `blocked`, not `live_success`.
+- The recorded evidence remains sanitized and bounded at `docs/research/assets/v1.5-real-qwenpaw-guarded-smoke/live-qwenpaw-smoke-result.json`.
+- This proves manual local QwenPaw model reachability, not production QwenPaw orchestration or authoritative state mutation.
+
+## v1.7 Real QwenPaw Guarded Adapter State
+
+- v1.7 adds advisory qualification on top of the v1.6 local QwenPaw reachability smoke.
+- The smoke script now distinguishes provider reachability from advisory qualification.
+- `advisory_qualified` requires `recovery_rationale`, `visitor_safe_notice_draft`, and `safety_notes`.
+- `advisory_unqualified` means QwenPaw responded but the response did not pass adapter qualification.
+- Provider/runtime failures remain `blocked`, not deterministic-demo failures.
+- The current recorded v1.7 smoke outcome is `advisory_unqualified`: provider reachable, HTTP 200, but required advisory fields were missing.
+- v1.4 fake QwenPaw shadow orchestration remains the accepted product path.
+- v1.3 deterministic live demo remains the reliable demo path.
+
+## v1.8 QwenPaw Advisory Optimization Spike State
+
+- v1.8 keeps QwenPaw live execution manual, localhost-only, advisory-only, and optional.
+- The smoke script now supports prompt variants for JSON-only, Markdown-section, and few-shot JSON advisory formatting.
+- The default v1.8 validator is `json_no_preamble_validator`; `strict_existing_validator` remains available for compatibility with the v1.7 qualification path.
+- Repair attempts are bounded and record metadata only: attempt number, response status, advisory status, qualification failure kind, and field presence.
+- The v1.8 evidence report now renders a `Repair History` section without raw response content.
+- Agent variants can route between the active/default agent and the current QA agent configuration.
+- v1.8.1 fixes QwenPaw SSE typed-content parsing: reasoning/thinking streams are excluded, streaming content is grouped by `msg_id`, and only final assistant message text is validated.
+- After the parser fix, the real local QwenPaw v1.8 matrix returned 3/3 `advisory_qualified` results with `json_no_preamble_pass=true` and zero repair attempts.
+- Matrix evidence is stored under `docs/research/assets/v1.8-qwenpaw-advisory-optimization/` with separate parserfix JSON artifacts for QA JSON-only, QA few-shot JSON, and default JSON-only runs.
+- The v1.8.1 live evidence proves local advisory qualification through the guarded smoke adapter, not production orchestration.
+- v1.4 fake QwenPaw shadow orchestration remains the accepted product path.
+- v1.3 deterministic live demo remains the reliable demo path.
+
 ## Demo Accounts
 
 - organizer: `organizer.demo`
@@ -160,6 +222,6 @@ shadcn/ui-inspired local component layer
 
 ## Current Boundary
 
-This is a stronger productized multilingual MVP, not a final commercial UI. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview.
+This is a stronger productized multilingual MVP, not a final commercial UI. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview. v1.4 adds optional organizer-only QwenPaw shadow evidence, and v1.8 adds guarded local QwenPaw advisory optimization evidence, while the reliable demo path remains deterministic.
 
-Do not continue into QwenPaw integration, real merchant connections, hardware, real traffic prediction, model training, payment/POS integrations, open registration, real map APIs, or a marketing landing page without a new plan.
+Do not continue into production QwenPaw orchestration, real merchant connections, hardware, real traffic prediction, model training, payment/POS integrations, open registration, real map APIs, or a marketing landing page without a new plan.

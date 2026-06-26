@@ -436,3 +436,230 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 - The first Task 7 default Playwright run failed because the default mocked config picked up the live-only v1.3 spec without starting FastAPI. This was fixed by excluding `v13-live-demo-smoke.spec.ts` from `apps/web/playwright.config.ts`; the live spec remains covered by `apps/web/playwright.live.config.ts`.
 - Full Playwright verification regenerated several historical screenshot artifacts. Only v1.3 evidence screenshots are part of v1.3 outputs.
 - The current optional Qwen evidence does not prove live provider success. It proves the guarded path blocks safely without a process key, writes sanitized evidence, and leaves the deterministic live demo valid.
+
+## v1.4 QwenPaw Multi-Agent Orchestration Spike Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python -m pytest tests/test_v14_workflow_contract.py tests/test_v14_tool_registry.py tests/test_v14_qwenpaw_shadow_runtime.py tests/test_v14_qwenpaw_shadow_api.py -q` | `apps/api` | 0 | 14 focused v1.4 workflow, permissioned-tool, shadow-runtime, and API tests passed; 3 existing FastAPI/Starlette deprecation warnings. |
+| `python -m pytest -q` | `apps/api` | 0 | 119 backend tests passed; 3 existing FastAPI/Starlette deprecation warnings. |
+| `npm.cmd run test` | `apps/web` | 0 | 28 frontend test files passed, 94 tests passed. |
+| `npm.cmd run build` | `apps/web` | 0 | `tsc -b && vite build` passed; 3216 modules transformed; existing >500 kB chunk warning remains for `assets/index-DwOVRZL_.js` at 841.37 kB. |
+| `npm.cmd exec -- playwright test` | `apps/web` | 0 | Default mocked Playwright suite passed: 22 passed, 6 skipped. |
+| `npm.cmd exec -- playwright test tests/e2e/v13-live-demo-smoke.spec.ts --config playwright.live.config.ts` | `apps/web` | 0 | v1.3 live smoke passed after clearing a stale local Vite process on port 5179: 1 test passed. |
+| `rg -n 'sk-[A-Za-z0-9._-]{20,}\|Bearer\\s+sk-[A-Za-z0-9._-]{20,}\|DASHSCOPE_API_KEY\\s*=\\s*sk-' apps docs README.md .gitignore` | project root | 1 | Strict secret scan found no real key or bearer-token matches; `rg` exit 1 is expected for no matches. |
+| `rg -n '([A-Z]:\\\\Users\\\\[^\\\\]+\|[A-Z]:\\\\rz\\\\\|[A-Z]:/rz/)' docs apps README.md` | project root | 1 | Local absolute path scan found no matches; `rg` exit 1 is expected for no matches. |
+| `rg -n 'QwenPaw\|AgentRun\|AgentDraft\|AgentModelCall\|AgentEvaluation\|schema\|fallback\|backend\|deterministic\|PlanVersion\|RecoveryProposal' apps\\web\\src\\pages\\public apps\\web\\src\\pages\\merchant apps\\web\\src\\pages\\tourist` | project root | 1 | Public, merchant, and tourist page sources do not expose the listed internal QwenPaw/model/backend terms; `rg` exit 1 is expected for no matches. |
+
+### Evidence Artifacts
+
+| Artifact | Summary |
+| --- | --- |
+| `docs/research/v1.4-qwenpaw-orchestration-spike-smoke.md` | Documents the shadow run, advisory-only boundary, no required provider credentials, and optional live-provider status. |
+| `docs/research/assets/v1.4-qwenpaw-orchestration-spike/shadow-run-evidence.json` | Sanitized evidence with `outcome=shadow_success`, `backend=qwenpaw_fake`, `agent_run_mode=qwenpaw_workflow`, `authoritative_mutation=false`, `human_approval_required=true`, 3 permission decisions, and 1 denied permission. |
+
+### v1.4 Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| QwenPaw shadow path is organizer-only | pass |
+| Shadow run is advisory and cannot approve, publish, or mutate authoritative runtime/business state | pass |
+| Permissioned tool calls record allowed and denied decisions | pass |
+| Unsafe adapter output falls back to safe deterministic advisory output | pass |
+| Missing Origin plus demo CSRF is rejected for the QwenPaw shadow endpoint | pass |
+| Frontend ignores stale shadow orchestration responses when the selected incident changes | pass |
+| Merchant, tourist, and public pages do not expose raw QwenPaw/model/backend terms | pass |
+| v1.3 deterministic live demo remains verified after v1.4 | pass |
+| No real provider API key, bearer token, or local absolute path was found by final scans | pass |
+
+### v1.4 Verification Notes
+
+- Backend pytest must be run serially against the default SQLite store. An initial verification attempt ran focused and full pytest concurrently, which reproduced the known SQLite lock/seed-state failure. After stopping stale local Python services and rerunning serially, both focused and full backend suites passed.
+- The first v1.3 live smoke attempt found a stale local Vite process on port 5179 from an earlier run. After stopping that process and the failed-run Python residue, the live smoke passed.
+- Full Playwright and live smoke regenerated several historical screenshot artifacts. They are verification byproducts and are not part of the v1.4 documentation commit.
+- v1.4 does not prove live QwenPaw provider execution. It proves a guarded QwenPaw-style shadow orchestration contract, fake-adapter evidence path, organizer UI exposure, and non-authoritative safety boundary.
+
+## v1.5 Real QwenPaw Guarded Smoke Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python -m pytest tests/test_v15_live_qwenpaw_smoke_script.py -q` | `apps/api` | 0 | 21 v1.5 script tests passed; tests cover live flag guard, localhost guard, redaction, bounded response/session handling, optional `QWENPAW_AGENT_ID` header routing, `trust_env=False`, fake success, blocked connection failure, failed QwenPaw SSE/provider responses, token-stream compaction, 200-level QwenPaw error payloads, Markdown evidence whitespace hygiene, and provider-error classification boundaries. |
+| `python -m pytest tests/test_v14_workflow_contract.py tests/test_v14_tool_registry.py tests/test_v14_qwenpaw_shadow_runtime.py tests/test_v14_qwenpaw_shadow_api.py tests/test_v15_live_qwenpaw_smoke_script.py -q` | `apps/api` | 0 | 35 focused v1.4/v1.5 backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `python -m pytest -q` | `apps/api` | 0 | 140 backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `npm.cmd run test` | `apps/web` | 0 | 28 frontend test files passed, 94 tests passed. |
+| `npm.cmd run build` | `apps/web` | 0 | `tsc -b && vite build` passed; 3216 modules transformed; existing >500 kB chunk warning remains for `assets/index-DwOVRZL_.js` at 841.37 kB. |
+| `npm.cmd exec -- playwright test` | `apps/web` | 0 | Default mocked Playwright suite passed: 22 passed, 6 skipped. |
+| `npm.cmd exec -- playwright test tests/e2e/v13-live-demo-smoke.spec.ts --config playwright.live.config.ts` | `apps/web` | 0 | v1.3 live smoke passed: 1 test passed. |
+| `where.exe qwenpaw` | project root | 1 | No local `qwenpaw` executable was found. |
+| `Test-NetConnection -ComputerName 127.0.0.1 -Port 8088` | project root | 0 | Command completed with `TcpTestSucceeded=False`; no local QwenPaw service was listening on port 8088. |
+| `python scripts\live_qwenpaw_smoke.py` without `RUN_LIVE_QWENPAW_SMOKE` | `apps/api` | 1 | Wrote sanitized `blocked` evidence with `blocked_reason=RUN_LIVE_QWENPAW_SMOKE is required` and `request_sent=false`. Initial sandboxed attempt could not write `docs/research`; rerun with approved project write access succeeded. |
+| `python scripts\live_qwenpaw_smoke.py` with `RUN_LIVE_QWENPAW_SMOKE=1`, `QWENPAW_BASE_URL=http://127.0.0.1:8088` against the local QwenPaw service | `apps/api` | 1 | Wrote sanitized `blocked` evidence with `request_sent=true`, `response_status_code=200`, `blocked_reason=QwenPaw model is not configured`, and `failure_kind=provider_error`. |
+| strict secret/password scan | project root | 1 | `rg` found no real key, bearer-token, provider key assignment, or QwenPaw password matches in `apps`, `docs`, `README.md`, or `.gitignore`; exit 1 is expected for no matches. |
+| local-path scan | project root | 1 | `rg` found no local absolute path matches in `docs`, `apps`, or `README.md`; exit 1 is expected for no matches. |
+| public/merchant/tourist boundary scan | project root | 1 | `rg` found no raw QwenPaw/model/backend/internal terms in public, merchant, or tourist page source; exit 1 is expected for no matches. |
+
+### Evidence Artifacts
+
+| Artifact | Summary |
+| --- | --- |
+| `apps/api/scripts/live_qwenpaw_smoke.py` | Manual localhost-only smoke script guarded by `RUN_LIVE_QWENPAW_SMOKE=1`, with `trust_env=False`, optional `QWENPAW_AGENT_ID` routing via `X-Agent-Id`, bounded response reads, bounded session/agent IDs, and redaction for secrets and local paths. |
+| `apps/api/tests/test_v15_live_qwenpaw_smoke_script.py` | Contract tests for guard rails, prompt sanitization, response parsing, redaction, bounded evidence, fake live success, connection blocking, and proxy/environment isolation. |
+| `docs/research/v1.5-real-qwenpaw-guarded-smoke.md` | Sanitized smoke report. The original v1.5 outcome was `blocked`; the current artifact has since been updated by v1.6 to `live_success`. |
+| `docs/research/assets/v1.5-real-qwenpaw-guarded-smoke/live-qwenpaw-smoke-result.json` | Sanitized JSON evidence. The original v1.5 provider-error evidence was superseded by v1.6 live-success evidence after active model configuration. |
+
+### v1.5 Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Smoke refuses to send a request unless `RUN_LIVE_QWENPAW_SMOKE=1` | pass |
+| Smoke rejects non-localhost `QWENPAW_BASE_URL` values | pass |
+| Smoke disables environment/proxy routing with `trust_env=False` | pass |
+| Optional `QWENPAW_AGENT_ID` is sent only as an explicit `X-Agent-Id` header and is recorded in sanitized evidence | pass |
+| Fake transport can prove `live_success` without real network access | pass |
+| QwenPaw 200-level error payloads are classified as `blocked`, not `live_success` | pass |
+| Missing local QwenPaw service or missing active model configuration is classified as `blocked`, not a product failure | pass |
+| Original v1.5 recorded evidence was honest `blocked/provider_error`, not live success | pass |
+| Evidence stores bounded sanitized previews only | pass |
+| v1.4 fake QwenPaw adapter remains the accepted product path | pass |
+| v1.3 deterministic live demo remains verified | pass |
+| No real key, password, bearer token, or local absolute path was found by final scans | pass |
+| Public, merchant, and tourist pages do not expose raw QwenPaw/model/backend terms | pass |
+
+### v1.5 Verification Notes
+
+- The original v1.5 live-flag smoke reached a local QwenPaw service on `127.0.0.1:8088`, but it returned `No active model configured.` That evidence proved localhost service reachability plus safe provider-error classification, not real QwenPaw model success.
+- During the first live-flag smoke attempt, the authorized process recorded an HTTP 502 while port 8088 was not listening. Root-cause probing showed `httpx` with default environment trust could be influenced by the execution environment, while `trust_env=False` produced direct localhost connection failure. The script was patched and tested to always use `trust_env=False`.
+- Full Playwright and v1.3 live smoke regenerated several historical screenshot PNGs. Those PNG diffs are verification byproducts and are not part of the v1.5 documentation commits.
+- Backend pytest was run serially against the default SQLite store.
+
+## v1.6 Local QwenPaw Reachability Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `<TEMP_QWENPAW_VENV>\Scripts\qwenpaw.exe --version` | project root | 0 | Local isolated QwenPaw CLI reported `1.1.12.post1`. |
+| `qwenpaw init --defaults --accept-security --force` with isolated `QWENPAW_WORKING_DIR` and `QWENPAW_SECRET_DIR` | temp workspace | 0 | Initialized QwenPaw outside the repo and reported no default model configured. |
+| `Test-NetConnection -ComputerName 127.0.0.1 -Port 8088` while QwenPaw app was running | project root | 0 | Command completed with `TcpTestSucceeded=True`. |
+| `python scripts\live_qwenpaw_smoke.py` with `RUN_LIVE_QWENPAW_SMOKE=1`, `QWENPAW_BASE_URL=http://127.0.0.1:8088` | `apps/api` | 1 | Wrote sanitized blocked evidence for reachable QwenPaw SSE response: `failure_kind=provider_error`, `blocked_reason=QwenPaw model is not configured`. |
+| Configure active model as `opencode/deepseek-v4-flash-free` through QwenPaw `ProviderManager.activate_model()` | temp workspace | 0 | Wrote the global active model into the isolated QwenPaw secret/config directory; no process API key was present or stored. |
+| `qwenpaw models list` with isolated QwenPaw dirs | temp workspace | 0 | Active model slot reported `opencode / deepseek-v4-flash-free`. |
+| `python scripts\live_qwenpaw_smoke.py` with `RUN_LIVE_QWENPAW_SMOKE=1`, `QWENPAW_BASE_URL=http://127.0.0.1:8088`, `QWENPAW_AGENT_ID=QwenPaw_QA_Agent_0.2`, `QWENPAW_SMOKE_SESSION_ID=zhiyin-v15-qwenpaw-smoke-qa-agent-v1` | `apps/api` | 0 | Wrote sanitized `live_success` evidence with HTTP 200, explicit QA-agent routing, bounded response preview, and no `blocked_reason` or `failure_kind`. |
+| `python -m pytest tests/test_v14_workflow_contract.py tests/test_v14_tool_registry.py tests/test_v14_qwenpaw_shadow_runtime.py tests/test_v14_qwenpaw_shadow_api.py tests/test_v15_live_qwenpaw_smoke_script.py -q` | `apps/api` | 0 | 35 focused QwenPaw backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `python -m pytest -q` | `apps/api` | 0 | 140 backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| strict changed-file secret/password scan | project root | 1 | No real key, bearer token, provider key assignment, or QwenPaw password matches; exit 1 is expected for no matches. |
+| changed evidence/docs local-path scan | project root | 1 | No local absolute path matches in changed evidence/docs/script files; exit 1 is expected for no matches. |
+| `git diff --check` | project root | 0 | No whitespace errors; Git reported expected Windows line-ending warnings for touched text files. |
+
+### v1.6 Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Local QwenPaw service was reachable on localhost | pass |
+| QwenPaw provider/model failure was not misclassified as `live_success` | pass |
+| Active QwenPaw LLM model was configured without adding a process API key | pass |
+| Guarded live smoke returned `live_success` after active model configuration and explicit QA-agent routing | pass |
+| Missing/invalid agent-style QwenPaw error payloads are blocked instead of misclassified as success | pass |
+| Evidence remains bounded and sanitized | pass |
+| Live success remains advisory-only and non-authoritative | pass |
+| v1.4 fake QwenPaw shadow path remains the accepted product path | pass |
+| v1.3 deterministic live demo remains the reliable demo path | pass |
+
+## v1.7 Real QwenPaw Guarded Adapter Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python -m pytest tests/test_v15_live_qwenpaw_smoke_script.py -q` | `apps/api` | 0 | 32 v1.5/v1.7 smoke script tests passed; tests cover strict advisory qualification, unqualified missing fields, unsafe authority claims, safe authority negation, coupon/redemption authority claims, provider-error blocking, evidence persistence, localhost guard, and `trust_env=False`. |
+| `python -m pytest tests/test_v14_workflow_contract.py tests/test_v14_tool_registry.py tests/test_v14_qwenpaw_shadow_runtime.py tests/test_v14_qwenpaw_shadow_api.py tests/test_v15_live_qwenpaw_smoke_script.py -q` | `apps/api` | 0 | 46 focused v1.4/v1.5/v1.7 QwenPaw backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `python -m pytest -q` | `apps/api` | 0 | 151 backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `python scripts\live_qwenpaw_smoke.py` with `RUN_LIVE_QWENPAW_SMOKE=1`, localhost QwenPaw, `QWENPAW_AGENT_ID=QwenPaw_QA_Agent_0.2`, and session `zhiyin-v17-qwenpaw-qualified-advisory-v1` | `apps/api` | 1 | Strict live smoke wrote sanitized evidence with `outcome=advisory_unqualified`, `provider_reachable=true`, `advisory_status=unqualified`, and `qualification_failure_kind=missing_fields`; QwenPaw returned HTTP 200 but did not provide the required advisory fields. |
+| strict secret/password scan | project root | 1 | `rg` found no real key, bearer-token, provider key assignment, OpenAI key assignment, or QwenPaw password matches in `apps`, `docs`, `README.md`, or `.gitignore`; exit 1 is expected for no matches. |
+| local-path scan | project root | 1 | `rg` found no local absolute path matches in `docs`, `apps`, or `README.md`; exit 1 is expected for no matches. |
+| public/merchant/tourist boundary scan | project root | 1 | `rg` found no raw QwenPaw/model/backend/internal terms in public, merchant, or tourist page source; exit 1 is expected for no matches. |
+| `git diff --check` | project root | 0 | No whitespace errors. |
+
+### Evidence Artifacts
+
+| Artifact | Summary |
+| --- | --- |
+| `apps/api/scripts/live_qwenpaw_smoke.py` | Manual localhost-only smoke script now records `provider_reachable`, `advisory_status`, field presence, sanitized advisory excerpts, and strict `advisory_qualified`/`advisory_unqualified` outcomes. |
+| `apps/api/tests/test_v15_live_qwenpaw_smoke_script.py` | Contract tests for guarded live flag, localhost guard, strict advisory fields, authority-claim rejection, safe negations, bounded evidence, and blocked provider/runtime failures. |
+| `docs/research/v1.5-real-qwenpaw-guarded-smoke.md` | Sanitized smoke report for the v1.7 contract. The current outcome is `advisory_unqualified`, not product orchestration. |
+| `docs/research/assets/v1.5-real-qwenpaw-guarded-smoke/live-qwenpaw-smoke-result.json` | Sanitized JSON evidence with `advisory_contract_version=v1.7`, `provider_reachable=true`, `advisory_status=unqualified`, and missing-field diagnostics. |
+
+### v1.7 Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Smoke refuses to send a request unless `RUN_LIVE_QWENPAW_SMOKE=1` | pass |
+| Smoke rejects non-localhost `QWENPAW_BASE_URL` values | pass |
+| Smoke disables environment/proxy routing with `trust_env=False` | pass |
+| Provider/runtime/QwenPaw error payloads remain `blocked` | pass |
+| A non-empty response alone no longer passes the smoke | pass |
+| `advisory_qualified` requires all three required advisory fields | pass |
+| Unsafe authority claims produce `advisory_unqualified` | pass |
+| Evidence contains only bounded sanitized previews and excerpts | pass |
+| `main()` exits 0 only for `advisory_qualified` | pass |
+| v1.4 fake adapter remains the accepted product path | pass |
+| Merchant, tourist, and public source files remain untouched by v1.7 product behavior | pass |
+
+### v1.7 Verification Notes
+
+- The strict live smoke used an isolated temporary QwenPaw workspace and stopped the local QwenPaw process after the run; port 8088 was confirmed closed afterward.
+- The live provider was reachable and returned HTTP 200, but the model output stayed in preamble/tool-introspection text and did not include the required advisory fields.
+- The correct next step is prompt and agent-selection hardening, not product wiring.
+
+## v1.8 QwenPaw Advisory Optimization Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python -m pytest apps\api\tests\test_v15_live_qwenpaw_smoke_script.py -q` | project root | 0 | 57 smoke script tests passed; 3 existing FastAPI/Starlette warnings. |
+| `python -m pytest apps\api\tests\test_v14_qwenpaw_shadow_runtime.py apps\api\tests\test_v14_qwenpaw_shadow_api.py apps\api\tests\test_v15_live_qwenpaw_smoke_script.py -q` | project root | 0 | 64 focused QwenPaw tests passed; 3 existing FastAPI/Starlette warnings. |
+| v1.8.1 QA JSON-only live matrix cell | `apps/api` | 0 | Real local QwenPaw returned `advisory_qualified`, `json_no_preamble_pass=true`, `parsed_output_format=json`, and zero repair attempts. |
+| v1.8.1 QA few-shot JSON live matrix cell | `apps/api` | 0 | Real local QwenPaw returned `advisory_qualified`, `json_no_preamble_pass=true`, `parsed_output_format=json`, and zero repair attempts. |
+| v1.8.1 default JSON-only live matrix cell | `apps/api` | 0 | Real local QwenPaw returned `advisory_qualified`, `json_no_preamble_pass=true`, `parsed_output_format=json`, and zero repair attempts. |
+| `Test-NetConnection -ComputerName 127.0.0.1 -Port 8088` after stopping QwenPaw | project root | 0 | Command completed with `TcpTestSucceeded=False`; local QwenPaw service was stopped after the live matrix. |
+| v1.8 evidence secret scan | project root | 1 | No secret, bearer-token, provider key assignment, OpenAI key assignment, or QwenPaw password matches in v1.8 evidence/docs paths; `rg` exit 1 is expected for no matches. |
+| v1.8 evidence local-path scan | project root | 1 | No local absolute path matches in v1.8 evidence/docs paths; `rg` exit 1 is expected for no matches. |
+
+### Evidence Artifacts
+
+| Artifact | Summary |
+| --- | --- |
+| `apps/api/scripts/live_qwenpaw_smoke.py` | v1.8.1 parser fix: QwenPaw SSE reasoning streams are excluded, content deltas are grouped by `msg_id`, and only final assistant message text is validated. |
+| `apps/api/tests/test_v15_live_qwenpaw_smoke_script.py` | Adds regression coverage for typed `thinking + text`, streamed reasoning/message deltas, and completed response envelopes that contain reasoning plus message output. |
+| `docs/research/v1.8-qwenpaw-advisory-optimization.md` | Sanitized v1.8.1 smoke report with parser-fix root cause and 3-cell live matrix summary. |
+| `docs/research/assets/v1.8-qwenpaw-advisory-optimization/live-qwenpaw-advisory-optimization-result-json-qa-parserfix.json` | QA agent, JSON-only prompt, `advisory_qualified`, zero repair attempts. |
+| `docs/research/assets/v1.8-qwenpaw-advisory-optimization/live-qwenpaw-advisory-optimization-result-fewshot-repair-parserfix.json` | QA agent, few-shot JSON prompt, `advisory_qualified`, zero repair attempts. |
+| `docs/research/assets/v1.8-qwenpaw-advisory-optimization/live-qwenpaw-advisory-optimization-result-json-default-parserfix.json` | Default agent, JSON-only prompt, `advisory_qualified`, zero repair attempts. |
+| `docs/research/assets/v1.8-qwenpaw-advisory-optimization/live-qwenpaw-advisory-optimization-result.json` | Latest matrix cell, default agent JSON-only, `advisory_qualified`. |
+
+### v1.8 Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Smoke refuses to send a request unless `RUN_LIVE_QWENPAW_SMOKE=1` | pass |
+| QwenPaw SSE reasoning/thinking is not validated as final advisory output | pass |
+| Real local QwenPaw matrix returned 3/3 `advisory_qualified` after parser fix | pass |
+| Repair history is rendered in the Markdown report | pass |
+| Empty repair history records `No repair attempts were used.` | pass |
+| Repair metadata does not render raw response content | pass |
+| Evidence remains bounded and sanitized | pass |
+| Optional live QwenPaw remains localhost-only and advisory-only | pass |
+| v1.4 fake adapter remains the accepted product path | pass |
+| v1.3 deterministic live demo remains the reliable demo path | pass |
+
+### v1.8 Verification Notes
+
+- The v1.8.1 live matrix used local QwenPaw `1.1.12.post1` through `http://127.0.0.1:8088/api/agent/process`.
+- The initial live matrix failure was a parser false negative: QwenPaw returned final JSON in assistant `text`, but the previous parser flattened reasoning/thinking into the same preview.
+- v1.8.1 does not make QwenPaw a product requirement and does not authorize QwenPaw output to approve, publish, mutate runtime state, or create coupon/redemption records.
+- No frontend suite, build, or Playwright suite was run in this pass because v1.8.1 touched only the guarded backend smoke script, tests, and research/status docs.

@@ -1,0 +1,40 @@
+{
+  "outcome": "advisory_qualified",
+  "base_url_host": "127.0.0.1",
+  "endpoint": "/api/agent/process",
+  "agent_id": null,
+  "prompt_variant": "prompt_a_json_only",
+  "validator_variant": "json_no_preamble_validator",
+  "agent_variant": "agent_default",
+  "repair_attempt_count": 0,
+  "repair_history": [],
+  "parsed_output_format": "json",
+  "json_no_preamble_pass": true,
+  "unexpected_fields": [],
+  "session_id": "zhiyin-v18-parserfix-json-default-v1",
+  "request_sent": true,
+  "response_status_code": 200,
+  "response_content_type": "text/event-stream; charset=utf-8",
+  "latency_ms": 6624,
+  "sanitized_prompt_preview": "You are the final advisory formatter for a demo operations system.\nEvent: demo-night-tour\nIncident: merchant m001 reported sold_out.\nBoundary: advisory only. Do not claim that you approved, published, applied, updated, created, redeemed, or mutated any system state.\nReturn exactly one JSON object and nothing else.\nNo Markdown. No preamble. No tool inspection. Do not inspect tools, files, workspace, memory, or external context.\nDo not describe your reasoning, prompt, schema, agent sta\n[TRUNCATED]",
+  "sanitized_response_preview": "{\n  \"recovery_rationale\": \"Merchant m001 has reported being sold out during the demo-night-tour. To maintain visitor experience, alternative nearby merchants or a restocking schedule may be considered. Organizer approval is required before any restocking or route adjustment is made.\",\n  \"visitor_safe_notice_draft\": \"One of our tour merchants has reached capacity for the evening. Please explore other participating vendors nearby. Thank you for your understanding.\",\n  \"safety_notes\": \"No immediate safety concern. Merchant remains open for general questions but cannot serve additional customers tonight. Organizer must approve any changes to merchant participation or inventory replenishment.\"\n}",
+  "response_preview_sha256": "71023077fffbc071855b58b69ae72ce827dfe613143fd877117418f82f0a20aa",
+  "blocked_reason": null,
+  "failure_kind": null,
+  "advisory_contract_version": "v1.8",
+  "provider_reachable": true,
+  "advisory_status": "qualified",
+  "qualification_failure_kind": null,
+  "advisory_fields_present": {
+    "recovery_rationale": true,
+    "visitor_safe_notice_draft": true,
+    "safety_notes": true
+  },
+  "sanitized_advisory_excerpt": {
+    "recovery_rationale": "Merchant m001 has reported being sold out during the demo-night-tour. To maintain visitor experience, alternative nearby merchants or a restocking schedule may be considered. Organizer approval is required before any restocking or route adjustment is made.",
+    "visitor_safe_notice_draft": "One of our tour merchants has reached capacity for the evening. Please explore other participating vendors nearby. Thank you for your understanding.",
+    "safety_notes": "No immediate safety concern. Merchant remains open for general questions but cannot serve additional customers tonight. Organizer must approve any changes to merchant participation or inventory replenishment."
+  },
+  "preamble_stripped": false,
+  "evidence_generated_at": "2026-06-26T19:05:52.313194+00:00"
+}

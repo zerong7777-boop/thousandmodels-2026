@@ -1,0 +1,40 @@
+{
+  "outcome": "advisory_qualified",
+  "base_url_host": "127.0.0.1",
+  "endpoint": "/api/agent/process",
+  "agent_id": "QwenPaw_QA_Agent_0.2",
+  "prompt_variant": "prompt_a_json_only",
+  "validator_variant": "json_no_preamble_validator",
+  "agent_variant": "agent_qa_current",
+  "repair_attempt_count": 0,
+  "repair_history": [],
+  "parsed_output_format": "json",
+  "json_no_preamble_pass": true,
+  "unexpected_fields": [],
+  "session_id": "zhiyin-v18-parserfix-json-qa-v3",
+  "request_sent": true,
+  "response_status_code": 200,
+  "response_content_type": "text/event-stream; charset=utf-8",
+  "latency_ms": 5557,
+  "sanitized_prompt_preview": "You are the final advisory formatter for a demo operations system.\nEvent: demo-night-tour\nIncident: merchant m001 reported sold_out.\nBoundary: advisory only. Do not claim that you approved, published, applied, updated, created, redeemed, or mutated any system state.\nReturn exactly one JSON object and nothing else.\nNo Markdown. No preamble. No tool inspection. Do not inspect tools, files, workspace, memory, or external context.\nDo not describe your reasoning, prompt, schema, agent sta\n[TRUNCATED]",
+  "sanitized_response_preview": "{\n  \"recovery_rationale\": \"Merchant m001 reported a sold_out condition during demo-night-tour. This may impact visitor experience and available services. Organizer should assess venue capacity, adjust routing, and coordinate with affected merchant before continuing operations.\",\n  \"visitor_safe_notice_draft\": \"One of the tour stops is currently at full capacity. Please follow organizer guidance for possible routing adjustments. We appreciate your patience while we ensure everyone has a smooth experience.\",\n  \"safety_notes\": \"No immediate safety hazard detected. Organizer approval is required before any authoritative action such as rerouting visitors or updating capacity status.\"\n}",
+  "response_preview_sha256": "e19835e174e500043105b543d7408bddd8b30f6ca8f65116cc4b134bbbc17fea",
+  "blocked_reason": null,
+  "failure_kind": null,
+  "advisory_contract_version": "v1.8",
+  "provider_reachable": true,
+  "advisory_status": "qualified",
+  "qualification_failure_kind": null,
+  "advisory_fields_present": {
+    "recovery_rationale": true,
+    "visitor_safe_notice_draft": true,
+    "safety_notes": true
+  },
+  "sanitized_advisory_excerpt": {
+    "recovery_rationale": "Merchant m001 reported a sold_out condition during demo-night-tour. This may impact visitor experience and available services. Organizer should assess venue capacity, adjust routing, and coordinate with affected merchant before continuing operations.",
+    "visitor_safe_notice_draft": "One of the tour stops is currently at full capacity. Please follow organizer guidance for possible routing adjustments. We appreciate your patience while we ensure everyone has a smooth experience.",
+    "safety_notes": "No immediate safety hazard detected. Organizer approval is required before any authoritative action such as rerouting visitors or updating capacity status."
+  },
+  "preamble_stripped": false,
+  "evidence_generated_at": "2026-06-26T19:02:24.114827+00:00"
+}
