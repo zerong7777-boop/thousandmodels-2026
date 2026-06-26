@@ -1,0 +1,40 @@
+{
+  "outcome": "advisory_qualified",
+  "base_url_host": "127.0.0.1",
+  "endpoint": "/api/agent/process",
+  "agent_id": "QwenPaw_QA_Agent_0.2",
+  "prompt_variant": "prompt_c_few_shot_json",
+  "validator_variant": "json_no_preamble_validator",
+  "agent_variant": "agent_qa_current",
+  "repair_attempt_count": 0,
+  "repair_history": [],
+  "parsed_output_format": "json",
+  "json_no_preamble_pass": true,
+  "unexpected_fields": [],
+  "session_id": "zhiyin-v18-parserfix-fewshot-repair-v1",
+  "request_sent": true,
+  "response_status_code": 200,
+  "response_content_type": "text/event-stream; charset=utf-8",
+  "latency_ms": 5025,
+  "sanitized_prompt_preview": "You are the final advisory formatter for a demo operations system.\nEvent: demo-night-tour\nIncident: merchant m001 reported sold_out.\nBoundary: advisory only. Do not claim that you approved, published, applied, updated, created, redeemed, or mutated any system state.\nReturn exactly one JSON object and nothing else.\nNo Markdown. No preamble. No tool inspection. Do not inspect tools, files, workspace, memory, or external context.\nDo not describe your reasoning, prompt, schema, agent sta\n[TRUNCATED]",
+  "sanitized_response_preview": "{\"recovery_rationale\":\"Merchant m001 (demo-night-tour) has reported sold_out status. Visitor flow to this merchant should be reduced or temporarily paused to avoid congestion and disappointment until the organizer reviews and decides on restock or diversion measures.\",\"visitor_safe_notice_draft\":\"Notice: The featured items at merchant m001 are currently sold out. Please check back later or visit nearby stops. Follow on-site staff instructions for alternative options.\",\"safety_notes\":\"Advisory only. This is a notification draft — organizer approval is required before any publication, visitor communication, or operational changes. No system state has been modified.\"}",
+  "response_preview_sha256": "17a903e92f965f0eff4af757bb2df5843daaaa5482ff12b9e6e7122489f1e2ba",
+  "blocked_reason": null,
+  "failure_kind": null,
+  "advisory_contract_version": "v1.8",
+  "provider_reachable": true,
+  "advisory_status": "qualified",
+  "qualification_failure_kind": null,
+  "advisory_fields_present": {
+    "recovery_rationale": true,
+    "visitor_safe_notice_draft": true,
+    "safety_notes": true
+  },
+  "sanitized_advisory_excerpt": {
+    "recovery_rationale": "Merchant m001 (demo-night-tour) has reported sold_out status. Visitor flow to this merchant should be reduced or temporarily paused to avoid congestion and disappointment until the organizer reviews and decides on restock or diversion measures.",
+    "visitor_safe_notice_draft": "Notice: The featured items at merchant m001 are currently sold out. Please check back later or visit nearby stops. Follow on-site staff instructions for alternative options.",
+    "safety_notes": "Advisory only. This is a notification draft — organizer approval is required before any publication, visitor communication, or operational changes. No system state has been modified."
+  },
+  "preamble_stripped": false,
+  "evidence_generated_at": "2026-06-26T19:05:09.741111+00:00"
+}

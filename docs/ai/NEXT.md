@@ -2,9 +2,15 @@
 
 ## Recommended Next Step
 
-Improve prompt and agent selection until the guarded real-QwenPaw smoke returns `advisory_qualified`, while keeping the v1.4 fake adapter as the accepted product path.
+Finish publishing the v1.8.1 QwenPaw SSE parser fix and live matrix evidence.
 
-The current v1.7 smoke proves that the local QwenPaw provider is reachable and that the guarded adapter no longer accepts a non-empty response as success. The latest recorded outcome is `advisory_unqualified` because the response stayed in preamble/tool-introspection text and did not provide `recovery_rationale`, `visitor_safe_notice_draft`, or `safety_notes`.
+The optional local live QwenPaw v1.8 matrix has now been run after the parser fix. All three cells returned `advisory_qualified` with `json_no_preamble_pass=true` and zero repair attempts:
+
+1. QA agent + JSON-only prompt.
+2. QA agent + few-shot JSON prompt with bounded repair enabled.
+3. Default agent + JSON-only prompt.
+
+After this commit is pushed, the recommended next spike is v1.9 Direct Structured Output Baseline: a clean provider-level JSON-schema baseline that does not go through QwenPaw agent SSE. That baseline should be treated as an ablation, not a product requirement.
 
 ## Do Not Do Yet
 

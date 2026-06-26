@@ -614,3 +614,52 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 - The strict live smoke used an isolated temporary QwenPaw workspace and stopped the local QwenPaw process after the run; port 8088 was confirmed closed afterward.
 - The live provider was reachable and returned HTTP 200, but the model output stayed in preamble/tool-introspection text and did not include the required advisory fields.
 - The correct next step is prompt and agent-selection hardening, not product wiring.
+
+## v1.8 QwenPaw Advisory Optimization Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python -m pytest apps\api\tests\test_v15_live_qwenpaw_smoke_script.py -q` | project root | 0 | 57 smoke script tests passed; 3 existing FastAPI/Starlette warnings. |
+| `python -m pytest apps\api\tests\test_v14_qwenpaw_shadow_runtime.py apps\api\tests\test_v14_qwenpaw_shadow_api.py apps\api\tests\test_v15_live_qwenpaw_smoke_script.py -q` | project root | 0 | 64 focused QwenPaw tests passed; 3 existing FastAPI/Starlette warnings. |
+| v1.8.1 QA JSON-only live matrix cell | `apps/api` | 0 | Real local QwenPaw returned `advisory_qualified`, `json_no_preamble_pass=true`, `parsed_output_format=json`, and zero repair attempts. |
+| v1.8.1 QA few-shot JSON live matrix cell | `apps/api` | 0 | Real local QwenPaw returned `advisory_qualified`, `json_no_preamble_pass=true`, `parsed_output_format=json`, and zero repair attempts. |
+| v1.8.1 default JSON-only live matrix cell | `apps/api` | 0 | Real local QwenPaw returned `advisory_qualified`, `json_no_preamble_pass=true`, `parsed_output_format=json`, and zero repair attempts. |
+| `Test-NetConnection -ComputerName 127.0.0.1 -Port 8088` after stopping QwenPaw | project root | 0 | Command completed with `TcpTestSucceeded=False`; local QwenPaw service was stopped after the live matrix. |
+| v1.8 evidence secret scan | project root | 1 | No secret, bearer-token, provider key assignment, OpenAI key assignment, or QwenPaw password matches in v1.8 evidence/docs paths; `rg` exit 1 is expected for no matches. |
+| v1.8 evidence local-path scan | project root | 1 | No local absolute path matches in v1.8 evidence/docs paths; `rg` exit 1 is expected for no matches. |
+
+### Evidence Artifacts
+
+| Artifact | Summary |
+| --- | --- |
+| `apps/api/scripts/live_qwenpaw_smoke.py` | v1.8.1 parser fix: QwenPaw SSE reasoning streams are excluded, content deltas are grouped by `msg_id`, and only final assistant message text is validated. |
+| `apps/api/tests/test_v15_live_qwenpaw_smoke_script.py` | Adds regression coverage for typed `thinking + text`, streamed reasoning/message deltas, and completed response envelopes that contain reasoning plus message output. |
+| `docs/research/v1.8-qwenpaw-advisory-optimization.md` | Sanitized v1.8.1 smoke report with parser-fix root cause and 3-cell live matrix summary. |
+| `docs/research/assets/v1.8-qwenpaw-advisory-optimization/live-qwenpaw-advisory-optimization-result-json-qa-parserfix.json` | QA agent, JSON-only prompt, `advisory_qualified`, zero repair attempts. |
+| `docs/research/assets/v1.8-qwenpaw-advisory-optimization/live-qwenpaw-advisory-optimization-result-fewshot-repair-parserfix.json` | QA agent, few-shot JSON prompt, `advisory_qualified`, zero repair attempts. |
+| `docs/research/assets/v1.8-qwenpaw-advisory-optimization/live-qwenpaw-advisory-optimization-result-json-default-parserfix.json` | Default agent, JSON-only prompt, `advisory_qualified`, zero repair attempts. |
+| `docs/research/assets/v1.8-qwenpaw-advisory-optimization/live-qwenpaw-advisory-optimization-result.json` | Latest matrix cell, default agent JSON-only, `advisory_qualified`. |
+
+### v1.8 Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Smoke refuses to send a request unless `RUN_LIVE_QWENPAW_SMOKE=1` | pass |
+| QwenPaw SSE reasoning/thinking is not validated as final advisory output | pass |
+| Real local QwenPaw matrix returned 3/3 `advisory_qualified` after parser fix | pass |
+| Repair history is rendered in the Markdown report | pass |
+| Empty repair history records `No repair attempts were used.` | pass |
+| Repair metadata does not render raw response content | pass |
+| Evidence remains bounded and sanitized | pass |
+| Optional live QwenPaw remains localhost-only and advisory-only | pass |
+| v1.4 fake adapter remains the accepted product path | pass |
+| v1.3 deterministic live demo remains the reliable demo path | pass |
+
+### v1.8 Verification Notes
+
+- The v1.8.1 live matrix used local QwenPaw `1.1.12.post1` through `http://127.0.0.1:8088/api/agent/process`.
+- The initial live matrix failure was a parser false negative: QwenPaw returned final JSON in assistant `text`, but the previous parser flattened reasoning/thinking into the same preview.
+- v1.8.1 does not make QwenPaw a product requirement and does not authorize QwenPaw output to approve, publish, mutate runtime state, or create coupon/redemption records.
+- No frontend suite, build, or Playwright suite was run in this pass because v1.8.1 touched only the guarded backend smoke script, tests, and research/status docs.

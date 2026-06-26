@@ -198,6 +198,21 @@ shadcn/ui-inspired local component layer
 - v1.4 fake QwenPaw shadow orchestration remains the accepted product path.
 - v1.3 deterministic live demo remains the reliable demo path.
 
+## v1.8 QwenPaw Advisory Optimization Spike State
+
+- v1.8 keeps QwenPaw live execution manual, localhost-only, advisory-only, and optional.
+- The smoke script now supports prompt variants for JSON-only, Markdown-section, and few-shot JSON advisory formatting.
+- The default v1.8 validator is `json_no_preamble_validator`; `strict_existing_validator` remains available for compatibility with the v1.7 qualification path.
+- Repair attempts are bounded and record metadata only: attempt number, response status, advisory status, qualification failure kind, and field presence.
+- The v1.8 evidence report now renders a `Repair History` section without raw response content.
+- Agent variants can route between the active/default agent and the current QA agent configuration.
+- v1.8.1 fixes QwenPaw SSE typed-content parsing: reasoning/thinking streams are excluded, streaming content is grouped by `msg_id`, and only final assistant message text is validated.
+- After the parser fix, the real local QwenPaw v1.8 matrix returned 3/3 `advisory_qualified` results with `json_no_preamble_pass=true` and zero repair attempts.
+- Matrix evidence is stored under `docs/research/assets/v1.8-qwenpaw-advisory-optimization/` with separate parserfix JSON artifacts for QA JSON-only, QA few-shot JSON, and default JSON-only runs.
+- The v1.8.1 live evidence proves local advisory qualification through the guarded smoke adapter, not production orchestration.
+- v1.4 fake QwenPaw shadow orchestration remains the accepted product path.
+- v1.3 deterministic live demo remains the reliable demo path.
+
 ## Demo Accounts
 
 - organizer: `organizer.demo`
@@ -207,6 +222,6 @@ shadcn/ui-inspired local component layer
 
 ## Current Boundary
 
-This is a stronger productized multilingual MVP, not a final commercial UI. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview. v1.4 adds optional organizer-only QwenPaw shadow evidence, and v1.7 adds strict guarded local QwenPaw advisory qualification evidence, while the reliable demo path remains deterministic.
+This is a stronger productized multilingual MVP, not a final commercial UI. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview. v1.4 adds optional organizer-only QwenPaw shadow evidence, and v1.8 adds guarded local QwenPaw advisory optimization evidence, while the reliable demo path remains deterministic.
 
 Do not continue into production QwenPaw orchestration, real merchant connections, hardware, real traffic prediction, model training, payment/POS integrations, open registration, real map APIs, or a marketing landing page without a new plan.
