@@ -162,7 +162,217 @@ def test_parse_json_response_bounds_and_sanitizes_preview():
     assert len(preview) <= 96
 
 
-def test_live_success_with_fake_http_transport(monkeypatch, tmp_path):
+def _set_temp_evidence_paths(monkeypatch, tmp_path):
+    monkeypatch.setattr(live_qwenpaw_smoke, "ASSET_DIR", tmp_path)
+    monkeypatch.setattr(live_qwenpaw_smoke, "RESULT_JSON", tmp_path / "result.json")
+    monkeypatch.setattr(live_qwenpaw_smoke, "SMOKE_DOC", tmp_path / "smoke.md")
+
+
+def _live_smoke_env(**overrides):
+    env = {
+        "RUN_LIVE_QWENPAW_SMOKE": "1",
+        "QWENPAW_BASE_URL": "http://127.0.0.1:8088",
+    }
+    env.update(overrides)
+    return env
+
+
+def _assert_v17_evidence(tmp_path, result):
+    evidence = json.loads((tmp_path / "result.json").read_text(encoding="utf-8"))
+    assert result["advisory_contract_version"] == "v1.7"
+    assert evidence["advisory_contract_version"] == "v1.7"
+    return evidence
+
+
+def _assert_advisory_field_presence(result, **expected):
+    assert result["advisory_fields_present"] == {
+        "recovery_rationale": expected["recovery_rationale"],
+        "visitor_safe_notice_draft": expected["visitor_safe_notice_draft"],
+        "safety_notes": expected["safety_notes"],
+    }
+
+
+def _assert_unqualified_reachable(result, *, failure_kind):
+    assert result["outcome"] == "advisory_unqualified"
+    assert result["provider_reachable"] is True
+    assert result["advisory_status"] == "unqualified"
+    assert result["qualification_failure_kind"] == failure_kind
+
+
+def test_json_advisory_with_required_fields_is_qualified(monkeypatch, tmp_path):
+    advisory = {
+        "recovery_rationale": "Route affected visitors to the next available hosted slot.",
+        "visitor_safe_notice_draft": "Some items sold out; staff will offer the nearest safe alternative.",
+        "safety_notes": "Advisory only. Do not publish or mutate merchant runtime state.",
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            headers={"content-type": "application/json"},
+            json={"message": {"content": json.dumps(advisory)}},
+        )
+
+    _set_temp_evidence_paths(monkeypatch, tmp_path)
+
+    result = live_qwenpaw_smoke.run_smoke(
+        env=_live_smoke_env(),
+        transport=httpx.MockTransport(handler),
+    )
+
+    assert result["outcome"] == "advisory_qualified"
+    assert result["provider_reachable"] is True
+    assert result["advisory_status"] == "qualified"
+    assert result["qualification_failure_kind"] is None
+    _assert_advisory_field_presence(
+        result,
+        recovery_rationale=True,
+        visitor_safe_notice_draft=True,
+        safety_notes=True,
+    )
+    excerpts = result["sanitized_advisory_excerpt"]
+    assert excerpts["recovery_rationale"].startswith("Route affected visitors")
+    assert excerpts["visitor_safe_notice_draft"].startswith("Some items sold out")
+    assert excerpts["safety_notes"].startswith("Advisory only")
+    _assert_v17_evidence(tmp_path, result)
+
+
+def test_markdown_advisory_with_preamble_is_qualified(monkeypatch, tmp_path):
+    markdown = """I will inspect context before answering.
+
+### recovery_rationale
+Route affected visitors to the next available hosted slot.
+
+### visitor_safe_notice_draft
+Some items sold out; staff will offer the nearest safe alternative.
+
+### safety_notes
+Advisory only. Do not publish or mutate merchant runtime state.
+"""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            headers={"content-type": "text/event-stream"},
+            text=f"data: {json.dumps({'output': markdown})}\n\n",
+        )
+
+    _set_temp_evidence_paths(monkeypatch, tmp_path)
+
+    result = live_qwenpaw_smoke.run_smoke(
+        env=_live_smoke_env(),
+        transport=httpx.MockTransport(handler),
+    )
+
+    assert result["outcome"] == "advisory_qualified"
+    assert result["provider_reachable"] is True
+    assert result["advisory_status"] == "qualified"
+    assert result["qualification_failure_kind"] is None
+    assert result["preamble_stripped"] is True
+    assert result["sanitized_advisory_excerpt"]["visitor_safe_notice_draft"].startswith("Some items")
+
+
+def test_advisory_missing_required_fields_is_unqualified(monkeypatch, tmp_path):
+    advisory = {"recovery_rationale": "Route affected visitors to another hosted slot."}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            headers={"content-type": "application/json"},
+            json={"message": {"content": json.dumps(advisory)}},
+        )
+
+    _set_temp_evidence_paths(monkeypatch, tmp_path)
+
+    result = live_qwenpaw_smoke.run_smoke(
+        env=_live_smoke_env(),
+        transport=httpx.MockTransport(handler),
+    )
+
+    _assert_unqualified_reachable(result, failure_kind="missing_fields")
+    _assert_advisory_field_presence(
+        result,
+        recovery_rationale=True,
+        visitor_safe_notice_draft=False,
+        safety_notes=False,
+    )
+
+
+def test_preamble_only_response_is_unqualified_missing_fields(monkeypatch, tmp_path):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            headers={"content-type": "text/event-stream"},
+            text='data: {"content":"I will inspect context before answering."}\n\n',
+        )
+
+    _set_temp_evidence_paths(monkeypatch, tmp_path)
+
+    result = live_qwenpaw_smoke.run_smoke(
+        env=_live_smoke_env(),
+        transport=httpx.MockTransport(handler),
+    )
+
+    _assert_unqualified_reachable(result, failure_kind="missing_fields")
+    _assert_advisory_field_presence(
+        result,
+        recovery_rationale=False,
+        visitor_safe_notice_draft=False,
+        safety_notes=False,
+    )
+
+
+def test_authority_claim_in_safety_notes_is_unqualified(monkeypatch, tmp_path):
+    advisory = {
+        "recovery_rationale": "Route affected visitors to the next available hosted slot.",
+        "visitor_safe_notice_draft": "Some items sold out; staff will offer an alternative.",
+        "safety_notes": "I published the notice and updated merchant runtime state.",
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            headers={"content-type": "application/json"},
+            json={"message": {"content": json.dumps(advisory)}},
+        )
+
+    _set_temp_evidence_paths(monkeypatch, tmp_path)
+
+    result = live_qwenpaw_smoke.run_smoke(
+        env=_live_smoke_env(),
+        transport=httpx.MockTransport(handler),
+    )
+
+    _assert_unqualified_reachable(result, failure_kind="unsafe_authority_claim")
+    _assert_advisory_field_presence(
+        result,
+        recovery_rationale=True,
+        visitor_safe_notice_draft=True,
+        safety_notes=True,
+    )
+
+
+def test_main_returns_zero_only_for_advisory_qualified(monkeypatch, tmp_path):
+    monkeypatch.setattr(live_qwenpaw_smoke, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(live_qwenpaw_smoke, "RESULT_JSON", tmp_path / "result.json")
+    monkeypatch.setattr(
+        live_qwenpaw_smoke,
+        "run_smoke",
+        lambda: {"outcome": "advisory_qualified"},
+    )
+
+    assert live_qwenpaw_smoke.main() == 0
+
+    monkeypatch.setattr(
+        live_qwenpaw_smoke,
+        "run_smoke",
+        lambda: {"outcome": "advisory_unqualified"},
+    )
+
+    assert live_qwenpaw_smoke.main() == 1
+
+
+def test_unstructured_fake_http_response_is_unqualified(monkeypatch, tmp_path):
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.url.path == "/api/agent/process"
         assert "x-agent-id" not in request.headers
@@ -187,7 +397,7 @@ def test_live_success_with_fake_http_transport(monkeypatch, tmp_path):
         transport=httpx.MockTransport(handler),
     )
 
-    assert result["outcome"] == "live_success"
+    _assert_unqualified_reachable(result, failure_kind="missing_fields")
     assert result["request_sent"] is True
     assert result["response_status_code"] == 200
     assert result["endpoint"] == "/api/agent/process"
@@ -223,7 +433,7 @@ def test_optional_agent_id_is_sent_as_header_and_written_to_evidence(monkeypatch
     )
     evidence = json.loads((tmp_path / "result.json").read_text(encoding="utf-8"))
 
-    assert result["outcome"] == "live_success"
+    _assert_unqualified_reachable(result, failure_kind="missing_fields")
     assert captured_headers["x-agent-id"] == "QwenPaw_QA_Agent_0.2"
     assert result["agent_id"] == "QwenPaw_QA_Agent_0.2"
     assert evidence["agent_id"] == "QwenPaw_QA_Agent_0.2"
@@ -232,7 +442,7 @@ def test_optional_agent_id_is_sent_as_header_and_written_to_evidence(monkeypatch
 def test_render_smoke_doc_strips_response_preview_trailing_whitespace():
     doc = live_qwenpaw_smoke.render_smoke_doc(
         {
-            "outcome": "live_success",
+            "outcome": "advisory_unqualified",
             "endpoint": "/api/agent/process",
             "base_url_host": "127.0.0.1",
             "agent_id": "QwenPaw_QA_Agent_0.2",
@@ -277,7 +487,7 @@ def test_run_smoke_disables_httpx_proxy_environment(monkeypatch, tmp_path):
         transport=httpx.MockTransport(handler),
     )
 
-    assert result["outcome"] == "live_success"
+    _assert_unqualified_reachable(result, failure_kind="missing_fields")
     assert captured_client_kwargs.get("trust_env") is False
 
 
@@ -315,7 +525,7 @@ def test_session_id_is_sanitized_and_bounded_in_request_and_evidence(monkeypatch
     )
     evidence = json.loads((tmp_path / "result.json").read_text(encoding="utf-8"))
 
-    assert result["outcome"] == "live_success"
+    _assert_unqualified_reachable(result, failure_kind="missing_fields")
     for session_id in (
         result["session_id"],
         evidence["session_id"],
@@ -389,7 +599,7 @@ def test_run_smoke_reads_bounded_response_stream_without_sentinel(
     )
     evidence_text = (tmp_path / "result.json").read_text(encoding="utf-8")
 
-    assert result["outcome"] == "live_success"
+    _assert_unqualified_reachable(result, failure_kind="missing_fields")
     assert expected_preview in result["sanitized_response_preview"]
     assert len(result["sanitized_response_preview"]) <= 1200
     assert sentinel.decode("utf-8") not in evidence_text
@@ -454,7 +664,10 @@ def test_auth_error_json_keeps_auth_required_classification(monkeypatch, tmp_pat
     assert result["response_status_code"] == 401
 
 
-def test_non_failed_sse_error_field_does_not_override_success(monkeypatch, tmp_path):
+def test_non_failed_sse_error_field_does_not_override_unqualified_reachable(
+    monkeypatch,
+    tmp_path,
+):
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
             200,
@@ -477,7 +690,7 @@ def test_non_failed_sse_error_field_does_not_override_success(monkeypatch, tmp_p
         transport=httpx.MockTransport(handler),
     )
 
-    assert result["outcome"] == "live_success"
+    _assert_unqualified_reachable(result, failure_kind="missing_fields")
     assert result["failure_kind"] is None
     assert "Advisory only response" in result["sanitized_response_preview"]
 
