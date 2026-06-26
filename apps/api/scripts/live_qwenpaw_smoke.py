@@ -32,6 +32,27 @@ MAX_AGENT_ID_CHARS = 96
 MAX_RESPONSE_BYTES = 65536
 CONNECT_TIMEOUT_SECONDS = 3.0
 READ_TIMEOUT_SECONDS = 20.0
+ADVISORY_CONTRACT_VERSION = "v1.7"
+REQUIRED_ADVISORY_FIELDS = (
+    "recovery_rationale",
+    "visitor_safe_notice_draft",
+    "safety_notes",
+)
+MAX_ADVISORY_EXCERPT_CHARS = 360
+AUTHORITY_CLAIM_PATTERNS = [
+    re.compile(
+        r"\bI\s+(approved|published|applied|mutated|created|redeemed|claimed|changed|updated)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(already|successfully)\s+(approved|published|applied|mutated|created|redeemed|claimed|changed|updated)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(published the notice|approved the plan|applied the suggestion|mutated the state|updated merchant runtime|changed inventory)\b",
+        re.IGNORECASE,
+    ),
+]
 
 SECRET_PATTERNS = [
     re.compile(r"Bearer\s+sk-[A-Za-z0-9._-]{20,}", re.IGNORECASE),
@@ -241,17 +262,118 @@ def parse_response_preview(
     text: str,
     max_chars: int = MAX_PREVIEW_CHARS,
 ) -> str:
+    return bound_preview(
+        extract_response_text(content_type=content_type, text=text),
+        max_chars=max_chars,
+    )
+
+
+def extract_response_text(content_type: str, text: str) -> str:
     lowered = content_type.lower()
     if "text/event-stream" in lowered:
-        extracted = _extract_sse_text(text) or text
-    elif "json" in lowered:
+        return _extract_sse_text(text) or text
+    if "json" in lowered:
         try:
-            extracted = _extract_json_text(json.loads(text))
+            return _extract_json_text(json.loads(text))
         except json.JSONDecodeError:
-            extracted = text
+            return text
+    return text
+
+
+def _parse_advisory_json(text: str) -> dict[str, str]:
+    candidates = [text.strip()]
+    match = re.search(r"\{.*\}", text, flags=re.DOTALL)
+    if match:
+        candidates.append(match.group(0))
+    for candidate in candidates:
+        if not candidate:
+            continue
+        try:
+            payload = json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(payload, dict):
+            continue
+        fields = {
+            field: _extract_json_text(payload.get(field)).strip()
+            for field in REQUIRED_ADVISORY_FIELDS
+            if field in payload
+        }
+        if fields:
+            return fields
+    return {}
+
+
+def _parse_advisory_markdown(text: str) -> tuple[dict[str, str], bool]:
+    fields: dict[str, str] = {}
+    pattern = re.compile(
+        r"(?im)^\s{0,3}#{1,6}\s*(recovery_rationale|visitor_safe_notice_draft|safety_notes)\s*$"
+    )
+    matches = list(pattern.finditer(text))
+    if not matches:
+        return fields, False
+    preamble_stripped = matches[0].start() > 0 and bool(text[: matches[0].start()].strip())
+    for index, match in enumerate(matches):
+        field = match.group(1).lower()
+        start = match.end()
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        value = text[start:end].strip()
+        if value:
+            fields[field] = value
+    return fields, preamble_stripped
+
+
+def _contains_unsafe_authority_claim(text: str) -> bool:
+    scrubbed = text.lower()
+    safe_negations = (
+        "do not approve",
+        "do not publish",
+        "do not mutate",
+        "do not apply",
+        "do not update",
+        "do not change",
+        "no state was changed",
+        "no system state mutated",
+        "no system state was mutated",
+        "no plan, notice, merchant runtime, coupon, or redemption state has changed",
+    )
+    for phrase in safe_negations:
+        scrubbed = scrubbed.replace(phrase, "")
+    return any(pattern.search(scrubbed) for pattern in AUTHORITY_CLAIM_PATTERNS)
+
+
+def qualify_advisory_text(text: str) -> dict[str, Any]:
+    json_fields = _parse_advisory_json(text)
+    markdown_fields, preamble_stripped = _parse_advisory_markdown(text)
+    fields = {**markdown_fields, **json_fields}
+    sanitized_fields = {
+        field: bound_preview(fields.get(field, ""), max_chars=MAX_ADVISORY_EXCERPT_CHARS)
+        for field in REQUIRED_ADVISORY_FIELDS
+        if fields.get(field, "").strip()
+    }
+    fields_present = {
+        field: bool(sanitized_fields.get(field))
+        for field in REQUIRED_ADVISORY_FIELDS
+    }
+    missing = [field for field, present in fields_present.items() if not present]
+    unsafe = _contains_unsafe_authority_claim("\n".join(sanitized_fields.values()))
+    if missing:
+        status = "unqualified"
+        failure_kind = "missing_fields"
+    elif unsafe:
+        status = "unqualified"
+        failure_kind = "unsafe_authority_claim"
     else:
-        extracted = text
-    return bound_preview(extracted, max_chars=max_chars)
+        status = "qualified"
+        failure_kind = None
+    return {
+        "advisory_contract_version": ADVISORY_CONTRACT_VERSION,
+        "advisory_status": status,
+        "qualification_failure_kind": failure_kind,
+        "advisory_fields_present": fields_present,
+        "sanitized_advisory_excerpt": sanitized_fields,
+        "preamble_stripped": preamble_stripped,
+    }
 
 
 def render_smoke_doc(result: dict[str, Any]) -> str:
@@ -259,6 +381,10 @@ def render_smoke_doc(result: dict[str, Any]) -> str:
         line.rstrip()
         for line in (result.get("sanitized_response_preview") or "").splitlines()
     )
+    field_lines = [
+        f"- {field}: `{present}`"
+        for field, present in (result.get("advisory_fields_present") or {}).items()
+    ]
     return "\n".join(
         [
             "# v1.5 Real QwenPaw Guarded Smoke",
@@ -274,13 +400,18 @@ def render_smoke_doc(result: dict[str, Any]) -> str:
             f"- Latency ms: `{result.get('latency_ms')}`",
             f"- Blocked reason: `{result.get('blocked_reason')}`",
             f"- Failure kind: `{result.get('failure_kind')}`",
+            f"- Advisory contract: `{result.get('advisory_contract_version')}`",
+            f"- Provider reachable: `{result.get('provider_reachable')}`",
+            f"- Advisory status: `{result.get('advisory_status')}`",
+            f"- Qualification failure kind: `{result.get('qualification_failure_kind')}`",
             "",
             "## Boundary",
             "",
             "- This smoke is manual and guarded by `RUN_LIVE_QWENPAW_SMOKE=1`.",
             "- It calls only a localhost QwenPaw service.",
             "- It does not approve plans, publish notices, mutate merchant runtime, or create coupon/redemption records.",
-            "- `live_success` means localhost model reachability plus a non-empty sanitized response; it does not prove structured advisory-field completion or production orchestration.",
+            "- `advisory_qualified` means the response passed the v1.7 required-field and authority-claim checks; it still does not prove production orchestration.",
+            "- `advisory_unqualified` means the local provider responded, but the response did not pass adapter qualification.",
             "- The v1.4 fake adapter remains the accepted product path.",
             "- The v1.3 deterministic live demo remains the reliable demo path.",
             "",
@@ -289,6 +420,10 @@ def render_smoke_doc(result: dict[str, Any]) -> str:
             "```text",
             response_preview,
             "```",
+            "",
+            "## Advisory Field Check",
+            "",
+            *field_lines,
             "",
             "## Evidence",
             "",
@@ -328,6 +463,15 @@ def base_result(*, env: dict[str, str], base_url: str | None, request_sent: bool
         "response_preview_sha256": "",
         "blocked_reason": None,
         "failure_kind": None,
+        "advisory_contract_version": ADVISORY_CONTRACT_VERSION,
+        "provider_reachable": False,
+        "advisory_status": "not_applicable",
+        "qualification_failure_kind": None,
+        "advisory_fields_present": {
+            field: False for field in REQUIRED_ADVISORY_FIELDS
+        },
+        "sanitized_advisory_excerpt": {},
+        "preamble_stripped": False,
         "evidence_generated_at": utc_now_iso(),
     }
 
@@ -449,6 +593,8 @@ def run_smoke(
         result["outcome"] = "blocked"
         result["blocked_reason"] = blocked_reason
         result["failure_kind"] = failure_kind
+        result["provider_reachable"] = False
+        result["advisory_status"] = "not_applicable"
         result["sanitized_response_preview"] = failure_preview
         result["response_preview_sha256"] = (
             hashlib.sha256(failure_preview.encode("utf-8")).hexdigest()
@@ -456,7 +602,16 @@ def run_smoke(
             else ""
         )
     elif response_status_code == 200 and preview:
-        result["outcome"] = "live_success"
+        qualification = qualify_advisory_text(
+            extract_response_text(content_type=content_type, text=response_text)
+        )
+        result.update(qualification)
+        result["provider_reachable"] = True
+        result["outcome"] = (
+            "advisory_qualified"
+            if qualification["advisory_status"] == "qualified"
+            else "advisory_unqualified"
+        )
     elif response_status_code in {401, 403}:
         result["outcome"] = "blocked"
         result["blocked_reason"] = "QwenPaw authentication is required"
@@ -484,7 +639,7 @@ def main() -> int:
             indent=2,
         )
     )
-    return 0 if result["outcome"] == "live_success" else 1
+    return 0 if result["outcome"] == "advisory_qualified" else 1
 
 
 if __name__ == "__main__":
