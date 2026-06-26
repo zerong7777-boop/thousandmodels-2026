@@ -1,17 +1,28 @@
 {
-  "outcome": "live_success",
+  "outcome": "advisory_unqualified",
   "base_url_host": "127.0.0.1",
   "endpoint": "/api/agent/process",
   "agent_id": "QwenPaw_QA_Agent_0.2",
-  "session_id": "zhiyin-v15-qwenpaw-smoke-qa-agent-v1",
+  "session_id": "zhiyin-v17-qwenpaw-qualified-advisory-v1",
   "request_sent": true,
   "response_status_code": 200,
   "response_content_type": "text/event-stream; charset=utf-8",
-  "latency_ms": 7308,
+  "latency_ms": 13645,
   "sanitized_prompt_preview": "You are helping verify a local QwenPaw integration for a demo operations system.\nEvent: demo-night-tour\nIncident: merchant m001 reported sold_out.\nBoundary: advisory only. Do not claim that you approved, published, applied, or mutated any system state.\nReturn a concise advisory response with recovery_rationale, visitor_safe_notice_draft, and safety_notes.",
-  "sanitized_response_preview": "The user wants me to act as an advisory agent for a demo operations system related to QwenPaw. Let me understand the scenario:\n\n- Event: demo-night-tour\n- Incident: merchant m001 reported sold_out\n- My role: advisory only (no operation/mutation claims)\n- Output: advisory response with recovery_rationale, visitor_safe_notice_draft, safety_notes\n\nSince this is a hypothetical/demo scenario, I'll provide a concise advisory response based on common operational patterns. The \"sold_out\" state for a merchant in a tour event typically means the merchant has run out of stock/capacity.\n\nLet me provide a clear advisory response with the three requested components, staying strictly within the \"advisory only\" boundary.Understood. Here is the advisory output for the demo operations system integration verification.\n\n---\n\n## Advisory Response — `demo-night-tour`\n\n**Origin:** QwenPaw QA Agent (advisory only)  \n**Incident:** Merchant `m001` — `sold_out`  \n**Boundary respected:** No system state mutated, no approvals claimed.\n\n---\n\n### recovery_rationale\n\n`sold_out` for merchant `m001` means no further allocations/orders can be fulfilled from this vendor for the remainder of `demo-night-to\n[TRUNCATED]",
-  "response_preview_sha256": "1deb03a18b37be3efc8423cb888bb8464d3c925d2b6666d1af66a42b44beb31b",
+  "sanitized_response_preview": "The user is asking me to help verify a local QwenPaw integration for a demo operations system. There's an event \"demo-night-tour\" and an incident where merchant m001 reported sold_out. They want a concise advisory response with recovery_rationale, visitor_safe_notice_draft, and safety_notes.\n\nThis seems like a somewhat abstract/roleplay scenario related to QwenPaw's event/incident handling capabilities. Let me first check if there's any documentation or context about this kind of thing in the QwenPaw codebase or my workspace.\n\nLet me look at my memory and workspace files first to understand if there's relevant context.The user is asking me to help verify a local QwenPaw integration for a demo operations system. There's an event \"demo-night-tour\" and an incident where merchant m001 reported sold_out. They want a concise advisory response with recovery_rationale, visitor_safe_notice_draft, and safety_notes.\n\nThis seems like a somewhat abstract/roleplay scenario related to QwenPaw's event/incident handling capabilities. Let me first check if there's any documentation or context about this kind of thing in the QwenPaw codebase or my workspace.\n\nLet me look at my memory and\n[TRUNCATED]",
+  "response_preview_sha256": "d9c0bcea6d52456a3deba19c224dc8c711d4e47890780b64d76e8b02faa8a0b6",
   "blocked_reason": null,
   "failure_kind": null,
-  "evidence_generated_at": "2026-06-22T05:29:54.908671+00:00"
+  "advisory_contract_version": "v1.7",
+  "provider_reachable": true,
+  "advisory_status": "unqualified",
+  "qualification_failure_kind": "missing_fields",
+  "advisory_fields_present": {
+    "recovery_rationale": false,
+    "visitor_safe_notice_draft": false,
+    "safety_notes": false
+  },
+  "sanitized_advisory_excerpt": {},
+  "preamble_stripped": false,
+  "evidence_generated_at": "2026-06-26T15:31:16.294533+00:00"
 }
