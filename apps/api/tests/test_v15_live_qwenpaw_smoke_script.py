@@ -364,6 +364,61 @@ def test_authority_claim_in_safety_notes_is_unqualified(monkeypatch, tmp_path):
     )
 
 
+def test_passive_authority_claim_is_unqualified(monkeypatch, tmp_path):
+    advisory = {
+        "recovery_rationale": "Route affected visitors to the next available hosted slot.",
+        "visitor_safe_notice_draft": "Some items sold out; staff will offer an alternative.",
+        "safety_notes": "The notice was published and merchant runtime was updated.",
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            headers={"content-type": "application/json"},
+            json={"message": {"content": json.dumps(advisory)}},
+        )
+
+    _set_temp_evidence_paths(monkeypatch, tmp_path)
+
+    result = live_qwenpaw_smoke.run_smoke(
+        env=_live_smoke_env(),
+        transport=httpx.MockTransport(handler),
+    )
+
+    _assert_unqualified_reachable(result, failure_kind="unsafe_authority_claim")
+
+
+def test_preamble_authority_claim_is_unqualified(monkeypatch, tmp_path):
+    markdown = """I approved the plan before drafting the advisory.
+
+### recovery_rationale
+Route affected visitors to the next available hosted slot.
+
+### visitor_safe_notice_draft
+Some items sold out; staff will offer the nearest safe alternative.
+
+### safety_notes
+Advisory only. No plan, notice, merchant runtime, coupon, or redemption state has changed.
+"""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            headers={"content-type": "text/event-stream"},
+            text=f"data: {json.dumps({'output': markdown})}\n\n",
+        )
+
+    _set_temp_evidence_paths(monkeypatch, tmp_path)
+
+    result = live_qwenpaw_smoke.run_smoke(
+        env=_live_smoke_env(),
+        transport=httpx.MockTransport(handler),
+    )
+
+    _assert_unqualified_reachable(result, failure_kind="unsafe_authority_claim")
+    assert result["preamble_stripped"] is True
+
+
 def test_main_returns_zero_only_for_advisory_qualified(monkeypatch, tmp_path):
     monkeypatch.setattr(live_qwenpaw_smoke, "PROJECT_ROOT", tmp_path)
     monkeypatch.setattr(live_qwenpaw_smoke, "RESULT_JSON", tmp_path / "result.json")

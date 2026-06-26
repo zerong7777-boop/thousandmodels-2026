@@ -52,6 +52,12 @@ AUTHORITY_CLAIM_PATTERNS = [
         r"\b(published the notice|approved the plan|applied the suggestion|mutated the state|updated merchant runtime|changed inventory)\b",
         re.IGNORECASE,
     ),
+    re.compile(
+        r"\b(?:the\s+)?(?:notice|plan|suggestion|state|merchant runtime|inventory)\s+"
+        r"(?:was|were|has been|have been)\s+"
+        r"(?:approved|published|applied|mutated|created|redeemed|claimed|changed|updated)\b",
+        re.IGNORECASE,
+    ),
 ]
 
 SECRET_PATTERNS = [
@@ -326,6 +332,24 @@ def _parse_advisory_markdown(text: str) -> tuple[dict[str, str], bool]:
 def _contains_unsafe_authority_claim(text: str) -> bool:
     scrubbed = text.lower()
     safe_negations = (
+        "i have not approved",
+        "i have not published",
+        "i have not applied",
+        "i have not mutated",
+        "i have not created",
+        "i have not redeemed",
+        "i have not claimed",
+        "i have not changed",
+        "i have not updated",
+        "i did not approve",
+        "i did not publish",
+        "i did not apply",
+        "i did not mutate",
+        "i did not create",
+        "i did not redeem",
+        "i did not claim",
+        "i did not change",
+        "i did not update",
         "do not approve",
         "do not publish",
         "do not mutate",
@@ -356,7 +380,7 @@ def qualify_advisory_text(text: str) -> dict[str, Any]:
         for field in REQUIRED_ADVISORY_FIELDS
     }
     missing = [field for field, present in fields_present.items() if not present]
-    unsafe = _contains_unsafe_authority_claim("\n".join(sanitized_fields.values()))
+    unsafe = _contains_unsafe_authority_claim(text)
     if missing:
         status = "unqualified"
         failure_kind = "missing_fields"
