@@ -45,6 +45,11 @@ AUTHORITY_CLAIM_PATTERNS = [
         re.IGNORECASE,
     ),
     re.compile(
+        r"\bI(?:\s+have|'ve)\s+"
+        r"(approved|published|applied|mutated|created|redeemed|claimed|changed|updated)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
         r"\b(already|successfully)\s+(approved|published|applied|mutated|created|redeemed|claimed|changed|updated)\b",
         re.IGNORECASE,
     ),
@@ -53,7 +58,8 @@ AUTHORITY_CLAIM_PATTERNS = [
         re.IGNORECASE,
     ),
     re.compile(
-        r"\b(?:the\s+)?(?:notice|plan|suggestion|state|merchant runtime|inventory)\s+"
+        r"\b(?:the\s+)?"
+        r"(?:notice|plan|suggestion|state|merchant runtime|inventory|coupon|redemption|coupon record|redemption record)\s+"
         r"(?:was|were|has been|have been)\s+"
         r"(?:approved|published|applied|mutated|created|redeemed|claimed|changed|updated)\b",
         re.IGNORECASE,
