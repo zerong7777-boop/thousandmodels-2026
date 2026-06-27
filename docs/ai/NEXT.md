@@ -2,14 +2,16 @@
 
 ## Recommended Next Step
 
-Commit the verified v2.2 persistence migrations branch, then push it and observe GitHub Actions before merge. After that, the recommended next implementation phase is `v2.3-deployment-environment-policy`.
+Complete v2.3 full verification, commit the deployment environment operations branch, then push it and observe GitHub Actions before merge. After that, the recommended next implementation phase is `v2.4-observability-release-runbook`.
 
-v2.2 now adds migration-managed SQLite persistence and explicit demo reset boundaries. The local verification gate has passed; before moving on, keep the release discipline:
+v2.3 adds an explicit environment contract, `/api/ready`, deployment smoke checks, and restricted-environment startup guards. Before moving on, keep the release discipline:
 
-1. Commit the v2.2 branch.
-2. Push the branch.
-3. Observe GitHub Actions before merging.
-4. Merge only after remote CI is green.
+1. Run full backend pytest serially.
+2. Run full frontend Vitest and production build.
+3. Run repository hygiene and whitespace checks.
+4. Run the deployment smoke against a local API when a server is running.
+5. Commit and push the v2.3 branch.
+6. Merge only after remote CI is green.
 
 The 14 historical screenshot PNG diffs still need a separate explicit decision: restore them, commit them as a named evidence refresh, or regenerate them through a dedicated visual evidence task.
 
@@ -25,4 +27,5 @@ The 14 historical screenshot PNG diffs still need a separate explicit decision: 
 - Do not stage the historical screenshot PNG diffs unless a separate evidence-refresh task explicitly owns them.
 - Do not treat v2.1 as complete production identity; it is a beta auth/session/CSRF baseline.
 - Do not treat v2.2 as production database operations; it is schema ownership and migration discipline for the current SQLite store.
+- Do not treat v2.3 as a real cloud launch; it is an environment/readiness operations baseline without hosting, TLS, managed secrets, backups, or monitoring.
 - Do not assume GitHub Actions is green until the pushed workflow run is observed.

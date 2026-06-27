@@ -28,6 +28,10 @@ class AppSettings:
     session_ttl_hours: int
     csrf_mode: str
     allowed_origins: tuple[str, ...]
+    auto_migrate: bool = True
+    run_live_qwenpaw_smoke: bool = False
+    qwenpaw_base_url: str | None = None
+    qwenpaw_agent_id: str | None = None
 
     @property
     def is_production(self) -> bool:
@@ -50,6 +54,16 @@ class AppSettings:
             ]
             if malformed_origins:
                 raise RuntimeError("ALLOWED_ORIGINS must contain only valid HTTPS origins")
+            if self.auto_migrate:
+                raise RuntimeError("AUTO_MIGRATE must be false for staging/production")
+            if self.run_live_qwenpaw_smoke:
+                raise RuntimeError(
+                    "RUN_LIVE_QWENPAW_SMOKE must be false for staging/production"
+                )
+            if self.qwenpaw_base_url and _is_local_url(self.qwenpaw_base_url):
+                raise RuntimeError(
+                    "QWENPAW_BASE_URL must not point to localhost for staging/production"
+                )
 
         if self.session_samesite == "none" and not self.session_cookie_secure:
             raise RuntimeError("SESSION_SAMESITE=none requires secure cookies")
@@ -88,6 +102,12 @@ def load_settings(environ: Mapping[str, str] | None = None) -> AppSettings:
         CSRF_MODE_VALUES,
     )
     allowed_origins = _parse_allowed_origins(source.get("ALLOWED_ORIGINS"), app_env)
+    auto_migrate = _parse_bool(source.get("AUTO_MIGRATE"), "AUTO_MIGRATE", default=True)
+    run_live_qwenpaw_smoke = _parse_bool(
+        source.get("RUN_LIVE_QWENPAW_SMOKE"),
+        "RUN_LIVE_QWENPAW_SMOKE",
+        default=False,
+    )
 
     return AppSettings(
         app_env=app_env,
@@ -98,6 +118,10 @@ def load_settings(environ: Mapping[str, str] | None = None) -> AppSettings:
         session_ttl_hours=session_ttl_hours,
         csrf_mode=csrf_mode,
         allowed_origins=allowed_origins,
+        auto_migrate=auto_migrate,
+        run_live_qwenpaw_smoke=run_live_qwenpaw_smoke,
+        qwenpaw_base_url=_optional_secret(source.get("QWENPAW_BASE_URL")),
+        qwenpaw_agent_id=_optional_secret(source.get("QWENPAW_AGENT_ID")),
     )
 
 
@@ -188,3 +212,8 @@ def _is_https_origin(origin: str) -> bool:
         and not parsed.query
         and not parsed.fragment
     )
+
+
+def _is_local_url(url: str) -> bool:
+    parsed = urlparse(url)
+    return parsed.hostname in {"localhost", "127.0.0.1", "::1"}

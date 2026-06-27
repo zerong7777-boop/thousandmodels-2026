@@ -63,6 +63,25 @@ python scripts\migrate_store.py
 
 For production-like environments, set `AUTO_MIGRATE=false` to refuse startup when migrations are pending, then run the migration script as an explicit deployment step. v2.2 keeps SQLite compatibility for beta/demo usage; it does not add PostgreSQL operations, backups, rollback automation, or tenant isolation.
 
+## Deployment Readiness
+
+v2.3 defines the local/demo/staging/production-like environment contract in `docs/research/v2.3-environment-contract.md`.
+
+The API exposes:
+
+- `GET /api/health` for lightweight liveness.
+- `GET /api/ready` for environment, store, migration, auth policy, and optional provider readiness summaries.
+
+Run a deployment smoke against a running API with:
+
+```powershell
+python apps\api\scripts\deployment_smoke.py --base-url http://127.0.0.1:8000
+```
+
+Staging/production-like startup must use `DEMO_MODE=false`, `CSRF_MODE=double-submit`, explicit HTTPS `ALLOWED_ORIGINS`, secure cookies, and `AUTO_MIGRATE=false`. `RUN_LIVE_QWENPAW_SMOKE=true` and localhost `QWENPAW_BASE_URL` values are rejected outside local/demo mode.
+
+v2.3 intentionally does not add Dockerfiles because the deployment target is still unspecified. Use the existing local commands plus the deployment smoke until a concrete hosting target is selected.
+
 ## Run Web
 
 ```powershell

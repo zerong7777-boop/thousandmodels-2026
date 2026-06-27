@@ -312,6 +312,7 @@ def test_load_validated_settings_returns_valid_production_config():
             "APP_SECRET_KEY": "test-secret",
             "CSRF_MODE": "double-submit",
             "ALLOWED_ORIGINS": "https://example.com",
+            "AUTO_MIGRATE": "false",
         }
     )
 

@@ -1,5 +1,4 @@
 import json
-import os
 import sqlite3
 from datetime import UTC, datetime
 from pathlib import Path
@@ -41,43 +40,38 @@ from app.schemas import (
     RoutePoint,
     TouchpointInteraction,
 )
+from app.settings import AppSettings, load_settings
 from app.store_paths import database_path_from_env, project_root
 
 T = TypeVar("T", bound=BaseModel)
 
 
-def _env_bool(name: str, default: bool) -> bool:
-    value = os.getenv(name)
-    if value is None:
-        return default
-    normalized = value.strip().lower()
-    if normalized in {"1", "true", "yes", "on"}:
-        return True
-    if normalized in {"0", "false", "no", "off"}:
-        return False
-    raise ValueError(f"{name} must be true or false")
+def _should_refuse_pending_migrations(settings: AppSettings) -> bool:
+    return settings.app_env in {"staging", "production"} and not settings.auto_migrate
 
 
-def _should_refuse_pending_migrations(db_path: Path) -> bool:
-    app_env = os.getenv("APP_ENV", "local").strip().lower()
-    return app_env in {"staging", "production"} and not _env_bool("AUTO_MIGRATE", True)
+def _should_refuse_auto_migrate_enabled(settings: AppSettings) -> bool:
+    return settings.app_env in {"staging", "production"} and settings.auto_migrate
 
 
 class MVPStore:
     def __init__(self, db_path: Path | str | None = None):
+        settings = load_settings()
         self.db_path = Path(db_path) if db_path else database_path_from_env()
         if str(self.db_path) != ":memory:":
+            if _should_refuse_auto_migrate_enabled(settings):
+                raise RuntimeError("AUTO_MIGRATE must be false for staging/production")
+            if _should_refuse_pending_migrations(settings):
+                pending = pending_versions(self.db_path)
+                if pending:
+                    raise RuntimeError(
+                        "Database has pending migrations and AUTO_MIGRATE=false: "
+                        + ", ".join(pending)
+                    )
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA foreign_keys = ON")
-        if str(self.db_path) != ":memory:" and _should_refuse_pending_migrations(self.db_path):
-            pending = pending_versions(self.db_path)
-            if pending:
-                raise RuntimeError(
-                    "Database has pending migrations and AUTO_MIGRATE=false: "
-                    + ", ".join(pending)
-                )
         run_migrations(self.conn)
 
     def ensure_auth_schema(self) -> None:

@@ -37,7 +37,7 @@ def test_reset_demo_state_refuses_when_demo_mode_is_disabled(tmp_path, monkeypat
 def test_reset_demo_state_refuses_production_even_with_demo_mode(tmp_path, monkeypatch):
     monkeypatch.setenv("APP_ENV", "production")
     monkeypatch.setenv("DEMO_MODE", "true")
-    store = MVPStore(tmp_path / "production.sqlite3")
+    store = MVPStore(":memory:")
     brief = seed_demo(store)
 
     with pytest.raises(RuntimeError, match="local/demo"):

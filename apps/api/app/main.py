@@ -23,6 +23,7 @@ from app.auth import (
 )
 from app.csrf import CSRF_COOKIE, issue_csrf_token
 from app.migrations.runner import latest_schema_version, pending_versions
+from app.readiness import build_readiness_payload
 from app.schemas import (
     AuthResponse,
     AuthUserRecord,
@@ -187,6 +188,11 @@ def health():
         "agent_backend": choose_agent_backend().__class__.__name__,
         "store": store,
     }
+
+
+@app.get("/api/ready")
+def ready():
+    return build_readiness_payload(settings=load_settings(), store=STORE)
 
 
 @app.post("/api/auth/login", response_model=AuthResponse)
