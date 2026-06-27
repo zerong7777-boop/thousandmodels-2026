@@ -938,3 +938,46 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 | `/api/metrics` exposes only process-local counters | pass. |
 | Release and incident runbooks exist | pass. |
 | v2.4 adds vendor monitoring, durable metrics, alerting, or SLOs | no; it remains a beta operations baseline. |
+
+## v2.5 Live E2E Release Gate Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python -m pytest apps/api/tests/test_v25_release_gate.py -q` | project root | 0 | 6 release-gate tests passed; covers success, readiness failure, public internal-term leak failure, missing metrics failure, request-error redaction, and CLI defaults. |
+| `python -m pytest apps/api/tests/test_v24_structured_logs.py apps/api/tests/test_v25_release_gate.py -q` | project root | 0 | 10 tests passed; covers the URL redaction fix in v2.4 observability and v2.5 evidence preservation. |
+| `python apps\api\scripts\release_gate.py --base-url http://127.0.0.1:8025 --output docs\research\assets\v2.5-live-e2e-release-gate\release-gate-result.json` | project root | 0 | Real local API release gate passed 20 steps against a hidden uvicorn process using an isolated temporary SQLite database. |
+| `python -m pytest -q` | `apps/api` | 0 | 337 backend tests passed; only existing FastAPI/Starlette deprecation warnings. |
+| `npm.cmd run test` | `apps/web` | 0 | 29 frontend test files passed, 98 tests total. |
+| `npm.cmd run build` | `apps/web` | 0 | TypeScript and Vite production build passed; Vite reported the existing chunk-size warning. |
+| `python scripts\repo_hygiene.py --base origin/main` | project root | 0 | Secrets, local paths, node_modules, and generated-artifact checks passed. |
+| `git diff --check` | project root | 0 | No whitespace errors; Git reported Windows LF-to-CRLF working-copy warnings. |
+
+### Evidence Artifacts
+
+| Artifact | Summary |
+| --- | --- |
+| `apps/api/scripts/release_gate.py` | Live API release gate with JSONL step output, optional JSON evidence, redaction, and deterministic local/demo flow checks. |
+| `apps/api/tests/test_v25_release_gate.py` | Fake-HTTP release-gate regression suite for success, failure semantics, redaction, metrics, and CLI defaults. |
+| `docs/research/assets/v2.5-live-e2e-release-gate/release-gate-result.json` | Real local release-gate evidence with `status=passed`, 20 passed steps, and process-local metrics observed. |
+| `docs/proposal/v2.5-live-e2e-release-gate-spec.md` | v2.5 scope, required behavior, boundaries, and acceptance criteria. |
+| `docs/proposal/v2.5-live-e2e-release-gate-implementation-plan.md` | v2.5 task plan and verification gates. |
+
+### v2.5 Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Release gate runs against a real live API | pass. |
+| Release gate uses real HTTP sessions and demo auth | pass. |
+| Health and readiness pass before stateful checks | pass. |
+| Unauthenticated protected route returns the v2.4 error envelope | pass. |
+| Organizer seed, plan generation, plan approval, event-page publish, and merchant-edge generation pass | pass. |
+| Public event projection omits forbidden internal terms | pass. |
+| Public scan, coupon claim, and redemption pass | pass. |
+| Merchant workbench exposes the generated interaction package | pass. |
+| Review report generation passes | pass. |
+| Metrics include counters touched by the release gate | pass. |
+| Evidence omits passwords, session cookies, bearer tokens, secret names, and local absolute paths | pass. |
+| Ordinary URLs are preserved by redaction and not mistaken for Windows local paths | pass. |
+| v2.5 starts servers, runs browsers, calls Qwen/QwenPaw, or proves cloud readiness | no; it remains a deterministic local/demo API release gate. |

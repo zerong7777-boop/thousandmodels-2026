@@ -34,7 +34,7 @@ SENSITIVE_FIELD_MARKERS = (
 )
 PATH_TRAILING_WORDS = "with|and|for|from|to|via|because|while|using|when|error|failed"
 WINDOWS_ABSOLUTE_PATH = re.compile(
-    rf"[A-Za-z]:[\\/](?:(?!\s+(?:{PATH_TRAILING_WORDS})\b)[^\"'\r\n,;])+",
+    rf"(?<![A-Za-z])[A-Za-z]:[\\/](?:(?!\s+(?:{PATH_TRAILING_WORDS})\b)[^\"'\r\n,;])+",
     re.IGNORECASE,
 )
 POSIX_LOCAL_PATH = re.compile(
