@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.agents.orchestrator import choose_agent_backend
 from app.agents.runtime import AgentRuntime
@@ -15,6 +16,7 @@ from app.auth import (
     hash_session_token,
     is_allowed_local_dev_origin,
     public_user,
+    record_auth_failure,
     require_merchant,
     require_organizer,
     verify_merchant_owner,
@@ -22,7 +24,13 @@ from app.auth import (
     verify_password,
 )
 from app.csrf import CSRF_COOKIE, issue_csrf_token
+from app.metrics import METRICS
 from app.migrations.runner import latest_schema_version, pending_versions
+from app.observability import (
+    http_exception_handler,
+    request_id_middleware,
+    unhandled_exception_handler,
+)
 from app.readiness import build_readiness_payload
 from app.schemas import (
     AuthResponse,
@@ -98,6 +106,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.middleware("http")(request_id_middleware)
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(Exception, unhandled_exception_handler)
+
 
 @app.on_event("startup")
 def seed_auth_on_startup() -> None:
@@ -131,11 +143,20 @@ def verify_strict_mutation_origin(request: Request) -> None:
     origin = request.headers.get("origin")
     if origin in STRICT_MUTATION_ORIGINS or is_allowed_local_dev_origin(origin):
         return
+    record_auth_failure("invalid_mutation_origin")
     raise HTTPException(status_code=403, detail="invalid mutation origin")
 
 
 def persist_agent_runtime_result(result) -> None:
     STORE.save_agent_run(result.run)
+    METRICS.increment(
+        "agent_runs_total",
+        {
+            "mode": result.run.mode,
+            "status": result.run.status,
+            "trigger": result.run.trigger,
+        },
+    )
     for call in result.tool_calls:
         STORE.save_agent_tool_call(call)
     for draft in result.drafts:
@@ -175,6 +196,7 @@ def latest_published_event_page(event_id: str, plan_version: int | None = None):
 
 @app.get("/api/health")
 def health():
+    METRICS.increment("health_checks_total")
     settings = load_settings()
     store = {
         "kind": "sqlite",
@@ -195,11 +217,17 @@ def ready():
     return build_readiness_payload(settings=load_settings(), store=STORE)
 
 
+@app.get("/api/metrics")
+def metrics():
+    return {"scope": "process", "counters": METRICS.snapshot()}
+
+
 @app.post("/api/auth/login", response_model=AuthResponse)
 def login(request: Request, response: Response, payload: LoginRequest):
     verify_mutation_origin(request)
     user = STORE.get_user_by_username(payload.username)
     if not user or user.status != "active" or not verify_password(payload.password, user.password_hash):
+        record_auth_failure("invalid_credentials")
         raise HTTPException(status_code=401, detail="invalid credentials")
     return create_login_session(response, user)
 
@@ -588,6 +616,10 @@ def run_qwenpaw_shadow_orchestration_endpoint(
         trace_id=f"trace_{runtime_result.run.run_id}",
     )
     STORE.save_agent_trace(trace)
+    METRICS.increment(
+        "qwenpaw_advisory_total",
+        {"status": runtime_result.run.status},
+    )
     permission_decisions = [
         call.output_payload["permission_decision"]
         for call in runtime_result.tool_calls
@@ -853,6 +885,7 @@ def approve_recovery_proposal(
         incident.status = "approved"
         STORE.save_incident(incident)
     STORE.save_event_summary(event)
+    METRICS.increment("recovery_approvals_total", {"kind": "proposal"})
     audit_user(event_id, user, "approve_recovery_proposal", proposal_id)
     return {"proposal": proposal, "current_plan": next_plan, "notice": notice}
 
@@ -870,6 +903,7 @@ def approve_recovery_action(
     action.approval_status = "approved"
     STORE.save_recovery_action(action)
     STORE.append_notice(action.event_id, action.tourist_notification)
+    METRICS.increment("recovery_approvals_total", {"kind": "action"})
     audit_user(action.event_id, user, "approve_recovery", action.action_id)
     return action
 
@@ -982,7 +1016,7 @@ def public_touchpoint_interaction(
     verify_mutation_origin(request)
     body = payload or {}
     try:
-        return record_touchpoint_interaction(
+        interaction = record_touchpoint_interaction(
             event_id=event_id,
             touchpoint_id=touchpoint_id,
             interaction_type=body.get("interaction_type", "scan"),
@@ -990,6 +1024,8 @@ def public_touchpoint_interaction(
             anonymous_interaction_id=body.get("anonymous_interaction_id"),
             metadata=body.get("metadata") or {},
         )
+        METRICS.increment("public_touchpoint_interactions_total")
+        return interaction
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -1004,11 +1040,13 @@ def public_coupon_claim(
     verify_mutation_origin(request)
     body = payload or {}
     try:
-        return claim_coupon(
+        redemption = claim_coupon(
             event_id=event_id,
             coupon_rule_id=coupon_rule_id,
             anonymous_interaction_id=body.get("anonymous_interaction_id", ""),
         )
+        METRICS.increment("public_coupon_claims_total")
+        return redemption
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -1021,7 +1059,9 @@ def public_coupon_redeem(
 ):
     verify_mutation_origin(request)
     try:
-        return redeem_coupon(event_id=event_id, redemption_id=redemption_id)
+        redemption = redeem_coupon(event_id=event_id, redemption_id=redemption_id)
+        METRICS.increment("public_coupon_redemptions_total")
+        return redemption
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -1055,6 +1095,7 @@ def review_report(
     )
     persist_agent_runtime_result(runtime_result)
     STORE.save_report(report)
+    METRICS.increment("review_reports_total")
     audit(event_id, "agent", "review", "generate_review_report", "生成活动复盘报告")
     return {**report.model_dump(), "agent_run": runtime_result.run, "agent_drafts": runtime_result.drafts}
 

@@ -69,7 +69,7 @@ def test_login_failure_is_generic_and_does_not_set_cookie(client):
     )
 
     assert response.status_code == 401
-    assert response.json()["detail"] == "invalid credentials"
+    assert response.json()["error"]["message"] == "invalid credentials"
     assert "set-cookie" not in response.headers
 
 

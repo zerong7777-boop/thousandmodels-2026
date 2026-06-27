@@ -82,6 +82,18 @@ Staging/production-like startup must use `DEMO_MODE=false`, `CSRF_MODE=double-su
 
 v2.3 intentionally does not add Dockerfiles because the deployment target is still unspecified. Use the existing local commands plus the deployment smoke until a concrete hosting target is selected.
 
+## Observability And Runbooks
+
+v2.4 adds a beta operations baseline:
+
+- every API response includes `X-Request-ID`;
+- API request logs are JSON structured and include request ID, route template, status, duration, and authenticated actor when available;
+- HTTP errors and unhandled errors return a consistent `error` envelope with the request ID;
+- `GET /api/metrics` exposes in-process beta counters for health, auth failures, agent runs, QwenPaw advisory runs, public interactions, recovery approvals, and review reports;
+- release and incident response runbooks live in `docs/ops/`.
+
+This is not a vendor monitoring stack. It does not add OpenTelemetry, Prometheus/Grafana hosting, PagerDuty, SLOs, or customer incident operations.
+
 ## Run Web
 
 ```powershell
