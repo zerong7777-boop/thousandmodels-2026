@@ -981,3 +981,51 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 | Evidence omits passwords, session cookies, bearer tokens, secret names, and local absolute paths | pass. |
 | Ordinary URLs are preserved by redaction and not mistaken for Windows local paths | pass. |
 | v2.5 starts servers, runs browsers, calls Qwen/QwenPaw, or proves cloud readiness | no; it remains a deterministic local/demo API release gate. |
+
+## v2.6 Browser Release Evidence Gate Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `npm.cmd run test:e2e:live:v26 -- --list` | `apps/web` | 0 | Playwright loaded the live config and discovered 1 Chromium v2.6 browser gate test. |
+| `npm.cmd run test:e2e:live:v26` | `apps/web` | 0 | Real local browser gate passed 1 Chromium test against FastAPI and Vite; evidence recorded 8 passed steps and 5 screenshot hashes. |
+| `python -m pytest -q` | `apps/api` | 0 | 337 backend tests passed; only existing FastAPI/Starlette deprecation warnings. |
+| `npm.cmd run test` | `apps/web` | 0 | 29 frontend test files passed, 98 tests total. |
+| `npm.cmd run build` | `apps/web` | 0 | TypeScript and Vite production build passed; Vite reported the existing chunk-size warning. |
+| `python scripts\repo_hygiene.py --base origin/main` | project root | 0 | Secrets, local paths, node_modules, and generated-artifact checks passed. |
+| `git diff --check` | project root | 0 | No whitespace errors; Git reported Windows LF-to-CRLF working-copy warnings. |
+
+### Evidence Artifacts
+
+| Artifact | Summary |
+| --- | --- |
+| `apps/web/tests/e2e/v26-browser-release-evidence.spec.ts` | Live browser gate with real API setup, UI login flows, public H5 interactions, review page checks, forbidden-term checks, metrics check, and JSON evidence writing in `finally`. |
+| `apps/web/playwright.live.config.ts` | Env-driven API/web ports plus isolated SQLite default for live Playwright API startup. |
+| `apps/web/playwright.config.ts` | Keeps v1.3 and v2.6 live specs out of ordinary Playwright visual runs. |
+| `docs/research/assets/v2.6-browser-release-evidence-gate/browser-release-gate-result.json` | Real local browser evidence with `status=passed`, 8 passed steps, 5 screenshot hashes, and touched metrics. |
+| `docs/proposal/v2.6-browser-release-evidence-gate-spec.md` | v2.6 scope, required behavior, evidence contract, boundaries, and acceptance criteria. |
+| `docs/proposal/v2.6-browser-release-evidence-gate-implementation-plan.md` | v2.6 task plan and verification gates. |
+
+### v2.6 Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Browser gate starts a real local API and web app | pass. |
+| Browser gate uses an isolated SQLite database by default | pass. |
+| Browser gate uses real FastAPI endpoints, not Playwright API mocks | pass. |
+| Organizer event workspace is visible through the UI | pass. |
+| Merchant interaction package is visible through the UI | pass. |
+| Merchant sold-out status can be reported through the UI | pass. |
+| Organizer exception suggestions are visible through the UI | pass. |
+| Public H5 mobile scan, coupon claim, and redemption work through the UI | pass. |
+| Organizer review report is visible through the UI | pass. |
+| Metrics include counters touched by the browser gate | pass. |
+| Evidence omits passwords, session cookies, bearer tokens, secret values, raw provider payloads, and local absolute paths | pass. |
+| Screenshot PNG files are committed | no; only JSON evidence with file names and hashes is committed. |
+| v2.6 proves cloud readiness or real external integrations | no; it remains deterministic local/demo browser release evidence. |
+
+### v2.6 Verification Notes
+
+- The first sandboxed `npm.cmd run test:e2e:live:v26` attempt failed before business assertions because Playwright could not write `apps/web/test-results/.last-run.json` (`EPERM`). The same command passed when rerun with approved project write access.
+- The v2.6 gate did not call Qwen, DashScope, or QwenPaw.

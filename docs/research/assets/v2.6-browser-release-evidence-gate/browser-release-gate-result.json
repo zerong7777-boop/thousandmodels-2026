@@ -1,0 +1,146 @@
+{
+  "status": "passed",
+  "event_id": "demo-night-tour",
+  "api_base_url": "http://127.0.0.1:8000",
+  "web_base_url": "http://127.0.0.1:5179",
+  "started_at": "2026-06-27T17:10:29.159Z",
+  "finished_at": "2026-06-27T17:10:36.122Z",
+  "duration_ms": 6963,
+  "steps": [
+    {
+      "step": "api health ready and demo setup",
+      "ok": true,
+      "started_at": "2026-06-27T17:10:29.159Z",
+      "finished_at": "2026-06-27T17:10:30.151Z",
+      "duration_ms": 992,
+      "summary": "health_ready_seeded"
+    },
+    {
+      "step": "organizer event workspace",
+      "ok": true,
+      "started_at": "2026-06-27T17:10:30.160Z",
+      "finished_at": "2026-06-27T17:10:31.784Z",
+      "duration_ms": 1624,
+      "summary": "workspace_visible"
+    },
+    {
+      "step": "merchant package surface",
+      "ok": true,
+      "started_at": "2026-06-27T17:10:31.784Z",
+      "finished_at": "2026-06-27T17:10:32.597Z",
+      "duration_ms": 813,
+      "summary": "merchant_package_visible"
+    },
+    {
+      "step": "merchant sold-out status",
+      "ok": true,
+      "started_at": "2026-06-27T17:10:32.597Z",
+      "finished_at": "2026-06-27T17:10:33.030Z",
+      "duration_ms": 433,
+      "summary": "sold_out_reported"
+    },
+    {
+      "step": "organizer exception suggestions",
+      "ok": true,
+      "started_at": "2026-06-27T17:10:33.030Z",
+      "finished_at": "2026-06-27T17:10:34.259Z",
+      "duration_ms": 1229,
+      "summary": "exception_suggestion_visible"
+    },
+    {
+      "step": "public mobile scan claim redeem",
+      "ok": true,
+      "started_at": "2026-06-27T17:10:34.259Z",
+      "finished_at": "2026-06-27T17:10:34.906Z",
+      "duration_ms": 647,
+      "summary": "scan_claim_redeem_visible"
+    },
+    {
+      "step": "organizer review page",
+      "ok": true,
+      "started_at": "2026-06-27T17:10:34.906Z",
+      "finished_at": "2026-06-27T17:10:36.113Z",
+      "duration_ms": 1207,
+      "summary": "review_visible"
+    },
+    {
+      "step": "metrics touched",
+      "ok": true,
+      "started_at": "2026-06-27T17:10:36.113Z",
+      "finished_at": "2026-06-27T17:10:36.121Z",
+      "duration_ms": 8,
+      "summary": "metrics_ready"
+    }
+  ],
+  "screenshots": [
+    {
+      "file_name": "01-organizer-workspace.png",
+      "step": "organizer event workspace",
+      "viewport": {
+        "width": 1440,
+        "height": 940
+      },
+      "bytes": 424987,
+      "sha256": "ac6ed7983803132d34b9bef0e430f890fd732ec36b97600496aeecc1d3b41ce1"
+    },
+    {
+      "file_name": "02-merchant-package.png",
+      "step": "merchant package surface",
+      "viewport": {
+        "width": 1440,
+        "height": 940
+      },
+      "bytes": 154855,
+      "sha256": "6ecaba1b720bcff9bb8c483ec1a6ea5dca6a276f4ac2a8172721776394b4c787"
+    },
+    {
+      "file_name": "03-exception-suggestions.png",
+      "step": "organizer exception suggestions",
+      "viewport": {
+        "width": 1440,
+        "height": 940
+      },
+      "bytes": 291924,
+      "sha256": "16314413671af1f8c011c5c1272fa2bbed1745dc0d664d604aa1b4abbbbed548"
+    },
+    {
+      "file_name": "04-public-mobile.png",
+      "step": "public mobile scan claim redeem",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "bytes": 135408,
+      "sha256": "300a3639d1ab4e4d6c28c67154adf7fce7b4076d57ae78396dd0e011b2020ac3"
+    },
+    {
+      "file_name": "05-review-page.png",
+      "step": "organizer review page",
+      "viewport": {
+        "width": 1440,
+        "height": 940
+      },
+      "bytes": 282452,
+      "sha256": "8af783e37d551d76a074ab4c0d63846163834826416ccc2e5a3575a2cbe193b6"
+    }
+  ],
+  "metrics_observed": {
+    "agent_runs_total|mode=deterministic,status=completed,trigger=incident_recovery": 1,
+    "agent_runs_total|mode=deterministic,status=completed,trigger=merchant_edge_package_generation": 1,
+    "agent_runs_total|mode=deterministic,status=completed,trigger=planning_generation": 1,
+    "agent_runs_total|mode=deterministic,status=completed,trigger=review_generation": 1,
+    "auth_failures_total|reason=missing_session": 5,
+    "health_checks_total": 2,
+    "public_coupon_claims_total": 1,
+    "public_coupon_redemptions_total": 1,
+    "public_touchpoint_interactions_total": 1,
+    "review_reports_total": 1
+  },
+  "artifact_policy": {
+    "evidence_file": "docs/research/assets/v2.6-browser-release-evidence-gate/browser-release-gate-result.json",
+    "screenshot_storage": "temp_dir",
+    "screenshot_count_limit": 5,
+    "path_policy": "Evidence records relative artifact names only, never local absolute paths.",
+    "secret_policy": "Evidence omits passwords, cookies, tokens, and request headers."
+  }
+}
