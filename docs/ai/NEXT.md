@@ -2,15 +2,16 @@
 
 ## Recommended Next Step
 
-Finish publishing the v1.8.1 QwenPaw SSE parser fix and live matrix evidence.
+Start `v2.0-ci-repo-hygiene`.
 
-The optional local live QwenPaw v1.8 matrix has now been run after the parser fix. All three cells returned `advisory_qualified` with `json_no_preamble_pass=true` and zero repair attempts:
+v1.9 completed the commercial-readiness audit pack and classified the project as a CR0 demo-grade MVP with CR1 audit evidence. The next phase should turn the two repository-level P0 findings into enforceable controls:
 
-1. QA agent + JSON-only prompt.
-2. QA agent + few-shot JSON prompt with bounded repair enabled.
-3. Default agent + JSON-only prompt.
+1. Add GitHub Actions for API pytest, web Vitest, and web production build.
+2. Add hygiene scans for secrets, local absolute paths, and accidental generated PNG scope.
+3. Document release gates and local reproduction commands.
+4. Resolve or quarantine the 14 historical screenshot PNG diffs so future commits stay reviewable.
 
-After this commit is pushed, the recommended next spike is v1.9 Direct Structured Output Baseline: a clean provider-level JSON-schema baseline that does not go through QwenPaw agent SSE. That baseline should be treated as an ablation, not a product requirement.
+Do this before production auth/session hardening, migration-backed persistence, deployment configuration, observability, or any new external integration work.
 
 ## Do Not Do Yet
 
@@ -21,3 +22,4 @@ After this commit is pushed, the recommended next spike is v1.9 Direct Structure
 - Do not add real merchant, POS, payment, hardware, map, weather, traffic, or visitor identity integrations before a new plan.
 - Do not use optional Qwen or QwenPaw live evidence as a business-success claim; it is only provider reachability/advisory evidence.
 - Do not run backend pytest in parallel against the default SQLite database; use serial runs or isolated database paths.
+- Do not stage the historical screenshot PNG diffs unless a separate evidence-refresh task explicitly owns them.

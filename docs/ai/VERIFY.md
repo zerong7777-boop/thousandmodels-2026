@@ -663,3 +663,51 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 - The initial live matrix failure was a parser false negative: QwenPaw returned final JSON in assistant `text`, but the previous parser flattened reasoning/thinking into the same preview.
 - v1.8.1 does not make QwenPaw a product requirement and does not authorize QwenPaw output to approve, publish, mutate runtime state, or create coupon/redemption records.
 - No frontend suite, build, or Playwright suite was run in this pass because v1.8.1 touched only the guarded backend smoke script, tests, and research/status docs.
+
+## v1.9 Commercial Readiness Audit Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python -m pytest -q` | `apps/api` | 0 | 176 backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `npm.cmd run test` | `apps/web` | 0 | 28 frontend test files passed; 94 tests passed. |
+| `npm.cmd run build` | `apps/web` | 0 | `tsc -b && vite build` passed; Vite still emitted the known large chunk warning for `assets/index-DwOVRZL_.js` at 841.37 kB. |
+| `Test-Path .github` | project root | 0 | Returned `False`; no root GitHub Actions workflow directory was present. |
+| `git ls-files apps\web\node_modules` | project root | 0 | Returned 0 tracked files. |
+| GitHub connector repository check | GitHub | 0 | Repository is public, default branch is `main`, and archived is false. |
+| GitHub connector open PR search | GitHub | 0 | No open pull requests. |
+| GitHub connector open issue search | GitHub | 0 | No open issues. |
+| GitHub connector PR checks | GitHub | 0 | PR #1 and PR #2 are merged. |
+| GitHub connector status/workflow checks | GitHub | 0 | No commit statuses or workflow runs were observed for origin/main. |
+| `ConvertFrom-Json` for v1.9 JSON artifacts | project root | 0 | Both v1.9 JSON evidence files parse successfully. |
+| v1.9 placeholder scan | project root | 1 | No unresolved placeholder markers in v1.9 proposal/report/evidence files; `rg` exit 1 is expected for no matches. |
+| v1.9 strict secret scan | project root | 1 | No key, bearer-token, provider-key assignment, or auth-header matches in v1.9 proposal/report/evidence files; `rg` exit 1 is expected for no matches. |
+| v1.9 local-path scan | project root | 1 | No local absolute workspace paths in v1.9 proposal/report/evidence files; `rg` exit 1 is expected for no matches. |
+| `git diff --check` for v1.9/docs-ai scope | project root | 0 | No whitespace errors; Git reported expected Windows line-ending warnings for touched docs/ai markdown files. |
+
+### Evidence Artifacts
+
+| Artifact | Summary |
+| --- | --- |
+| `docs/proposal/v1.9-commercial-readiness-audit-pack-spec.md` | Formal v1.9 spec for commercial-readiness classification, P0/P1 gap mapping, and acceptance criteria. |
+| `docs/proposal/v1.9-commercial-readiness-audit-pack-implementation-plan.md` | Stepwise execution plan with scoped files, verification gates, and commit boundaries. |
+| `docs/research/v1.9-commercial-readiness-audit.md` | Human-readable audit report and next-phase recommendation. |
+| `docs/research/assets/v1.9-commercial-readiness-audit/github-repo-state.json` | Repository, branch, GitHub, dirty-worktree, and local verification snapshot. |
+| `docs/research/assets/v1.9-commercial-readiness-audit/commercial-readiness-matrix.json` | Machine-readable P0/P1 readiness matrix and `v2.0-ci-repo-hygiene` recommendation. |
+
+### v1.9 Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Current implementation is classified as commercial-ready | fail by design; the correct classification is CR0 product/demo readiness plus CR1 audit-pack readiness. |
+| Local product suites pass | pass. |
+| GitHub release gates exist | fail; no Actions workflow/status evidence was observed. |
+| Historical screenshot PNG diffs are included in v1.9 scope | no; they remain explicitly out of scope. |
+| QwenPaw is claimed as production orchestration | no; it remains optional, localhost-only, advisory-only evidence. |
+
+### v1.9 Verification Notes
+
+- v1.9 did not modify runtime product code.
+- v1.9 did not run the v1.3 live Playwright smoke; the phase reran API tests, web tests, and web build to support the audit pack.
+- The next implementation phase should create enforceable CI/repository controls before auth, persistence, deployment, or external integrations are expanded.
