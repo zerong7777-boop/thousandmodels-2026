@@ -35,13 +35,23 @@ from app.readiness import build_readiness_payload
 from app.schemas import (
     AuthResponse,
     AuthUserRecord,
+    EventCreateRequest,
+    EventSummary,
+    EventUpdateRequest,
     InventoryTriggerRequest,
     LoginRequest,
     MerchantRuntimeState,
     PublicEvent,
     RuntimeStateUpdate,
 )
-from app.seed import seed_demo, seed_demo_accounts
+from app.seed import seed_demo, seed_demo_accounts, seed_local_catalog
+from app.services.events import (
+    create_event,
+    mark_public_release_for_plan_approval,
+    mark_public_release_published,
+    mark_public_release_stale,
+    update_draft_event,
+)
 from app.services.incidents import incident_from_runtime_state
 from app.settings import AppSettings, load_settings, load_validated_settings
 from app.services.event_page import (
@@ -137,6 +147,10 @@ def audit(event_id: str, actor_type: str, actor_id: str, action_type: str, note:
 
 def audit_user(event_id: str, user: AuthUserRecord, action_type: str, note: str) -> None:
     audit(event_id, user.role, user.user_id, action_type, note)
+
+
+def has_ascii_slug_component(value: str) -> bool:
+    return any(char.isascii() and char.isalnum() for char in value.strip())
 
 
 def verify_strict_mutation_origin(request: Request) -> None:
@@ -269,6 +283,43 @@ def list_events(user: AuthUserRecord = Depends(require_organizer)):
     return STORE.list_event_summaries()
 
 
+@app.post("/api/events", response_model=EventSummary)
+def create_event_endpoint(
+    request: Request,
+    payload: EventCreateRequest,
+    user: AuthUserRecord = Depends(require_organizer),
+):
+    verify_mutation_origin(request)
+    try:
+        event = create_event(STORE, payload)
+    except ValueError as exc:
+        detail = str(exc)
+        status_code = 400 if detail == "event_id is invalid" else 409
+        raise HTTPException(status_code=status_code, detail=detail) from exc
+    audit_user(event.event_id, user, "create_event", event.title)
+    return event
+
+
+@app.patch("/api/events/{event_id}", response_model=EventSummary)
+def update_event_endpoint(
+    request: Request,
+    event_id: str,
+    payload: EventUpdateRequest,
+    user: AuthUserRecord = Depends(require_organizer),
+):
+    verify_mutation_origin(request)
+    if not has_ascii_slug_component(event_id):
+        raise HTTPException(status_code=400, detail="event_id is invalid")
+    try:
+        event = update_draft_event(STORE, event_id, payload)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    audit_user(event_id, user, "update_event", event.title)
+    return event
+
+
 @app.get("/api/events/{event_id}")
 def get_event(event_id: str, user: AuthUserRecord = Depends(require_organizer)):
     event = STORE.get_event_summary(event_id)
@@ -301,17 +352,17 @@ def generate_plan(
 ):
     verify_mutation_origin(request)
     brief = STORE.get_event_brief(event_id)
-    if not brief:
-        brief = seed_demo(STORE, event_id=event_id)
+    event = STORE.get_event_summary(event_id)
+    if not brief or not event:
+        raise HTTPException(status_code=404, detail="event brief not found")
     merchants = STORE.list_merchants()
-    plan = generate_event_plan(brief, merchants, choose_agent_backend())
-    packs = generate_merchant_packs(plan, merchants)
     route_points = STORE.list_route_points()
-    if not route_points:
-        seed_demo(STORE, event_id=event_id)
-        brief = STORE.get_event_brief(event_id) or brief
+    if not merchants or not route_points:
+        seed_local_catalog(STORE)
         merchants = STORE.list_merchants()
         route_points = STORE.list_route_points()
+    plan = generate_event_plan(brief, merchants, choose_agent_backend())
+    packs = generate_merchant_packs(plan, merchants)
     plan_v1 = generate_plan_version(
         brief=brief,
         merchants=merchants,
@@ -339,6 +390,9 @@ def generate_plan(
     persist_agent_runtime_result(runtime_result)
     STORE.save_agent_trace(trace)
     STORE.save_merchant_tasks(event_id, tasks)
+    event.status = "pending_approval"
+    event.public_release_status = "draft"
+    STORE.save_event_summary(event)
     audit(event_id, "agent", "planner", "generate_plan", "生成 EventPlan 和商户执行包")
     return {
         **plan.model_dump(),
@@ -377,7 +431,7 @@ def approve_plan(
         plan_v1.approved_at = datetime.now(UTC).isoformat()
         event.status = "active"
         event.current_plan_version = 1
-        event.public_release_status = "published"
+        event = mark_public_release_for_plan_approval(STORE, event, 1)
         STORE.save_plan_version(plan_v1)
         STORE.save_event_summary(event)
     audit_user(event_id, user, "approve_plan", "organizer approved event plan")
@@ -417,7 +471,7 @@ def approve_plan_version(
     plan.approved_at = datetime.now(UTC).isoformat()
     event.status = "active"
     event.current_plan_version = version
-    event.public_release_status = "published"
+    event = mark_public_release_for_plan_approval(STORE, event, version)
     STORE.save_plan_version(plan)
     STORE.save_event_summary(event)
     audit_user(event_id, user, "approve_plan_version", f"approved v{version}")
@@ -874,7 +928,7 @@ def approve_recovery_proposal(
     )
     current_plan.status = "superseded"
     event.current_plan_version = next_plan.version
-    event.public_release_status = "published"
+    event = mark_public_release_stale(event)
     STORE.save_plan_version(current_plan)
     STORE.save_plan_version(next_plan)
     STORE.save_merchant_tasks(event_id, next_tasks)
@@ -953,6 +1007,8 @@ def publish_event_page_endpoint(
         )
     published = mark_event_page_published(page)
     STORE.save_event_page(published)
+    event = mark_public_release_published(event)
+    STORE.save_event_summary(event)
     audit_user(event_id, user, "publish_event_page", published.id)
     return published
 
@@ -968,27 +1024,32 @@ def get_event_page(event_id: str, user: AuthUserRecord = Depends(require_organiz
 @app.get("/api/public/events/{event_id}")
 def public_event(event_id: str):
     event = STORE.get_event_summary(event_id)
-    if event and event.current_plan_version:
-        plan_version = STORE.get_plan_version(event_id, event.current_plan_version)
-        if plan_version:
-            public_payload = build_public_event(
-                event=event,
-                plan=plan_version,
-                notices=STORE.list_public_notices(event_id),
-                legacy_notices=STORE.list_notices(event_id),
-            )
-            page = latest_published_event_page(event_id, plan_version=plan_version.version)
-            if page:
-                event_page = build_event_page_projection(
+    if event:
+        if event.current_plan_version:
+            plan_version = STORE.get_plan_version(event_id, event.current_plan_version)
+            if plan_version:
+                page = latest_published_event_page(event_id, plan_version=plan_version.version)
+                public_payload = build_public_event(
                     event=event,
-                    page=page,
-                    plan_version=plan_version,
+                    plan=plan_version,
                     notices=STORE.list_public_notices(event_id),
-                    packages=STORE.list_merchant_interaction_packages(event_id),
+                    legacy_notices=STORE.list_notices(event_id),
                 )
-                public_payload["event_page"] = event_page
-                public_payload["merchant_highlights"] = event_page["merchant_highlights"]
-            return public_payload
+                if page:
+                    event_page = build_event_page_projection(
+                        event=event,
+                        page=page,
+                        plan_version=plan_version,
+                        notices=STORE.list_public_notices(event_id),
+                        packages=STORE.list_merchant_interaction_packages(event_id),
+                    )
+                    public_payload["event_page"] = event_page
+                    public_payload["merchant_highlights"] = event_page["merchant_highlights"]
+                    return public_payload
+                if event_id == "demo-night-tour":
+                    return public_payload
+        if event_id != "demo-night-tour":
+            raise HTTPException(status_code=404, detail="event page not found")
     plan = STORE.get_plan(event_id)
     if not plan:
         raise HTTPException(status_code=404, detail="plan not found")
@@ -1006,6 +1067,20 @@ def public_event(event_id: str):
     )
 
 
+def require_public_event_ready(event_id: str) -> None:
+    if event_id == "demo-night-tour":
+        return
+    event = STORE.get_event_summary(event_id)
+    if not event or event.public_release_status != "published":
+        raise HTTPException(status_code=404, detail="event page not found")
+    plan_version = STORE.get_plan_version(event_id, event.current_plan_version)
+    if not plan_version:
+        raise HTTPException(status_code=404, detail="event page not found")
+    page = latest_published_event_page(event_id, plan_version=plan_version.version)
+    if not page:
+        raise HTTPException(status_code=404, detail="event page not found")
+
+
 @app.post("/api/public/events/{event_id}/touchpoints/{touchpoint_id}/interactions")
 def public_touchpoint_interaction(
     request: Request,
@@ -1014,17 +1089,29 @@ def public_touchpoint_interaction(
     payload: dict | None = None,
 ):
     verify_mutation_origin(request)
+    require_public_event_ready(event_id)
     body = payload or {}
+    interaction_type = body.get("interaction_type", "scan")
+    anonymous_interaction_id = body.get("anonymous_interaction_id")
+    existing_interaction = None
+    if anonymous_interaction_id:
+        existing_interaction = STORE.find_touchpoint_interaction(
+            event_id=event_id,
+            touchpoint_id=touchpoint_id,
+            anonymous_interaction_id=anonymous_interaction_id,
+            interaction_type=interaction_type,
+        )
     try:
         interaction = record_touchpoint_interaction(
             event_id=event_id,
             touchpoint_id=touchpoint_id,
-            interaction_type=body.get("interaction_type", "scan"),
+            interaction_type=interaction_type,
             source=body.get("source", "demo"),
-            anonymous_interaction_id=body.get("anonymous_interaction_id"),
+            anonymous_interaction_id=anonymous_interaction_id,
             metadata=body.get("metadata") or {},
         )
-        METRICS.increment("public_touchpoint_interactions_total")
+        if existing_interaction is None:
+            METRICS.increment("public_touchpoint_interactions_total")
         return interaction
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -1038,14 +1125,24 @@ def public_coupon_claim(
     payload: dict | None = None,
 ):
     verify_mutation_origin(request)
+    require_public_event_ready(event_id)
     body = payload or {}
+    anonymous_interaction_id = body.get("anonymous_interaction_id", "")
+    existing_redemption = None
+    if anonymous_interaction_id:
+        existing_redemption = STORE.find_coupon_redemption_for_anonymous(
+            event_id=event_id,
+            coupon_rule_id=coupon_rule_id,
+            anonymous_interaction_id=anonymous_interaction_id,
+        )
     try:
         redemption = claim_coupon(
             event_id=event_id,
             coupon_rule_id=coupon_rule_id,
-            anonymous_interaction_id=body.get("anonymous_interaction_id", ""),
+            anonymous_interaction_id=anonymous_interaction_id,
         )
-        METRICS.increment("public_coupon_claims_total")
+        if existing_redemption is None:
+            METRICS.increment("public_coupon_claims_total")
         return redemption
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -1058,9 +1155,13 @@ def public_coupon_redeem(
     redemption_id: str,
 ):
     verify_mutation_origin(request)
+    require_public_event_ready(event_id)
+    existing_redemption = STORE.get_coupon_redemption(event_id, redemption_id)
+    already_redeemed = bool(existing_redemption and existing_redemption.status == "redeemed")
     try:
         redemption = redeem_coupon(event_id=event_id, redemption_id=redemption_id)
-        METRICS.increment("public_coupon_redemptions_total")
+        if not already_redeemed:
+            METRICS.increment("public_coupon_redemptions_total")
         return redemption
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

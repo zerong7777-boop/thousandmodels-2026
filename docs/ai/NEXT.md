@@ -2,16 +2,18 @@
 
 ## Recommended Next Step
 
-Complete v2.6 closeout: commit the browser release evidence branch, push it, open a PR, and observe GitHub Actions before merge. After that, the recommended next implementation phase is `v2.7-real-product-logic-foundation`.
+Complete v2.7 closeout: run full backend, frontend, build, repository hygiene, and whitespace verification; then commit, push, and open a PR for `feat/v27-real-product-logic-foundation`.
 
-v2.5 and v2.6 now prove the deterministic local beta through API and browser gates. The next useful work should stop adding release wrappers and start improving real product logic:
+After v2.7 is merged, the recommended next implementation phase is `v2.8-organizer-event-workspace`.
 
-1. Define a real event/workspace lifecycle beyond the single `demo-night-tour` fixture.
-2. Split demo seed data from user-created event data.
-3. Add organizer-created events, merchant assignment lifecycle, and package status transitions.
-4. Make public interactions idempotent and safer for repeated claims/redeems.
-5. Make review metrics derive from stored event activity rather than demo assumptions.
-6. Preserve deterministic demo mode as a fixture path for verification.
+v2.7 adds the first real non-demo event lifecycle foundation. The next useful work is to expose that foundation in a practical organizer workflow:
+
+1. Add an organizer event list that is not hardwired to `demo-night-tour`.
+2. Add a focused create-event form using the v2.7 `POST /api/events` contract.
+3. Add event selection/navigation so organizer pages can operate on a chosen event id.
+4. Keep demo routes available for release gates and screenshots.
+5. Avoid broad visual redesign; the goal is usable event workspace routing, not a landing page.
+6. Keep merchant assignment/catalog management for a later phase unless a minimal selector is needed to make event creation usable.
 
 ## Do Not Do Yet
 
@@ -29,4 +31,5 @@ v2.5 and v2.6 now prove the deterministic local beta through API and browser gat
 - Do not treat v2.4 as full observability maturity; it is a beta operations baseline without vendor monitoring, alert routing, SLOs, or customer incident operations.
 - Do not treat v2.5 as browser or cloud release proof; it is a live API release gate for local/demo beta readiness.
 - Do not treat v2.6 as cloud release proof; it is a live browser release gate for local/demo beta readiness.
+- Do not treat v2.7 as production readiness; it is a beta product-logic foundation without real external integrations or a full organizer creation UI.
 - Do not assume GitHub Actions is green until the pushed workflow run is observed.

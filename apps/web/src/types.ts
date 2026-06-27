@@ -267,6 +267,22 @@ export interface EventSummary {
   public_release_status: "draft" | "published" | "stale";
 }
 
+export type EventCreateRequest = {
+  event_id?: string;
+  title: string;
+  area: string;
+  date: string;
+  time_window: string;
+  budget_mop: number;
+  target_audience: string[];
+  event_goal: string;
+  theme_preferences: string[];
+  constraints: string[];
+  priority_rules: string[];
+};
+
+export type EventUpdateRequest = Partial<Omit<EventCreateRequest, "event_id">>;
+
 export interface RoutePoint {
   point_id: string;
   name: string;

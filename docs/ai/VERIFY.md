@@ -1029,3 +1029,34 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 
 - The first sandboxed `npm.cmd run test:e2e:live:v26` attempt failed before business assertions because Playwright could not write `apps/web/test-results/.last-run.json` (`EPERM`). The same command passed when rerun with approved project write access.
 - The v2.6 gate did not call Qwen, DashScope, or QwenPaw.
+
+## v2.7 Real Product Logic Foundation Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python -m pytest apps/api/tests/test_v27_real_product_logic_foundation.py -q` | project root | 0 | 10 v2.7 focused backend tests passed for non-demo event create/update, required create payload fields, demo boundary, lifecycle, public publication guard, current-package guard, idempotent interactions, process counters, and review metrics. |
+| `python -m pytest apps/api/tests/test_v27_real_product_logic_foundation.py apps/api/tests/test_v12_event_page_merchant_edge.py::test_touchpoint_scan_coupon_claim_redeem_are_anonymous_and_reported apps/api/tests/test_v02_public_projection.py apps/api/tests/test_api_flow.py apps/api/tests/test_v04_auth.py apps/api/tests/test_v04_authorization.py -q` | project root | 0 | 28 focused regression tests passed for v2.7, merchant-edge public interactions, demo public projection/API flow, and auth boundaries. |
+| `python -m pytest -q` | `apps/api` | 0 | 347 backend tests passed; only existing FastAPI/Starlette deprecation warnings. |
+| `npm.cmd run test` | `apps/web` | 0 | 29 frontend test files passed, 98 tests total after adding the event create/update API contract. |
+| `npm.cmd run build` | `apps/web` | 0 | TypeScript and Vite production build passed; Vite reported the existing large chunk warning. |
+| `python scripts\repo_hygiene.py --base origin/main` | project root | 0 | Secret, local-path, node-modules, and generated-artifact checks passed. |
+| `git diff --check` | project root | 0 | No whitespace errors; Git reported Windows LF-to-CRLF working-copy warnings. |
+
+### Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Organizer-created non-demo event can be created and updated before planning | pass. |
+| Missing non-demo event plan generation returns 404 and does not seed `demo-night-tour` | pass. |
+| Demo event seeding remains explicit through `/api/events/demo/seed` | pass. |
+| Plan approval does not publish public release by itself | pass. |
+| Event page publish marks public release as published | pass. |
+| Non-demo public mutation endpoints require a published current event page | pass. |
+| Repeated public scan/claim/redeem calls return existing records and stored review metrics count them once | pass. |
+| Repeated public scan/claim/redeem calls increment exposed process counters only once | pass. |
+| Stale touchpoint/coupon children from an older package are rejected after the current package changes | pass. |
+| Demo public projection and existing API flow remain compatible when explicitly seeded | pass. |
+| v2.7 adds full organizer event creation UI | no; only API and frontend contract methods were added. |
+| v2.7 adds real external integrations or production readiness | no; it remains a product-logic beta foundation. |

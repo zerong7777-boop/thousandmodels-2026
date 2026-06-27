@@ -467,6 +467,22 @@ class MVPStore:
             ]
         return interactions
 
+    def find_touchpoint_interaction(
+        self,
+        event_id: str,
+        touchpoint_id: str,
+        anonymous_interaction_id: str,
+        interaction_type: str,
+    ) -> TouchpointInteraction | None:
+        for interaction in self.list_touchpoint_interactions(event_id):
+            if (
+                interaction.touchpoint_id == touchpoint_id
+                and interaction.anonymous_interaction_id == anonymous_interaction_id
+                and interaction.interaction_type == interaction_type
+            ):
+                return interaction
+        return None
+
     def save_coupon_redemption(self, redemption: CouponRedemption) -> CouponRedemption:
         self.upsert_model(
             "coupon_redemptions", f"{redemption.event_id}:{redemption.id}", redemption
@@ -491,6 +507,21 @@ class MVPStore:
                 redemption for redemption in redemptions if redemption.merchant_id == merchant_id
             ]
         return redemptions
+
+    def find_coupon_redemption_for_anonymous(
+        self,
+        event_id: str,
+        coupon_rule_id: str,
+        anonymous_interaction_id: str,
+    ) -> CouponRedemption | None:
+        for redemption in self.list_coupon_redemptions(event_id):
+            if (
+                redemption.coupon_rule_id == coupon_rule_id
+                and redemption.anonymous_interaction_id == anonymous_interaction_id
+                and redemption.status in {"claimed", "redeemed"}
+            ):
+                return redemption
+        return None
 
     def save_operation_suggestion(
         self, suggestion: OperationSuggestion
