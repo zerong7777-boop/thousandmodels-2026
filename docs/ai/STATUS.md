@@ -237,6 +237,19 @@ shadcn/ui-inspired local component layer
 - v2.0 locally closes `CR-P0-001` and partially closes `CR-P0-002`; full closure requires a pushed branch with green GitHub Actions.
 - The recommended next phase after remote CI is green is `v2.1-auth-security-hardening`.
 
+## v2.1 Auth Security Hardening State
+
+- v2.1 adds typed backend security settings for `APP_ENV`, `DEMO_MODE`, `APP_SECRET_KEY`, session cookie policy, CSRF mode, TTL, and allowed origins.
+- Demo account seeding now runs only when demo mode is enabled, and startup validation rejects unsafe production-like configuration before serving requests.
+- Session cookies now use settings-driven `secure`, `samesite`, TTL, and path attributes while preserving local localhost demo compatibility.
+- CSRF handling now keeps the fixed `X-Zhiyin-CSRF: demo` path demo-only and adds a signed double-submit token baseline for non-demo modes.
+- `GET /api/auth/csrf` issues a signed CSRF token and non-HttpOnly `zhiyin_csrf` cookie for frontend double-submit use.
+- CORS/local-origin behavior is aligned with the settings boundary: localhost origin regex is demo-only, while non-demo modes use explicit allowed origins.
+- The frontend now gates demo quick-fill UI behind `VITE_DEMO_MODE` and uses a shared mutation helper for demo versus double-submit CSRF behavior.
+- `.env.example`, README, and docs/ai notes document the beta security baseline and production refusal boundaries without adding secrets.
+- v2.1 closes the v1.9 `CR-P0-003` demo-vs-production auth boundary gap at beta baseline level.
+- v2.1 does not add public registration, OAuth/SSO, password reset, tenant isolation, real identity administration, or compliance readiness.
+
 ## Demo Accounts
 
 - organizer: `organizer.demo`
@@ -246,6 +259,6 @@ shadcn/ui-inspired local component layer
 
 ## Current Boundary
 
-This is a stronger productized multilingual MVP, not a final commercial UI or commercial application. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview. v1.4 adds optional organizer-only QwenPaw shadow evidence, v1.8 adds guarded local QwenPaw advisory optimization evidence, v1.9 maps the P0/P1 commercial-readiness gaps, and v2.0 adds local CI/repository hygiene gates. The reliable demo path remains deterministic.
+This is a stronger productized multilingual MVP, not a final commercial UI or commercial application. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview. v1.4 adds optional organizer-only QwenPaw shadow evidence, v1.8 adds guarded local QwenPaw advisory optimization evidence, v1.9 maps the P0/P1 commercial-readiness gaps, v2.0 adds local CI/repository hygiene gates, and v2.1 adds beta auth/session/CSRF demo-boundary hardening. The reliable demo path remains deterministic.
 
 Do not continue into production QwenPaw orchestration, real merchant connections, hardware, real traffic prediction, model training, payment/POS integrations, open registration, real map APIs, or a marketing landing page without a new plan.

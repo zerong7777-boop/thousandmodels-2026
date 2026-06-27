@@ -746,3 +746,49 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 | Remote GitHub Actions observed green | not yet; requires push. |
 | Historical PNG files included in v2.0 scope | no; they remain unstaged. |
 | v2.0 makes the app commercial-ready | no; it only adds repository gates needed before security and deployment hardening. |
+
+## v2.1 Auth Security Hardening Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python -m pytest apps/api/tests/test_v21_security_settings.py apps/api/tests/test_v21_demo_boundary.py apps/api/tests/test_v21_session_cookie_policy.py apps/api/tests/test_v21_csrf_policy.py -q` | project root | 0 | 91 focused v2.1 backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `npm.cmd run test -- tests/v21-csrf-client.test.ts tests/login-page.test.tsx tests/auth-api.test.tsx tests/v12-event-interaction-api.test.ts` | `apps/web` | 0 | 4 focused frontend test files passed, 15 tests passed. |
+| `python -m pytest -q` | `apps/api` | 0 | 267 backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `npm.cmd run test` | `apps/web` | 0 | 29 frontend test files passed, 98 tests passed. |
+| `npm.cmd run build` | `apps/web` | 0 | `tsc -b && vite build` passed; Vite emitted the existing large chunk warning for `assets/index-BZnjRTU3.js` at 840.94 kB. |
+| `python scripts\repo_hygiene.py --base origin/main` | project root | 0 | Secret, local-path, node-modules, and generated-artifact checks passed. |
+| `git diff --check` | project root | 0 | No whitespace errors; Git reported expected Windows line-ending warnings for touched text files. |
+
+### Evidence Artifacts
+
+| Artifact | Summary |
+| --- | --- |
+| `apps/api/app/settings.py` | Typed security settings and startup validation for app env, demo mode, session cookies, CSRF mode, TTL, secret material, and allowed origins. |
+| `apps/api/app/csrf.py` | Signed double-submit CSRF token issuance and validation. |
+| `apps/api/app/auth.py` | Settings-driven session cookie policy and demo-only versus double-submit mutation-origin enforcement. |
+| `apps/api/app/main.py` | Validated startup seeding, settings-aligned CORS policy, and `/api/auth/csrf` endpoint. |
+| `apps/web/src/api.ts` | Shared frontend mutation helper that uses the demo CSRF header only in demo mode and fetches signed CSRF tokens otherwise. |
+| `apps/web/src/auth/authClient.ts` | Login/logout now use the shared mutation helper instead of hard-coded demo CSRF. |
+| `apps/web/src/pages/login/LoginPage.tsx` | Demo account shortcut UI is gated by `VITE_DEMO_MODE`. |
+| `.env.example` and `README.md` | Local demo defaults and production-like refusal boundaries are documented without secrets. |
+
+### v2.1 Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Local demo mode remains usable by default | pass. |
+| Demo users are seeded only when demo mode is enabled | pass. |
+| Production/staging-like unsafe startup config is rejected | pass. |
+| Session cookie attributes resolve from settings | pass. |
+| Fixed `X-Zhiyin-CSRF: demo` is demo-only | pass. |
+| Non-demo CSRF uses signed double-submit token/cookie matching | pass. |
+| Localhost origin regex is demo-only; non-demo modes use explicit allowed origins | pass. |
+| Frontend demo quick-fill is hidden when `VITE_DEMO_MODE=false` | pass. |
+| v2.1 provides complete production identity | no; it remains a beta auth/session/CSRF baseline without registration, SSO, tenant isolation, password reset, or user administration. |
+
+### v2.1 Verification Notes
+
+- Backend pytest must be run serially against the default SQLite store; parallel backend pytest is still unsafe for this repo's shared test database.
+- A sandboxed `python -X utf8 -m pytest ...` attempt failed with `sqlite3.OperationalError: attempt to write a readonly database` because that command prefix did not use the approved non-sandbox execution path. The same focused v2.1 backend tests passed with the approved `python -m pytest ...` prefix.

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import App from "../src/App";
 import { getDemoSession } from "../src/auth/session";
+import { zhHans as zh } from "../src/i18n/dictionaries/zh-Hans";
 import { authUsers, jsonResponse, mockAppFetch } from "./authTestUtils";
 
 beforeEach(() => {
@@ -10,6 +11,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   window.history.pushState({}, "", "/");
 });
 
@@ -35,6 +37,19 @@ test("language switcher changes login copy before authentication", async () => {
   expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /merchant demo/i })).toBeInTheDocument();
   expect(localStorage.getItem("zhiyin.locale")).toBe("en");
+});
+
+test("non-demo mode hides demo quick fill while keeping credential fields", async () => {
+  vi.stubEnv("VITE_DEMO_MODE", "false");
+  vi.stubGlobal("fetch", mockAppFetch(null));
+
+  render(<App />);
+
+  expect(await screen.findByLabelText(zh["auth.username"])).toBeInTheDocument();
+  expect(screen.getByLabelText(zh["auth.password"])).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: new RegExp(zh["auth.organizerDemo"]) })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: new RegExp(zh["auth.merchantDemo"]) })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: new RegExp(zh["auth.touristDemo"]) })).not.toBeInTheDocument();
 });
 
 test("selecting merchant fills credentials and submit creates backend session", async () => {

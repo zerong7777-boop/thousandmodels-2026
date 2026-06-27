@@ -2,14 +2,15 @@
 
 ## Recommended Next Step
 
-Push the v2.0 CI/repo-hygiene commit and observe GitHub Actions.
+Complete v2.1 full verification and commit the auth/security hardening branch. After that, the recommended next implementation phase is `v2.2-persistence-migration-hardening`.
 
-v2.0 has added local CI and repository hygiene gates. The next decision is whether to push the branch so GitHub can execute the new workflow:
+v2.1 now adds a beta auth/session/CSRF boundary between local demo behavior and production-like behavior. Before moving on, keep the release discipline:
 
-1. Push `v1-qwen-controlled-draft`.
-2. Check the new `CI` workflow on GitHub.
-3. If GitHub Actions is green, start `v2.1-auth-security-hardening`.
-4. If GitHub Actions fails, fix CI before product hardening.
+1. Run full backend pytest serially.
+2. Run full frontend Vitest and production build.
+3. Run repository hygiene and whitespace checks.
+4. Commit the v2.1 branch.
+5. Push the branch and observe GitHub Actions before merging.
 
 The 14 historical screenshot PNG diffs still need a separate explicit decision: restore them, commit them as a named evidence refresh, or regenerate them through a dedicated visual evidence task.
 
@@ -23,4 +24,5 @@ The 14 historical screenshot PNG diffs still need a separate explicit decision: 
 - Do not use optional Qwen or QwenPaw live evidence as a business-success claim; it is only provider reachability/advisory evidence.
 - Do not run backend pytest in parallel against the default SQLite database; use serial runs or isolated database paths.
 - Do not stage the historical screenshot PNG diffs unless a separate evidence-refresh task explicitly owns them.
+- Do not treat v2.1 as complete production identity; it is a beta auth/session/CSRF baseline.
 - Do not assume GitHub Actions is green until the pushed workflow run is observed.

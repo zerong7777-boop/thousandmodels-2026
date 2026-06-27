@@ -1,4 +1,5 @@
 import type { AuthResponse, AuthUser } from "../types";
+import { mutationOptions } from "../api";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -18,21 +19,12 @@ export const authClient = {
   },
 
   async login(username: string, password: string): Promise<AuthUser> {
-    const response = await fetch(`${API_BASE}/api/auth/login`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json", "X-Zhiyin-CSRF": "demo" },
-      body: JSON.stringify({ username, password })
-    });
+    const response = await fetch(`${API_BASE}/api/auth/login`, await mutationOptions({ username, password }));
     return (await parseJson<AuthResponse>(response)).user;
   },
 
   async logout(): Promise<void> {
-    const response = await fetch(`${API_BASE}/api/auth/logout`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "X-Zhiyin-CSRF": "demo" }
-    });
+    const response = await fetch(`${API_BASE}/api/auth/logout`, await mutationOptions());
     if (!response.ok) {
       throw new Error(await response.text());
     }

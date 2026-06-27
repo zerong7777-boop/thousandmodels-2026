@@ -17,6 +17,29 @@ The MVP demonstrates:
 
 The default path does not require `DASHSCOPE_API_KEY`. It uses a deterministic local Agent backend and keeps the Qwen/QwenPaw adapter behind the same interface.
 
+## Auth And Demo Boundary
+
+The local workspace defaults to demo mode:
+
+- `APP_ENV=local`
+- `DEMO_MODE=true`
+- `CSRF_MODE=demo`
+- `VITE_DEMO_MODE=true`
+
+This keeps the seeded demo accounts, visible login quick-fill controls, localhost cookies, and deterministic demo loop usable without external identity infrastructure.
+
+Production-like deployments must disable demo mode and provide explicit security settings:
+
+- `APP_ENV=production`
+- `DEMO_MODE=false`
+- `APP_SECRET_KEY=<deployment secret>`
+- `SESSION_COOKIE_SECURE=true`
+- `CSRF_MODE=double-submit`
+- `ALLOWED_ORIGINS=https://<allowed-origin>`
+- `VITE_DEMO_MODE=false`
+
+Startup validation rejects unsafe production settings such as demo account seeding, demo CSRF, missing secret material, insecure cookies, or non-HTTPS production origins. v2.1 is a beta security baseline; it does not add public registration, OAuth/SSO, password reset, tenant isolation, or a production user administration console.
+
 ## Run API
 
 ```powershell
