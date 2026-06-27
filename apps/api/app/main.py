@@ -22,6 +22,7 @@ from app.auth import (
     verify_password,
 )
 from app.csrf import CSRF_COOKIE, issue_csrf_token
+from app.migrations.runner import latest_schema_version, pending_versions
 from app.schemas import (
     AuthResponse,
     AuthUserRecord,
@@ -173,7 +174,19 @@ def latest_published_event_page(event_id: str, plan_version: int | None = None):
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "agent_backend": choose_agent_backend().__class__.__name__}
+    settings = load_settings()
+    store = {
+        "kind": "sqlite",
+        "schema_version": latest_schema_version(STORE.conn),
+        "pending_migrations": len(pending_versions(STORE.conn)),
+    }
+    if settings.app_env in {"local", "demo"}:
+        store["database_path"] = str(STORE.db_path)
+    return {
+        "status": "ok",
+        "agent_backend": choose_agent_backend().__class__.__name__,
+        "store": store,
+    }
 
 
 @app.post("/api/auth/login", response_model=AuthResponse)

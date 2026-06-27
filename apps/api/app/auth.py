@@ -1,5 +1,3 @@
-import base64
-import hashlib
 import hmac
 import secrets
 from datetime import UTC, datetime, timedelta
@@ -9,51 +7,14 @@ from fastapi import Depends, HTTPException, Request, Response
 
 from app.csrf import CSRF_COOKIE, verify_csrf_token
 from app.schemas import AuthResponse, AuthSessionRecord, AuthUserRecord, AuthUserResponse
+from app.security import hash_password, hash_session_token, verify_password
 from app.settings import AppSettings, load_settings
 from app.store import MVPStore, STORE
 
 SESSION_COOKIE = "zhiyin_session"
 SETTINGS = load_settings()
-PBKDF2_ITERATIONS = 260000
 ALLOWED_MUTATION_ORIGINS = {"http://127.0.0.1:5173", "http://localhost:5173"}
 LOCAL_DEV_ORIGIN_HOSTS = {"127.0.0.1", "localhost"}
-
-
-def hash_password(password: str, salt: bytes | None = None) -> str:
-    actual_salt = salt or secrets.token_bytes(16)
-    digest = hashlib.pbkdf2_hmac(
-        "sha256",
-        password.encode("utf-8"),
-        actual_salt,
-        PBKDF2_ITERATIONS,
-    )
-    return "pbkdf2_sha256${}${}${}".format(
-        PBKDF2_ITERATIONS,
-        base64.urlsafe_b64encode(actual_salt).decode("ascii"),
-        base64.urlsafe_b64encode(digest).decode("ascii"),
-    )
-
-
-def verify_password(password: str, stored_hash: str) -> bool:
-    try:
-        algorithm, iterations, salt_b64, digest_b64 = stored_hash.split("$", 3)
-        if algorithm != "pbkdf2_sha256":
-            return False
-        salt = base64.urlsafe_b64decode(salt_b64.encode("ascii"))
-        expected = base64.urlsafe_b64decode(digest_b64.encode("ascii"))
-        actual = hashlib.pbkdf2_hmac(
-            "sha256",
-            password.encode("utf-8"),
-            salt,
-            int(iterations),
-        )
-        return hmac.compare_digest(actual, expected)
-    except Exception:
-        return False
-
-
-def hash_session_token(token: str) -> str:
-    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 def public_user(user: AuthUserRecord) -> AuthUserResponse:

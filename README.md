@@ -50,6 +50,19 @@ python -m venv .venv
 .\.venv\Scripts\python -m uvicorn app.main:app --port 8000
 ```
 
+## Store Migrations
+
+The API store is migration-managed. Local/demo mode applies known SQLite migrations automatically when `MVPStore` opens the database.
+
+Run migrations explicitly with:
+
+```powershell
+cd apps/api
+python scripts\migrate_store.py
+```
+
+For production-like environments, set `AUTO_MIGRATE=false` to refuse startup when migrations are pending, then run the migration script as an explicit deployment step. v2.2 keeps SQLite compatibility for beta/demo usage; it does not add PostgreSQL operations, backups, rollback automation, or tenant isolation.
+
 ## Run Web
 
 ```powershell

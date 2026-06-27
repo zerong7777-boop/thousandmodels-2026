@@ -2,15 +2,14 @@
 
 ## Recommended Next Step
 
-Complete v2.1 full verification and commit the auth/security hardening branch. After that, the recommended next implementation phase is `v2.2-persistence-migration-hardening`.
+Commit the verified v2.2 persistence migrations branch, then push it and observe GitHub Actions before merge. After that, the recommended next implementation phase is `v2.3-deployment-environment-policy`.
 
-v2.1 now adds a beta auth/session/CSRF boundary between local demo behavior and production-like behavior. Before moving on, keep the release discipline:
+v2.2 now adds migration-managed SQLite persistence and explicit demo reset boundaries. The local verification gate has passed; before moving on, keep the release discipline:
 
-1. Run full backend pytest serially.
-2. Run full frontend Vitest and production build.
-3. Run repository hygiene and whitespace checks.
-4. Commit the v2.1 branch.
-5. Push the branch and observe GitHub Actions before merging.
+1. Commit the v2.2 branch.
+2. Push the branch.
+3. Observe GitHub Actions before merging.
+4. Merge only after remote CI is green.
 
 The 14 historical screenshot PNG diffs still need a separate explicit decision: restore them, commit them as a named evidence refresh, or regenerate them through a dedicated visual evidence task.
 
@@ -25,4 +24,5 @@ The 14 historical screenshot PNG diffs still need a separate explicit decision: 
 - Do not run backend pytest in parallel against the default SQLite database; use serial runs or isolated database paths.
 - Do not stage the historical screenshot PNG diffs unless a separate evidence-refresh task explicitly owns them.
 - Do not treat v2.1 as complete production identity; it is a beta auth/session/CSRF baseline.
+- Do not treat v2.2 as production database operations; it is schema ownership and migration discipline for the current SQLite store.
 - Do not assume GitHub Actions is green until the pushed workflow run is observed.
