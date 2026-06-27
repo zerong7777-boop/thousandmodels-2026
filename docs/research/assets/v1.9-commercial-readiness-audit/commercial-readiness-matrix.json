@@ -1,0 +1,177 @@
+{
+  "audit_version": "v1.9",
+  "generated_at_utc": "2026-06-27T04:32:26.0101075Z",
+  "overall_classification": {
+    "current_product_readiness": "CR0",
+    "audit_pack_readiness": "CR1",
+    "commercial_ready": false,
+    "summary": "The project has a credible deterministic demo path, real local QwenPaw advisory evidence, and passing local tests, but it still lacks the repository, security, deployment, data, and operations controls expected of a commercial application."
+  },
+  "readiness_scale": [
+    {
+      "level": "CR0",
+      "name": "Demo-grade MVP",
+      "definition": "Locally runnable and evidence-backed, but demo credentials, local state, manual verification, or optional provider probes remain central."
+    },
+    {
+      "level": "CR1",
+      "name": "Evidence-backed audit pack",
+      "definition": "Commercial gaps are explicitly mapped to evidence and remediation tasks, but production controls are not yet implemented."
+    },
+    {
+      "level": "CR2",
+      "name": "Private beta candidate",
+      "definition": "CI, dependency hygiene, migrations, environment policy, session hardening, smoke deployment, and basic observability are implemented."
+    },
+    {
+      "level": "CR3",
+      "name": "Commercial launch candidate",
+      "definition": "Tenant isolation, production secrets, monitoring, incident response, backups, release gates, and external integrations are operationally owned."
+    }
+  ],
+  "p0_gaps": [
+    {
+      "id": "CR-P0-001",
+      "area": "CI and release gates",
+      "status": "gap",
+      "evidence": [
+        "root_github_directory_present=false",
+        "origin_main_commit_statuses=[]",
+        "origin_main_workflow_runs=[]"
+      ],
+      "risk": "Passing local tests are not enough for a collaborative or deployable release flow.",
+      "recommended_next_phase": "v2.0-ci-repo-hygiene"
+    },
+    {
+      "id": "CR-P0-002",
+      "area": "Repository hygiene and generated artifacts",
+      "status": "gap",
+      "evidence": [
+        "14 historical screenshot PNG files are dirty in the local worktree",
+        "tracked_web_node_modules_count=0"
+      ],
+      "risk": "Verification byproducts can accidentally enter release commits and make diffs hard to review.",
+      "recommended_next_phase": "v2.0-ci-repo-hygiene"
+    },
+    {
+      "id": "CR-P0-003",
+      "area": "Authentication, session, and CSRF",
+      "status": "gap",
+      "evidence": [
+        "Demo accounts and password are seeded for local use",
+        "Frontend sends fixed X-Zhiyin-CSRF demo header",
+        "Session cookie is local-demo oriented"
+      ],
+      "risk": "The auth layer is suitable for demo control, not for external users or production traffic.",
+      "recommended_next_phase": "v2.1-auth-security-hardening"
+    },
+    {
+      "id": "CR-P0-004",
+      "area": "Data persistence and migrations",
+      "status": "gap",
+      "evidence": [
+        "Default backend store is SQLite",
+        "Persistence uses a generic records table",
+        "No Alembic migration workflow is present"
+      ],
+      "risk": "The data layer is difficult to evolve safely and is not ready for production concurrency, backups, or schema change control.",
+      "recommended_next_phase": "v2.2-persistence-migrations"
+    },
+    {
+      "id": "CR-P0-005",
+      "area": "Deployment and environment policy",
+      "status": "gap",
+      "evidence": [
+        "No production deployment manifest was verified in v1.9",
+        "Live QwenPaw remains localhost-only and manual",
+        "Qwen/QwenPaw are optional advisory probes"
+      ],
+      "risk": "There is no repeatable production deployment or environment promotion path.",
+      "recommended_next_phase": "v2.3-deployment-ops"
+    },
+    {
+      "id": "CR-P0-006",
+      "area": "Commercial claim boundary",
+      "status": "gap",
+      "evidence": [
+        "v1.3 deterministic live demo remains the reliable demo path",
+        "v1.8.1 QwenPaw evidence proves local advisory qualification only",
+        "QwenPaw does not approve, publish, mutate authoritative state, or create coupon/redemption records"
+      ],
+      "risk": "Overstating QwenPaw as production orchestration would misrepresent the system.",
+      "recommended_next_phase": "Keep claim boundaries in every demo and investor-facing artifact"
+    }
+  ],
+  "p1_gaps": [
+    {
+      "id": "CR-P1-001",
+      "area": "Frontend bundle and performance budget",
+      "status": "gap",
+      "evidence": [
+        "npm.cmd run build passes",
+        "main JS chunk is 841.37 kB and triggers Vite large chunk warning"
+      ],
+      "risk": "The app can be slow to load on mobile networks and lacks a strict performance budget.",
+      "recommended_next_phase": "Route-level code splitting and bundle budget enforcement"
+    },
+    {
+      "id": "CR-P1-002",
+      "area": "Observability",
+      "status": "gap",
+      "evidence": [
+        "No runtime metrics, tracing, or alerting configuration was verified in v1.9"
+      ],
+      "risk": "Failures in live demo or beta operation would be hard to diagnose after the fact.",
+      "recommended_next_phase": "Add structured request logs, smoke result retention, and health endpoint checks"
+    },
+    {
+      "id": "CR-P1-003",
+      "area": "End-to-end live coverage",
+      "status": "partial",
+      "evidence": [
+        "v1.3 live demo smoke exists and previously verified real backend state",
+        "v1.9 reran unit/integration suites and build, not the live Playwright smoke"
+      ],
+      "risk": "The local live path is proven historically but not enforced as a required release check.",
+      "recommended_next_phase": "Promote the v1.3 live smoke into CI or documented release gate"
+    },
+    {
+      "id": "CR-P1-004",
+      "area": "External integration realism",
+      "status": "gap",
+      "evidence": [
+        "No real merchant, POS, payment, hardware, map, weather, traffic, or visitor identity integration is implemented"
+      ],
+      "risk": "The product remains a controlled workflow prototype rather than a deployable city or merchant platform.",
+      "recommended_next_phase": "Pick one narrow integration only after CI, auth, persistence, and deployment are hardened"
+    }
+  ],
+  "validated_strengths": [
+    {
+      "area": "Deterministic demo reliability",
+      "evidence": "API full test suite, web Vitest suite, and production build passed locally in v1.9."
+    },
+    {
+      "area": "QwenPaw evidence honesty",
+      "evidence": "v1.8.1 records real local advisory qualification while preserving advisory-only and localhost-only boundaries."
+    },
+    {
+      "area": "Public surface boundary",
+      "evidence": "Prior verification keeps raw Agent, QwenPaw, model, and backend terms out of merchant, tourist, and public H5 pages."
+    },
+    {
+      "area": "Demo artifact discipline",
+      "evidence": "v1.9 explicitly separates historical screenshot PNG byproducts from the audit-pack commit scope."
+    }
+  ],
+  "recommended_next_phase": {
+    "id": "v2.0-ci-repo-hygiene",
+    "objective": "Turn the CR-P0-001 and CR-P0-002 gaps into enforceable repository controls before product hardening continues.",
+    "minimum_scope": [
+      "Add GitHub Actions for API tests, web tests, and web build",
+      "Add changed-file hygiene checks for secrets, local absolute paths, and generated PNG scope",
+      "Document release commands and required checks",
+      "Resolve or intentionally quarantine historical screenshot PNG diffs"
+    ]
+  }
+}

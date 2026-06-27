@@ -1,0 +1,110 @@
+{
+  "audit_version": "v1.9",
+  "captured_at_utc": "2026-06-27T04:32:26.0101075Z",
+  "repository": {
+    "full_name": "zerong7777-boop/thousandmodels-2026",
+    "visibility": "public",
+    "default_branch": "main",
+    "archived": false,
+    "permissions_observed": {
+      "admin": true,
+      "maintain": true,
+      "pull": true,
+      "push": true,
+      "triage": true
+    }
+  },
+  "local_state": {
+    "branch": "v1-qwen-controlled-draft",
+    "head_sha": "414c387e0a033edcf1eefe421fe6a6a47a521ad4",
+    "origin_main_sha": "562dca89ef20e19e8c2bf9ae244a95517cc86193",
+    "origin_branch_sha": "414c387e0a033edcf1eefe421fe6a6a47a521ad4",
+    "ahead_behind_origin_main": {
+      "ahead": 0,
+      "behind": 2
+    },
+    "root_github_directory_present": false,
+    "tracked_web_node_modules_count": 0,
+    "dirty_files": [
+      "docs/research/assets/v0.5-verification/04-organizer-exceptions.png",
+      "docs/research/assets/v0.5-verification/07-merchant-status-mobile.png",
+      "docs/research/assets/v0.6-i18n-verification/06-organizer-dashboard-zh-Hant.png",
+      "docs/research/assets/v0.6-i18n-verification/07-merchant-status-zh-Hant-mobile.png",
+      "docs/research/assets/v0.6-i18n-verification/08-public-h5-zh-Hant-mobile.png",
+      "docs/research/assets/v0.9-agent-evidence/02-organizer-exception-agent-drafts.png",
+      "docs/research/assets/v1.0-qwen-controlled-draft/01-exception-model-evidence.png",
+      "docs/research/assets/v1.2-event-page-merchant-edge/01-organizer-event-page-status.png",
+      "docs/research/assets/v1.2-event-page-merchant-edge/03-public-event-page-mobile.png",
+      "docs/research/assets/v1.2-event-page-merchant-edge/04-exception-operation-suggestion.png",
+      "docs/research/assets/v1.3-live-demo-smoke/01-live-organizer-workspace.png",
+      "docs/research/assets/v1.3-live-demo-smoke/03-live-exception-suggestion.png",
+      "docs/research/assets/v1.3-live-demo-smoke/04-live-public-event-page.png",
+      "docs/research/assets/v1.3-live-demo-smoke/05-live-review-metrics.png"
+    ]
+  },
+  "github_state": {
+    "open_pull_requests": [],
+    "open_issues": [],
+    "merged_pull_requests_checked": [
+      {
+        "number": 1,
+        "title": "V1 qwen controlled draft",
+        "merged": true,
+        "merged_at": "2026-06-21T06:26:06Z",
+        "base": "main",
+        "head": "v1-qwen-controlled-draft",
+        "head_sha": "7c8297cb72a4f829868906409ad29689b45a561e",
+        "merge_commit_sha": "0f3bed4a974d334a68b8e89f895d955607e85818",
+        "commits": 21,
+        "changed_files": 81,
+        "additions": 12793,
+        "deletions": 153,
+        "url": "https://github.com/zerong7777-boop/thousandmodels-2026/pull/1"
+      },
+      {
+        "number": 2,
+        "title": "V1 qwen controlled draft",
+        "merged": true,
+        "merged_at": "2026-06-26T19:26:08Z",
+        "base": "main",
+        "head": "v1-qwen-controlled-draft",
+        "head_sha": "414c387e0a033edcf1eefe421fe6a6a47a521ad4",
+        "merge_commit_sha": "562dca89ef20e19e8c2bf9ae244a95517cc86193",
+        "commits": 32,
+        "changed_files": 39,
+        "additions": 10320,
+        "deletions": 12,
+        "url": "https://github.com/zerong7777-boop/thousandmodels-2026/pull/2"
+      }
+    ],
+    "origin_main_commit_statuses": [],
+    "origin_main_workflow_runs": [],
+    "github_actions_classification": "gap"
+  },
+  "local_verification": [
+    {
+      "command": "python -m pytest -q",
+      "working_directory": "apps/api",
+      "exit_code": 0,
+      "summary": "176 passed, 3 warnings in 120.77s"
+    },
+    {
+      "command": "npm.cmd run test",
+      "working_directory": "apps/web",
+      "exit_code": 0,
+      "summary": "28 test files passed, 94 tests passed"
+    },
+    {
+      "command": "npm.cmd run build",
+      "working_directory": "apps/web",
+      "exit_code": 0,
+      "summary": "Production build passed; main JS chunk is 841.37 kB gzip 254.69 kB and still triggers the Vite large chunk warning"
+    }
+  ],
+  "notes": [
+    "Dirty files are historical screenshot PNG verification byproducts and were not included in the v1.9 scope.",
+    "No root GitHub Actions workflow directory was present at capture time.",
+    "The GitHub connector observed no commit statuses and no workflow runs for origin/main.",
+    "No local absolute workspace paths or secrets are stored in this artifact."
+  ]
+}
