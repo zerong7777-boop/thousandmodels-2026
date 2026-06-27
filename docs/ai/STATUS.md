@@ -293,6 +293,17 @@ shadcn/ui-inspired local component layer
 - v2.5 also fixes local-path redaction so ordinary URLs such as `http://127.0.0.1:8025` are not mistaken for Windows absolute paths.
 - v2.5 is a deterministic local/demo release gate. It does not start servers, run browser screenshots, call Qwen/QwenPaw, add cloud hosting, or prove production readiness.
 
+## v2.6 Browser Release Evidence Gate State
+
+- v2.6 adds `apps/web/tests/e2e/v26-browser-release-evidence.spec.ts`, a Playwright browser release gate for a real local FastAPI API and Vite app.
+- `apps/web/playwright.live.config.ts` now supports env-driven API/web ports and uses an isolated SQLite database by default when `DATABASE_URL` is not supplied.
+- Ordinary Playwright runs keep live specs out of scope; `apps/web/playwright.config.ts` excludes both v1.3 and v2.6 live browser specs.
+- `apps/web/package.json` adds `npm.cmd run test:e2e:live:v26` for the focused browser gate.
+- The gate verifies organizer workspace, merchant package surface, merchant sold-out reporting, organizer exception suggestions, public mobile scan/claim/redeem, organizer review page, and process-local metrics.
+- The recorded v2.6 evidence is `docs/research/assets/v2.6-browser-release-evidence-gate/browser-release-gate-result.json` with `status=passed`, 8 passed steps, and 5 screenshot hashes.
+- Screenshot PNG files are generated as local inspection artifacts and are not committed by default.
+- v2.6 is still deterministic local/demo browser release evidence. It does not add cloud browser testing, real external integrations, Qwen/QwenPaw production orchestration, or real commercial business logic.
+
 ## Demo Accounts
 
 - organizer: `organizer.demo`
@@ -302,6 +313,6 @@ shadcn/ui-inspired local component layer
 
 ## Current Boundary
 
-This is a stronger productized multilingual MVP, not a final commercial UI or commercial application. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview. v1.4 adds optional organizer-only QwenPaw shadow evidence, v1.8 adds guarded local QwenPaw advisory optimization evidence, v1.9 maps the P0/P1 commercial-readiness gaps, v2.0 adds local CI/repository hygiene gates, v2.1 adds beta auth/session/CSRF demo-boundary hardening, v2.2 adds migration-managed SQLite persistence, v2.3 adds deployment environment/readiness operations, v2.4 adds beta observability/runbook operations, and v2.5 adds a deterministic live API release gate. The reliable demo path remains deterministic.
+This is a stronger productized multilingual MVP, not a final commercial UI or commercial application. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview. v1.4 adds optional organizer-only QwenPaw shadow evidence, v1.8 adds guarded local QwenPaw advisory optimization evidence, v1.9 maps the P0/P1 commercial-readiness gaps, v2.0 adds local CI/repository hygiene gates, v2.1 adds beta auth/session/CSRF demo-boundary hardening, v2.2 adds migration-managed SQLite persistence, v2.3 adds deployment environment/readiness operations, v2.4 adds beta observability/runbook operations, v2.5 adds a deterministic live API release gate, and v2.6 adds deterministic live browser release evidence. The reliable demo path remains deterministic.
 
 Do not continue into production QwenPaw orchestration, real merchant connections, hardware, real traffic prediction, model training, payment/POS integrations, open registration, real map APIs, or a marketing landing page without a new plan.

@@ -86,6 +86,14 @@ python apps\api\scripts\release_gate.py --base-url http://127.0.0.1:8000 --outpu
 
 The release gate uses real HTTP sessions and the deterministic demo accounts to verify health, readiness, auth boundary, organizer planning and approval, event-page publish, merchant-edge packages, public scan/claim/redeem, merchant workbench, review report, and process-local metrics. It does not start servers, run browsers, call Qwen/QwenPaw, or prove cloud production readiness.
 
+Run the browser release evidence gate from `apps/web` with:
+
+```powershell
+npm.cmd run test:e2e:live:v26
+```
+
+The browser gate starts a real local FastAPI API and Vite app through Playwright, uses an isolated SQLite database by default, runs organizer, merchant, public H5, and review UI flows, and writes JSON evidence to `docs/research/assets/v2.6-browser-release-evidence-gate/browser-release-gate-result.json`. Screenshot files are local generated artifacts for inspection and are not committed by default.
+
 Staging/production-like startup must use `DEMO_MODE=false`, `CSRF_MODE=double-submit`, explicit HTTPS `ALLOWED_ORIGINS`, secure cookies, and `AUTO_MIGRATE=false`. `RUN_LIVE_QWENPAW_SMOKE=true` and localhost `QWENPAW_BASE_URL` values are rejected outside local/demo mode.
 
 v2.3 intentionally does not add Dockerfiles because the deployment target is still unspecified. Use the existing local commands plus the deployment smoke and v2.5 release gate until a concrete hosting target is selected.

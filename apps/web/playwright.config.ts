@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  testIgnore: "v13-live-demo-smoke.spec.ts",
+  testIgnore: ["**/v13-live-demo-smoke.spec.ts", "**/v26-browser-release-evidence.spec.ts"],
   timeout: 30_000,
   expect: {
     timeout: 8_000
