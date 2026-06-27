@@ -262,6 +262,17 @@ shadcn/ui-inspired local component layer
 - `apps/api/scripts/reset_demo_state.py` now refuses destructive reset outside local/demo mode or when `DEMO_MODE=false`.
 - v2.2 improves schema ownership and migration discipline, but does not add production database operations, backups, rollback automation, PostgreSQL, or tenant isolation.
 
+## v2.3 Deployment And Environment Operations State
+
+- v2.3 defines a local/demo/staging/production-like environment contract in `docs/research/v2.3-environment-contract.md`.
+- `.env.example` is grouped by app mode, API security, store, agents, manual QwenPaw smoke, and web settings.
+- `/api/ready` reports sanitized readiness for settings mode, store connectivity, migration pending count, auth policy, and optional provider status.
+- Staging/production-like startup rejects `AUTO_MIGRATE=true`, `RUN_LIVE_QWENPAW_SMOKE=true`, and localhost `QWENPAW_BASE_URL` values.
+- `MVPStore` now refuses restricted-environment `AUTO_MIGRATE=true` before creating or migrating the database.
+- `apps/api/scripts/deployment_smoke.py` checks `/api/health`, `/api/ready`, and `/api/public/events/demo-night-tour` against a running API.
+- v2.3 intentionally does not add Dockerfiles because the deployment target is still unspecified.
+- v2.3 partially closes deployment/environment policy readiness, but it does not add real hosting, managed secrets, TLS, DNS, backups, monitoring, or incident operations.
+
 ## Demo Accounts
 
 - organizer: `organizer.demo`
@@ -271,6 +282,6 @@ shadcn/ui-inspired local component layer
 
 ## Current Boundary
 
-This is a stronger productized multilingual MVP, not a final commercial UI or commercial application. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview. v1.4 adds optional organizer-only QwenPaw shadow evidence, v1.8 adds guarded local QwenPaw advisory optimization evidence, v1.9 maps the P0/P1 commercial-readiness gaps, v2.0 adds local CI/repository hygiene gates, v2.1 adds beta auth/session/CSRF demo-boundary hardening, and v2.2 adds migration-managed SQLite persistence. The reliable demo path remains deterministic.
+This is a stronger productized multilingual MVP, not a final commercial UI or commercial application. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview. v1.4 adds optional organizer-only QwenPaw shadow evidence, v1.8 adds guarded local QwenPaw advisory optimization evidence, v1.9 maps the P0/P1 commercial-readiness gaps, v2.0 adds local CI/repository hygiene gates, v2.1 adds beta auth/session/CSRF demo-boundary hardening, v2.2 adds migration-managed SQLite persistence, and v2.3 adds deployment environment/readiness operations. The reliable demo path remains deterministic.
 
 Do not continue into production QwenPaw orchestration, real merchant connections, hardware, real traffic prediction, model training, payment/POS integrations, open registration, real map APIs, or a marketing landing page without a new plan.

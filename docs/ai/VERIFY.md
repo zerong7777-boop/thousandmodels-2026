@@ -843,3 +843,56 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 | Health metadata omits database path in staging/production | pass. |
 | Demo reset refuses outside local/demo or when `DEMO_MODE=false` before default store creation | pass. |
 | v2.2 provides production database operations/backups/tenant isolation | no; it remains migration-managed SQLite beta readiness. |
+
+## v2.3 Deployment And Environment Operations Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python -m pytest apps/api/tests/test_v23_env_contract.py -q` | project root | 0 | 1 environment contract test passed; required v2.3 keys are present in `.env.example`. |
+| `python scripts\repo_hygiene.py --check secrets` | project root | 0 | Secret hygiene check passed after updating `.env.example` and the environment contract. |
+| `python -m pytest apps/api/tests/test_v23_readiness.py -q` | project root | 0 | 2 readiness endpoint tests passed; `/api/ready` returns sanitized readiness metadata. |
+| `python -m pytest apps/api/tests/test_v23_startup_guards.py apps/api/tests/test_v21_security_settings.py -q` | project root | 0 | 83 startup guard and settings regression tests passed. |
+| `python -m pytest apps/api/tests/test_v23_deployment_smoke.py -q` | project root | 0 | 6 deployment smoke script tests passed, including HTTP 200 readiness semantic failure. |
+| `python -m pytest apps/api/tests/test_v23_startup_guards.py apps/api/tests/test_v22_store_migration_integration.py -q` | project root | 0 | 20 startup/store migration guard tests passed; restricted `AUTO_MIGRATE=true` and malformed `APP_ENV` are refused before DB creation. |
+| `python -m pytest apps/api/tests/test_v23_deployment_smoke.py apps/api/tests/test_v23_startup_guards.py apps/api/tests/test_v22_store_migration_integration.py -q` | project root | 0 | 26 smoke/startup/store focused tests passed after code review fixes. |
+| `python -m pytest -q` | `apps/api` | 0 | 315 backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `npm.cmd run test` | `apps/web` | 0 | 29 frontend test files passed, 98 tests passed. |
+| `npm.cmd run build` | `apps/web` | 0 | `tsc -b && vite build` passed; Vite emitted the existing large chunk warning for `assets/index-BZnjRTU3.js` at 840.94 kB. |
+| `python apps\api\scripts\deployment_smoke.py --base-url http://127.0.0.1:8014` | project root | 0 | Real local HTTP smoke passed for `/api/health`, `/api/ready`, and `/api/public/events/demo-night-tour` after preparing an approved demo event. |
+| `python scripts\repo_hygiene.py --base origin/main` | project root | 0 | Secret, local-path, node-modules, and generated-artifact checks passed. |
+| `git diff --check` | project root | 0 | No whitespace errors; Git reported expected Windows line-ending warnings for touched text files. |
+
+### Evidence Artifacts
+
+| Artifact | Summary |
+| --- | --- |
+| `docs/research/v2.3-environment-contract.md` | Local/demo/staging/production-like environment variable contract and startup policy. |
+| `.env.example` | Grouped local defaults for app mode, security, store, agents, manual QwenPaw smoke, and web settings. |
+| `apps/api/app/readiness.py` | Builds sanitized `/api/ready` payloads for settings, store, migrations, auth policy, and optional providers. |
+| `apps/api/app/main.py` | Registers `/api/ready`. |
+| `apps/api/app/settings.py` | Adds deployment fields and restricted-environment guards for auto-migration and QwenPaw smoke settings. |
+| `apps/api/app/store.py` | Refuses restricted-environment `AUTO_MIGRATE=true` before creating or migrating a database. |
+| `apps/api/scripts/deployment_smoke.py` | Checks `/api/health`, `/api/ready`, and `/api/public/events/demo-night-tour` against a running API. |
+
+### v2.3 Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| `.env.example` documents required v2.3 keys | pass. |
+| `/api/ready` redacts local DB paths, secret names, and token-like values | pass. |
+| Staging/production-like startup rejects live QwenPaw smoke flags | pass. |
+| Staging/production-like startup rejects localhost QwenPaw base URLs | pass. |
+| Staging/production-like startup rejects `AUTO_MIGRATE=true` | pass. |
+| Malformed `APP_ENV` is rejected before store creation or migration | pass. |
+| Deployment smoke treats HTTP 200 `/api/ready` with `status=not_ready` as failure | pass. |
+| Deployment smoke exits non-zero on health, readiness, or public-event failure | pass. |
+| Dockerfiles added | no; v2.3 keeps them out until a deployment target is selected. |
+| v2.3 provides real cloud hosting, managed secrets, TLS, backups, or monitoring | no; it is an environment/readiness operations baseline. |
+
+### v2.3 Verification Notes
+
+- Local deployment smoke ran against a hidden `uvicorn` process on `127.0.0.1:8014`, then the process was stopped after verification.
+- The smoke service used a temporary SQLite database under the system temp directory because the existing default local runtime database was readonly for this process.
+- The live smoke did not enable `RUN_LIVE_QWENPAW_SMOKE` and did not call external model APIs.
