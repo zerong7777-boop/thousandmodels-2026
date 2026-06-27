@@ -30,8 +30,8 @@ SECRET_PATTERNS = [
 
 LOCAL_PATH_PATTERNS = [
     re.compile(r"[A-Za-z]:[\\/](?:Users|rz|codex-home)[\\/][^\s'\"`)]+"),
-    re.compile(r"/Users/[^/\s'\"`)]+/[^\s'\"`)]+"),
-    re.compile(r"/home/[^/\s'\"`)]+/[^\s'\"`)]+"),
+    re.compile(r"/Users/(?!\[)[^/\s'\"`)]+/[^\s'\"`)]+"),
+    re.compile(r"/home/(?!\[)[^/\s'\"`)]+/[^\s'\"`)]+"),
 ]
 
 GENERATED_ARTIFACT_PATTERNS = [
