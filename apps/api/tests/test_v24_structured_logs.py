@@ -88,10 +88,10 @@ def test_log_event_redacts_sensitive_fields_and_local_paths(caplog):
         "probe",
         authorization="Bearer secret-token",
         cookie="zhiyin_session=secret-session",
-        local_path=r"E:\rz\competitions\thousandmodels-2026\data\runtime\zhiyin.sqlite3",
-        message=r"failed at E:\rz\competitions\thousandmodels-2026\data\runtime\zhiyin.sqlite3 with Bearer secret-token",
+        local_path=r"Q:\PrivateWorkspace\data\runtime\zhiyin.sqlite3",
+        message=r"failed at Q:\PrivateWorkspace\data\runtime\zhiyin.sqlite3 with Bearer secret-token",
         note="token=secret-token",
-        spaced_path=r"failed at C:\Users\Jane Doe\secret.txt with Bearer sk-secret",
+        spaced_path=r"failed at Q:\Jane Doe\secret.txt with Bearer sk-secret",
         safe="visible",
     )
 
@@ -99,7 +99,7 @@ def test_log_event_redacts_sensitive_fields_and_local_paths(caplog):
     assert event["authorization"] == "[redacted]"
     assert event["cookie"] == "[redacted]"
     assert event["local_path"] == "[redacted]"
-    assert r"E:\rz" not in event["message"]
+    assert r"Q:\PrivateWorkspace" not in event["message"]
     assert "secret-token" not in event["message"]
     assert event["note"] == "token=[redacted]"
     assert "Jane Doe" not in event["spaced_path"]
