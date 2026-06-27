@@ -2,16 +2,16 @@
 
 ## Recommended Next Step
 
-Start `v2.0-ci-repo-hygiene`.
+Push the v2.0 CI/repo-hygiene commit and observe GitHub Actions.
 
-v1.9 completed the commercial-readiness audit pack and classified the project as a CR0 demo-grade MVP with CR1 audit evidence. The next phase should turn the two repository-level P0 findings into enforceable controls:
+v2.0 has added local CI and repository hygiene gates. The next decision is whether to push the branch so GitHub can execute the new workflow:
 
-1. Add GitHub Actions for API pytest, web Vitest, and web production build.
-2. Add hygiene scans for secrets, local absolute paths, and accidental generated PNG scope.
-3. Document release gates and local reproduction commands.
-4. Resolve or quarantine the 14 historical screenshot PNG diffs so future commits stay reviewable.
+1. Push `v1-qwen-controlled-draft`.
+2. Check the new `CI` workflow on GitHub.
+3. If GitHub Actions is green, start `v2.1-auth-security-hardening`.
+4. If GitHub Actions fails, fix CI before product hardening.
 
-Do this before production auth/session hardening, migration-backed persistence, deployment configuration, observability, or any new external integration work.
+The 14 historical screenshot PNG diffs still need a separate explicit decision: restore them, commit them as a named evidence refresh, or regenerate them through a dedicated visual evidence task.
 
 ## Do Not Do Yet
 
@@ -23,3 +23,4 @@ Do this before production auth/session hardening, migration-backed persistence, 
 - Do not use optional Qwen or QwenPaw live evidence as a business-success claim; it is only provider reachability/advisory evidence.
 - Do not run backend pytest in parallel against the default SQLite database; use serial runs or isolated database paths.
 - Do not stage the historical screenshot PNG diffs unless a separate evidence-refresh task explicitly owns them.
+- Do not assume GitHub Actions is green until the pushed workflow run is observed.

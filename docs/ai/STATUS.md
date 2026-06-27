@@ -226,6 +226,17 @@ shadcn/ui-inspired local component layer
 - v1.8.1 QwenPaw evidence remains local, optional, localhost-only, advisory-only, and non-authoritative.
 - The recommended next phase is `v2.0-ci-repo-hygiene`.
 
+## v2.0 CI And Repository Hygiene State
+
+- v2.0 adds repository-level CI and hygiene gates without changing product runtime behavior.
+- `.github/workflows/ci.yml` defines API tests, web tests/build, and repository hygiene jobs for pull requests and pushes to `main` and `v1-qwen-controlled-draft`.
+- `scripts/repo_hygiene.py` provides dependency-free checks for high-confidence secrets, local absolute paths, tracked `node_modules`, and generated screenshot artifact changes.
+- Local v2.0 verification passed: repo hygiene, API pytest, web Vitest, and web production build.
+- Remote GitHub Actions execution has not been observed yet because the v2.0 commit has not been pushed.
+- The 14 historical screenshot PNG diffs remain unstaged and unresolved by design; v2.0 does not restore or commit them without an explicit evidence-refresh or restore decision.
+- v2.0 locally closes `CR-P0-001` and partially closes `CR-P0-002`; full closure requires a pushed branch with green GitHub Actions.
+- The recommended next phase after remote CI is green is `v2.1-auth-security-hardening`.
+
 ## Demo Accounts
 
 - organizer: `organizer.demo`
@@ -235,6 +246,6 @@ shadcn/ui-inspired local component layer
 
 ## Current Boundary
 
-This is a stronger productized multilingual MVP, not a final commercial UI or commercial application. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview. v1.4 adds optional organizer-only QwenPaw shadow evidence, v1.8 adds guarded local QwenPaw advisory optimization evidence, and v1.9 maps the P0/P1 commercial-readiness gaps. The reliable demo path remains deterministic.
+This is a stronger productized multilingual MVP, not a final commercial UI or commercial application. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview. v1.4 adds optional organizer-only QwenPaw shadow evidence, v1.8 adds guarded local QwenPaw advisory optimization evidence, v1.9 maps the P0/P1 commercial-readiness gaps, and v2.0 adds local CI/repository hygiene gates. The reliable demo path remains deterministic.
 
 Do not continue into production QwenPaw orchestration, real merchant connections, hardware, real traffic prediction, model training, payment/POS integrations, open registration, real map APIs, or a marketing landing page without a new plan.

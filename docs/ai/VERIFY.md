@@ -711,3 +711,38 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 - v1.9 did not modify runtime product code.
 - v1.9 did not run the v1.3 live Playwright smoke; the phase reran API tests, web tests, and web build to support the audit pack.
 - The next implementation phase should create enforceable CI/repository controls before auth, persistence, deployment, or external integrations are expanded.
+
+## v2.0 CI And Repository Hygiene Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python scripts\repo_hygiene.py --check secrets` | project root | 0 | Secret scanner passed after allowing historical fake-key fixtures while retaining high-confidence token patterns. |
+| `python scripts\repo_hygiene.py --check local-paths` | project root | 0 | No local absolute workspace paths found in tracked text files. |
+| `python scripts\repo_hygiene.py --check node-modules` | project root | 0 | No tracked `node_modules` paths. |
+| `python scripts\repo_hygiene.py --check generated-artifacts --base origin/main` | project root | 0 | No committed generated screenshot artifact changes relative to `origin/main`. |
+| `python scripts\repo_hygiene.py --base origin/main` | project root | 0 | All repository hygiene checks passed. |
+| `python -m pytest -q` | `apps/api` | 0 | 176 backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `npm.cmd run test` | `apps/web` | 0 | 28 frontend test files passed; 94 tests passed. |
+| `npm.cmd run build` | `apps/web` | 0 | `tsc -b && vite build` passed; Vite still emitted the known large chunk warning for `assets/index-DwOVRZL_.js` at 841.37 kB. |
+
+### Evidence Artifacts
+
+| Artifact | Summary |
+| --- | --- |
+| `.github/workflows/ci.yml` | GitHub Actions workflow for API tests, web tests/build, and repository hygiene. |
+| `scripts/repo_hygiene.py` | Dependency-free local/CI hygiene scanner. |
+| `docs/proposal/v2.0-ci-repo-hygiene-spec.md` | v2.0 scope, required behavior, and acceptance criteria. |
+| `docs/proposal/v2.0-ci-repo-hygiene-implementation-plan.md` | v2.0 task plan and verification gates. |
+| `docs/research/v2.0-ci-repo-hygiene.md` | Local evidence report and remaining PNG decision boundary. |
+
+### v2.0 Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Product runtime behavior changed | no. |
+| CI workflow exists locally | pass. |
+| Remote GitHub Actions observed green | not yet; requires push. |
+| Historical PNG files included in v2.0 scope | no; they remain unstaged. |
+| v2.0 makes the app commercial-ready | no; it only adds repository gates needed before security and deployment hardening. |
