@@ -21,6 +21,8 @@ from app.auth import (
     verify_mutation_origin,
     verify_password,
 )
+from app.csrf import CSRF_COOKIE, issue_csrf_token
+from app.migrations.runner import latest_schema_version, pending_versions
 from app.schemas import (
     AuthResponse,
     AuthUserRecord,
@@ -32,6 +34,7 @@ from app.schemas import (
 )
 from app.seed import seed_demo, seed_demo_accounts
 from app.services.incidents import incident_from_runtime_state
+from app.settings import AppSettings, load_settings, load_validated_settings
 from app.services.event_page import (
     build_event_page_draft,
     build_event_page_projection,
@@ -69,16 +72,26 @@ from app.services.touchpoints import (
     redeem_coupon,
     summarize_touchpoint_metrics,
 )
-from app.store import STORE
+from app.store import MVPStore, STORE
 
 STRICT_MUTATION_ORIGINS = {"http://127.0.0.1:5173", "http://localhost:5173"}
+LOCAL_DEV_ORIGIN_REGEX = r"http://(127\.0\.0\.1|localhost):\d+"
+APP_SETTINGS = load_settings()
+
+
+def cors_allow_origins(settings: AppSettings) -> list[str]:
+    return list(settings.allowed_origins)
+
+
+def cors_allow_origin_regex(settings: AppSettings) -> str | None:
+    return LOCAL_DEV_ORIGIN_REGEX if settings.demo_mode else None
 
 app = FastAPI(title="智引濠江 MVP API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:5173", "http://localhost:5173"],
-    allow_origin_regex=r"http://(127\.0\.0\.1|localhost):\d+",
+    allow_origins=cors_allow_origins(APP_SETTINGS),
+    allow_origin_regex=cors_allow_origin_regex(APP_SETTINGS),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -87,7 +100,14 @@ app.add_middleware(
 
 @app.on_event("startup")
 def seed_auth_on_startup() -> None:
-    seed_demo_accounts(STORE)
+    settings = load_validated_settings()
+    validate_and_seed_auth(STORE, settings)
+
+
+def validate_and_seed_auth(store: MVPStore, settings: AppSettings) -> None:
+    settings.validate_startup()
+    if settings.demo_mode:
+        seed_demo_accounts(store)
 
 
 def audit(event_id: str, actor_type: str, actor_id: str, action_type: str, note: str) -> None:
@@ -154,7 +174,19 @@ def latest_published_event_page(event_id: str, plan_version: int | None = None):
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "agent_backend": choose_agent_backend().__class__.__name__}
+    settings = load_settings()
+    store = {
+        "kind": "sqlite",
+        "schema_version": latest_schema_version(STORE.conn),
+        "pending_migrations": len(pending_versions(STORE.conn)),
+    }
+    if settings.app_env in {"local", "demo"}:
+        store["database_path"] = str(STORE.db_path)
+    return {
+        "status": "ok",
+        "agent_backend": choose_agent_backend().__class__.__name__,
+        "store": store,
+    }
 
 
 @app.post("/api/auth/login", response_model=AuthResponse)
@@ -169,6 +201,21 @@ def login(request: Request, response: Response, payload: LoginRequest):
 @app.get("/api/auth/me", response_model=AuthResponse)
 def me(user: AuthUserRecord = Depends(get_current_user)):
     return AuthResponse(user=public_user(user))
+
+
+@app.get("/api/auth/csrf")
+def csrf(response: Response):
+    settings = load_settings()
+    token = issue_csrf_token(settings.required_secret())
+    response.set_cookie(
+        CSRF_COOKIE,
+        token,
+        httponly=False,
+        secure=settings.session_cookie_secure,
+        samesite=settings.session_samesite,
+        path="/",
+    )
+    return {"csrf_token": token}
 
 
 @app.post("/api/auth/logout")

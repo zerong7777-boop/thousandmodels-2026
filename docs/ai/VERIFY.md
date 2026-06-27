@@ -746,3 +746,100 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 | Remote GitHub Actions observed green | not yet; requires push. |
 | Historical PNG files included in v2.0 scope | no; they remain unstaged. |
 | v2.0 makes the app commercial-ready | no; it only adds repository gates needed before security and deployment hardening. |
+
+## v2.1 Auth Security Hardening Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python -m pytest apps/api/tests/test_v21_security_settings.py apps/api/tests/test_v21_demo_boundary.py apps/api/tests/test_v21_session_cookie_policy.py apps/api/tests/test_v21_csrf_policy.py -q` | project root | 0 | 91 focused v2.1 backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `npm.cmd run test -- tests/v21-csrf-client.test.ts tests/login-page.test.tsx tests/auth-api.test.tsx tests/v12-event-interaction-api.test.ts` | `apps/web` | 0 | 4 focused frontend test files passed, 15 tests passed. |
+| `python -m pytest -q` | `apps/api` | 0 | 267 backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `npm.cmd run test` | `apps/web` | 0 | 29 frontend test files passed, 98 tests passed. |
+| `npm.cmd run build` | `apps/web` | 0 | `tsc -b && vite build` passed; Vite emitted the existing large chunk warning for `assets/index-BZnjRTU3.js` at 840.94 kB. |
+| `python scripts\repo_hygiene.py --base origin/main` | project root | 0 | Secret, local-path, node-modules, and generated-artifact checks passed. |
+| `git diff --check` | project root | 0 | No whitespace errors; Git reported expected Windows line-ending warnings for touched text files. |
+
+### Evidence Artifacts
+
+| Artifact | Summary |
+| --- | --- |
+| `apps/api/app/settings.py` | Typed security settings and startup validation for app env, demo mode, session cookies, CSRF mode, TTL, secret material, and allowed origins. |
+| `apps/api/app/csrf.py` | Signed double-submit CSRF token issuance and validation. |
+| `apps/api/app/auth.py` | Settings-driven session cookie policy and demo-only versus double-submit mutation-origin enforcement. |
+| `apps/api/app/main.py` | Validated startup seeding, settings-aligned CORS policy, and `/api/auth/csrf` endpoint. |
+| `apps/web/src/api.ts` | Shared frontend mutation helper that uses the demo CSRF header only in demo mode and fetches signed CSRF tokens otherwise. |
+| `apps/web/src/auth/authClient.ts` | Login/logout now use the shared mutation helper instead of hard-coded demo CSRF. |
+| `apps/web/src/pages/login/LoginPage.tsx` | Demo account shortcut UI is gated by `VITE_DEMO_MODE`. |
+| `.env.example` and `README.md` | Local demo defaults and production-like refusal boundaries are documented without secrets. |
+
+### v2.1 Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Local demo mode remains usable by default | pass. |
+| Demo users are seeded only when demo mode is enabled | pass. |
+| Production/staging-like unsafe startup config is rejected | pass. |
+| Session cookie attributes resolve from settings | pass. |
+| Fixed `X-Zhiyin-CSRF: demo` is demo-only | pass. |
+| Non-demo CSRF uses signed double-submit token/cookie matching | pass. |
+| Localhost origin regex is demo-only; non-demo modes use explicit allowed origins | pass. |
+| Frontend demo quick-fill is hidden when `VITE_DEMO_MODE=false` | pass. |
+| v2.1 provides complete production identity | no; it remains a beta auth/session/CSRF baseline without registration, SSO, tenant isolation, password reset, or user administration. |
+
+### v2.1 Verification Notes
+
+- Backend pytest must be run serially against the default SQLite store; parallel backend pytest is still unsafe for this repo's shared test database.
+- A sandboxed `python -X utf8 -m pytest ...` attempt failed with `sqlite3.OperationalError: attempt to write a readonly database` because that command prefix did not use the approved non-sandbox execution path. The same focused v2.1 backend tests passed with the approved `python -m pytest ...` prefix.
+
+## v2.2 Persistence And Migrations Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python -m pytest apps/api/tests/test_v22_migrations.py -q` | project root | 0 | 4 initial migration-runner tests passed before quality review hardening. |
+| `python -m pytest apps/api/tests/test_v02_seed_store.py apps/api/tests/test_v12_store_models.py apps/api/tests/test_v22_store_migration_integration.py -q` | project root | 0 | 21 store-focused tests passed before `AUTO_MIGRATE=false` hardening. |
+| `python apps\api\scripts\migrate_store.py` | project root | 0 | Migration script returned JSON with `current_version=0002_auth_tables` and no pending migrations for the current local store. |
+| `python -m pytest apps/api/tests/test_v22_health_schema_status.py -q` | project root | 0 | 3 initial health schema metadata tests passed before staging path-leak hardening. |
+| `python -m pytest apps/api/tests/test_v22_demo_reset_boundary.py apps/api/tests/test_v13_demo_reset_script.py -q` | project root | 0 | 7 reset-boundary and existing reset tests passed. |
+| `python -m pytest apps/api/tests/test_v22_migrations.py apps/api/tests/test_v22_health_schema_status.py apps/api/tests/test_v22_demo_reset_boundary.py -q` | project root | 0 | 17 focused tests passed after fixing import-time store side effects and staging path omission. |
+| `python -m pytest apps/api/tests/test_v22_migrations.py apps/api/tests/test_v22_store_migration_integration.py apps/api/tests/test_v22_health_schema_status.py apps/api/tests/test_v22_demo_reset_boundary.py apps/api/tests/test_v02_seed_store.py apps/api/tests/test_v12_store_models.py apps/api/tests/test_v13_demo_reset_script.py -q` | project root | 0 | 42 v2.2 focused backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `python -m pytest apps/api/tests/test_v22_demo_reset_boundary.py apps/api/tests/test_v04_auth.py -q` | project root | 0 | 16 reset/import-boundary and auth regression tests passed after moving password helpers into `app.security`. |
+| `python -m pytest apps/api/tests/test_v22_migrations.py apps/api/tests/test_v22_store_migration_integration.py apps/api/tests/test_v22_health_schema_status.py apps/api/tests/test_v22_demo_reset_boundary.py apps/api/tests/test_v02_seed_store.py apps/api/tests/test_v04_auth.py apps/api/tests/test_v12_store_models.py apps/api/tests/test_v13_demo_reset_script.py -q` | project root | 0 | 53 v2.2 focused backend tests passed after adding the non-mutating path-read regression; 3 existing FastAPI/Starlette warnings. |
+| `python -m pytest -q` | `apps/api` | 0 | 292 backend tests passed; 3 existing FastAPI/Starlette warnings. |
+| `npm.cmd run test` | `apps/web` | 0 | 29 frontend test files passed, 98 tests passed. |
+| `npm.cmd run build` | `apps/web` | 0 | `tsc -b && vite build` passed; Vite emitted the existing large chunk warning for `assets/index-BZnjRTU3.js` at 840.94 kB. |
+| `python apps\api\scripts\migrate_store.py` | project root | 0 | Fresh final migration check returned `current_version=0002_auth_tables`, `applied_versions=[]`, and `pending_versions=[]`. |
+| `python scripts\repo_hygiene.py --base origin/main` | project root | 0 | Secret, local-path, node-modules, and generated-artifact checks passed. |
+| `git diff --check` | project root | 0 | No whitespace errors; Git reported expected Windows line-ending warnings for touched text files. |
+
+### Evidence Artifacts
+
+| Artifact | Summary |
+| --- | --- |
+| `apps/api/app/migrations/versions.py` | Defines `0001_initial_records` and `0002_auth_tables` with the current records/users/sessions/index schema. |
+| `apps/api/app/migrations/runner.py` | Runs idempotent SQLite migrations, reports current and pending versions, uses savepoints for migration atomicity, and keeps read helpers non-mutating. |
+| `apps/api/app/store.py` | `MVPStore` initializes through migrations and can refuse pending production/staging migrations when `AUTO_MIGRATE=false`. |
+| `apps/api/app/store_paths.py` | Provides database path resolution without importing `app.store` or constructing global `STORE`. |
+| `apps/api/app/security.py` | Holds password/session-token helpers without importing `app.store`, so seed/reset imports avoid global `STORE` side effects. |
+| `apps/api/scripts/migrate_store.py` | Explicit migration command that avoids import-time `STORE` side effects. |
+| `apps/api/scripts/reset_demo_state.py` | Demo reset now checks local/demo and `DEMO_MODE=true` before lazy-loading default `STORE`. |
+| `apps/api/app/main.py` | `/api/health` reports store kind, schema version, and pending migrations; database path is only shown in local/demo. |
+
+### v2.2 Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Fresh database migrates to latest schema | pass. |
+| Repeated migrations are idempotent | pass. |
+| Pending migrations are detected | pass. |
+| Failed migration rolls back DDL side effects | pass. |
+| Migration read helpers do not commit caller-owned transactions | pass. |
+| Path-based migration read helpers do not create missing database files or parent directories | pass. |
+| Existing `records`, auth, seed, and v1.2 store operations still work | pass. |
+| Migration script runs without constructing global `STORE` first | pass. |
+| Health metadata omits database path in staging/production | pass. |
+| Demo reset refuses outside local/demo or when `DEMO_MODE=false` before default store creation | pass. |
+| v2.2 provides production database operations/backups/tenant isolation | no; it remains migration-managed SQLite beta readiness. |

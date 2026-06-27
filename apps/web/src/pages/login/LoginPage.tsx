@@ -1,6 +1,7 @@
 import { Alert, Button, Card, Form, Input, Space, Typography } from "antd";
 import { Building2, Map, Store } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { isDemoMode } from "../../api";
 import { useAuth } from "../../auth/AuthProvider";
 import { defaultPathForRole } from "../../auth/roleRouting";
 import { LanguageSwitcher, useI18n } from "../../i18n";
@@ -59,6 +60,7 @@ const roleColor: Record<UserRole, string> = {
 export function LoginPage({ onNavigate }: LoginPageProps) {
   const { login } = useAuth();
   const { t } = useI18n();
+  const demoMode = isDemoMode();
   const [form] = Form.useForm<{ username: string; password: string }>();
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -95,27 +97,29 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
             </Typography.Title>
             <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300">{t("auth.productPurpose")}</p>
 
-            <div className="mt-8 grid gap-3">
-              {demoCredentials.map((credential) => (
-                <button
-                  key={credential.role}
-                  className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-4 text-left transition hover:bg-white/10"
-                  onClick={() => fillCredential(credential)}
-                  type="button"
-                >
-                  <span
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-white text-slate-900"
-                    style={{ color: roleColor[credential.role] }}
+            {demoMode ? (
+              <div className="mt-8 grid gap-3">
+                {demoCredentials.map((credential) => (
+                  <button
+                    key={credential.role}
+                    className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-4 text-left transition hover:bg-white/10"
+                    onClick={() => fillCredential(credential)}
+                    type="button"
                   >
-                    {credential.icon}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-sm font-semibold text-white">{t(credential.productLabelKey)}</span>
-                    <span className="mt-1 block text-xs leading-5 text-slate-300">{t(credential.descriptionKey)}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
+                    <span
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-white text-slate-900"
+                      style={{ color: roleColor[credential.role] }}
+                    >
+                      {credential.icon}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-white">{t(credential.productLabelKey)}</span>
+                      <span className="mt-1 block text-xs leading-5 text-slate-300">{t(credential.descriptionKey)}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
 
             <dl className="mt-8 grid gap-3 text-sm text-slate-300 sm:grid-cols-3">
               <div className="rounded-lg border border-white/10 bg-white/5 p-3">
@@ -139,7 +143,7 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
                 <Typography.Title level={2} style={{ margin: 0 }}>
                   {t("auth.productAccess")}
                 </Typography.Title>
-                <Typography.Text type="secondary">{t("auth.demoCredentialsHint")}</Typography.Text>
+                {demoMode ? <Typography.Text type="secondary">{t("auth.demoCredentialsHint")}</Typography.Text> : null}
               </Space>
 
               <Form form={form} layout="vertical" onFinish={submit} requiredMark={false}>
@@ -163,27 +167,29 @@ export function LoginPage({ onNavigate }: LoginPageProps) {
                 </Button>
               </Form>
 
-              <div>
-                <Typography.Text type="secondary">{t("auth.demoQuickFill")}</Typography.Text>
-                <div className="mt-3 grid gap-2">
-                  {demoCredentials.map((credential) => (
-                    <Button
-                      key={credential.role}
-                      className="login-demo-button flex h-auto w-full justify-start py-2 text-left"
-                      onClick={() => fillCredential(credential)}
-                      style={{ borderColor: roleColor[credential.role] }}
-                    >
-                      <Space>
-                        {credential.icon}
-                        <span>
-                          {t(credential.labelKey)}
-                          <span className="ml-2 text-slate-500">{credential.username}</span>
-                        </span>
-                      </Space>
-                    </Button>
-                  ))}
+              {demoMode ? (
+                <div>
+                  <Typography.Text type="secondary">{t("auth.demoQuickFill")}</Typography.Text>
+                  <div className="mt-3 grid gap-2">
+                    {demoCredentials.map((credential) => (
+                      <Button
+                        key={credential.role}
+                        className="login-demo-button flex h-auto w-full justify-start py-2 text-left"
+                        onClick={() => fillCredential(credential)}
+                        style={{ borderColor: roleColor[credential.role] }}
+                      >
+                        <Space>
+                          {credential.icon}
+                          <span>
+                            {t(credential.labelKey)}
+                            <span className="ml-2 text-slate-500">{credential.username}</span>
+                          </span>
+                        </Space>
+                      </Button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ) : null}
             </Space>
           </section>
         </div>

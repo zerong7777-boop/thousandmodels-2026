@@ -2,7 +2,6 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
-from app.auth import hash_password
 from app.schemas import (
     AuthUserRecord,
     EventBrief,
@@ -12,7 +11,12 @@ from app.schemas import (
     OperationalMetric,
     RoutePoint,
 )
-from app.store import MVPStore, project_root
+from app.security import hash_password
+from app.store_paths import project_root
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.store import MVPStore
 
 
 DEMO_AUTH_USERS = [
@@ -52,7 +56,7 @@ def load_json(name: str):
         return json.load(handle)
 
 
-def seed_demo_accounts(store: MVPStore) -> None:
+def seed_demo_accounts(store: "MVPStore") -> None:
     store.ensure_auth_schema()
     now = datetime.now(UTC).isoformat()
     for account in DEMO_AUTH_USERS:
@@ -72,7 +76,7 @@ def seed_demo_accounts(store: MVPStore) -> None:
         )
 
 
-def seed_demo(store: MVPStore, event_id: str = "demo-night-tour") -> EventBrief:
+def seed_demo(store: "MVPStore", event_id: str = "demo-night-tour") -> EventBrief:
     store.clear_demo(event_id)
     brief = EventBrief.model_validate(load_json("demo_event.json"))
     store.save_event_brief(brief)

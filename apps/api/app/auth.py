@@ -1,5 +1,3 @@
-import base64
-import hashlib
 import hmac
 import secrets
 from datetime import UTC, datetime, timedelta
@@ -7,51 +5,16 @@ from urllib.parse import urlparse
 
 from fastapi import Depends, HTTPException, Request, Response
 
+from app.csrf import CSRF_COOKIE, verify_csrf_token
 from app.schemas import AuthResponse, AuthSessionRecord, AuthUserRecord, AuthUserResponse
+from app.security import hash_password, hash_session_token, verify_password
+from app.settings import AppSettings, load_settings
 from app.store import MVPStore, STORE
 
 SESSION_COOKIE = "zhiyin_session"
-SESSION_TTL_HOURS = 8
-PBKDF2_ITERATIONS = 260000
+SETTINGS = load_settings()
 ALLOWED_MUTATION_ORIGINS = {"http://127.0.0.1:5173", "http://localhost:5173"}
 LOCAL_DEV_ORIGIN_HOSTS = {"127.0.0.1", "localhost"}
-
-
-def hash_password(password: str, salt: bytes | None = None) -> str:
-    actual_salt = salt or secrets.token_bytes(16)
-    digest = hashlib.pbkdf2_hmac(
-        "sha256",
-        password.encode("utf-8"),
-        actual_salt,
-        PBKDF2_ITERATIONS,
-    )
-    return "pbkdf2_sha256${}${}${}".format(
-        PBKDF2_ITERATIONS,
-        base64.urlsafe_b64encode(actual_salt).decode("ascii"),
-        base64.urlsafe_b64encode(digest).decode("ascii"),
-    )
-
-
-def verify_password(password: str, stored_hash: str) -> bool:
-    try:
-        algorithm, iterations, salt_b64, digest_b64 = stored_hash.split("$", 3)
-        if algorithm != "pbkdf2_sha256":
-            return False
-        salt = base64.urlsafe_b64decode(salt_b64.encode("ascii"))
-        expected = base64.urlsafe_b64decode(digest_b64.encode("ascii"))
-        actual = hashlib.pbkdf2_hmac(
-            "sha256",
-            password.encode("utf-8"),
-            salt,
-            int(iterations),
-        )
-        return hmac.compare_digest(actual, expected)
-    except Exception:
-        return False
-
-
-def hash_session_token(token: str) -> str:
-    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 def public_user(user: AuthUserRecord) -> AuthUserResponse:
@@ -65,32 +28,42 @@ def public_user(user: AuthUserRecord) -> AuthUserResponse:
 
 
 def create_login_session(
-    response: Response, user: AuthUserRecord, store: MVPStore = STORE
+    response: Response,
+    user: AuthUserRecord,
+    store: MVPStore = STORE,
+    settings: AppSettings = SETTINGS,
 ) -> AuthResponse:
     token = secrets.token_urlsafe(48)
     now = datetime.now(UTC)
+    max_age = settings.session_ttl_hours * 60 * 60
     store.create_session(
         AuthSessionRecord(
             session_id=f"sess_{secrets.token_urlsafe(18)}",
             token_hash=hash_session_token(token),
             user_id=user.user_id,
             created_at=now.isoformat(),
-            expires_at=(now + timedelta(hours=SESSION_TTL_HOURS)).isoformat(),
+            expires_at=(now + timedelta(hours=settings.session_ttl_hours)).isoformat(),
         )
     )
     response.set_cookie(
         SESSION_COOKIE,
         token,
-        max_age=SESSION_TTL_HOURS * 60 * 60,
+        max_age=max_age,
         httponly=True,
-        samesite="lax",
+        secure=settings.session_cookie_secure,
+        samesite=settings.session_samesite,
         path="/",
     )
     return AuthResponse(user=public_user(user))
 
 
-def clear_session_cookie(response: Response) -> None:
-    response.delete_cookie(SESSION_COOKIE, path="/", samesite="lax")
+def clear_session_cookie(response: Response, settings: AppSettings = SETTINGS) -> None:
+    response.delete_cookie(
+        SESSION_COOKIE,
+        path="/",
+        secure=settings.session_cookie_secure,
+        samesite=settings.session_samesite,
+    )
 
 
 def get_current_user(request: Request) -> AuthUserRecord:
@@ -134,13 +107,28 @@ def is_allowed_local_dev_origin(origin: str | None) -> bool:
     return parsed.scheme == "http" and parsed.hostname in LOCAL_DEV_ORIGIN_HOSTS and parsed.port is not None
 
 
-def verify_mutation_origin(request: Request) -> None:
+def verify_mutation_origin(request: Request, settings: AppSettings = SETTINGS) -> None:
     if request.method in {"GET", "HEAD", "OPTIONS"}:
         return
     origin = request.headers.get("origin")
     csrf = request.headers.get("x-zhiyin-csrf")
-    if origin in ALLOWED_MUTATION_ORIGINS or is_allowed_local_dev_origin(origin):
-        return
-    if csrf == "demo":
-        return
-    raise HTTPException(status_code=403, detail="invalid mutation origin")
+    if settings.demo_mode:
+        if (
+            origin in settings.allowed_origins
+            or origin in ALLOWED_MUTATION_ORIGINS
+            or is_allowed_local_dev_origin(origin)
+        ):
+            return
+        if csrf == "demo":
+            return
+        raise HTTPException(status_code=403, detail="invalid mutation origin")
+
+    if origin not in settings.allowed_origins:
+        raise HTTPException(status_code=403, detail="invalid mutation origin")
+
+    cookie_csrf = request.cookies.get(CSRF_COOKIE)
+    if not csrf or not cookie_csrf or not hmac.compare_digest(csrf, cookie_csrf):
+        raise HTTPException(status_code=403, detail="invalid csrf token")
+
+    if not verify_csrf_token(csrf, settings.required_secret()):
+        raise HTTPException(status_code=403, detail="invalid csrf token")

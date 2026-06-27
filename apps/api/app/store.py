@@ -7,6 +7,7 @@ from typing import TypeVar
 
 from pydantic import BaseModel
 
+from app.migrations.runner import pending_versions, run_migrations
 from app.schemas import (
     AgentDraft,
     AgentEvaluation,
@@ -40,22 +41,26 @@ from app.schemas import (
     RoutePoint,
     TouchpointInteraction,
 )
+from app.store_paths import database_path_from_env, project_root
 
 T = TypeVar("T", bound=BaseModel)
 
 
-def project_root() -> Path:
-    return Path(__file__).resolve().parents[3]
+def _env_bool(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ValueError(f"{name} must be true or false")
 
 
-def database_path_from_env() -> Path:
-    raw = os.getenv("DATABASE_URL", "sqlite:///./data/runtime/zhiyin.sqlite3")
-    if raw.startswith("sqlite:///"):
-        raw = raw.removeprefix("sqlite:///")
-    path = Path(raw)
-    if not path.is_absolute():
-        path = project_root() / path
-    return path
+def _should_refuse_pending_migrations(db_path: Path) -> bool:
+    app_env = os.getenv("APP_ENV", "local").strip().lower()
+    return app_env in {"staging", "production"} and not _env_bool("AUTO_MIGRATE", True)
 
 
 class MVPStore:
@@ -66,50 +71,17 @@ class MVPStore:
         self.conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA foreign_keys = ON")
-        self.conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS records (
-              collection TEXT NOT NULL,
-              item_key TEXT NOT NULL,
-              payload TEXT NOT NULL,
-              PRIMARY KEY (collection, item_key)
-            )
-            """
-        )
-        self.ensure_auth_schema()
-        self.conn.commit()
+        if str(self.db_path) != ":memory:" and _should_refuse_pending_migrations(self.db_path):
+            pending = pending_versions(self.db_path)
+            if pending:
+                raise RuntimeError(
+                    "Database has pending migrations and AUTO_MIGRATE=false: "
+                    + ", ".join(pending)
+                )
+        run_migrations(self.conn)
 
     def ensure_auth_schema(self) -> None:
-        self.conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS users (
-              user_id TEXT PRIMARY KEY,
-              username TEXT UNIQUE NOT NULL,
-              password_hash TEXT NOT NULL,
-              role TEXT NOT NULL,
-              display_name TEXT NOT NULL,
-              merchant_id TEXT NULL,
-              status TEXT NOT NULL,
-              created_at TEXT NOT NULL
-            )
-            """
-        )
-        self.conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS sessions (
-              session_id TEXT PRIMARY KEY,
-              token_hash TEXT UNIQUE NOT NULL,
-              user_id TEXT NOT NULL,
-              created_at TEXT NOT NULL,
-              expires_at TEXT NOT NULL,
-              revoked_at TEXT NULL,
-              FOREIGN KEY(user_id) REFERENCES users(user_id)
-            )
-            """
-        )
-        self.conn.execute("CREATE INDEX IF NOT EXISTS idx_sessions_token_hash ON sessions(token_hash)")
-        self.conn.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)")
-        self.conn.commit()
+        run_migrations(self.conn)
 
     def clear_auth_for_tests(self) -> None:
         self.conn.execute("DELETE FROM sessions")

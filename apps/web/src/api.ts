@@ -33,13 +33,30 @@ import type {
 } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
-const MUTATION_HEADERS = { "Content-Type": "application/json", "X-Zhiyin-CSRF": "demo" };
+const CSRF_HEADER = "X-Zhiyin-CSRF";
 const READ_OPTIONS = { credentials: "include" as const };
 
-const mutationOptions = (body?: unknown): RequestInit => ({
+export const isDemoMode = () => import.meta.env.VITE_DEMO_MODE !== "false";
+
+const getCsrfToken = async (): Promise<string> => {
+  if (isDemoMode()) {
+    return "demo";
+  }
+  const response = await fetch(`${API_BASE}/api/auth/csrf`, { credentials: "include" });
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  const payload = (await response.json()) as { csrf_token?: string };
+  if (!payload.csrf_token) {
+    throw new Error("Missing CSRF token");
+  }
+  return payload.csrf_token;
+};
+
+export const mutationOptions = async (body?: unknown): Promise<RequestInit> => ({
   method: "POST",
   credentials: "include",
-  headers: MUTATION_HEADERS,
+  headers: { "Content-Type": "application/json", [CSRF_HEADER]: await getCsrfToken() },
   ...(body === undefined ? {} : { body: JSON.stringify(body) })
 });
 
@@ -51,24 +68,21 @@ const json = async <T,>(request: Promise<Response>): Promise<T> => {
   return response.json() as Promise<T>;
 };
 
+const postJson = async <T,>(path: string, body?: unknown): Promise<T> =>
+  json<T>(fetch(`${API_BASE}${path}`, await mutationOptions(body)));
+
 export const api = {
   seed: () =>
-    json<{ status: string; event_id: string }>(
-      fetch(`${API_BASE}/api/events/demo/seed`, mutationOptions())
-    ),
+    postJson<{ status: string; event_id: string }>("/api/events/demo/seed"),
   getEvents: () => json<EventSummary[]>(fetch(`${API_BASE}/api/events`, READ_OPTIONS)),
   getEvent: (eventId = "demo-night-tour") =>
     json<EventSummary>(fetch(`${API_BASE}/api/events/${eventId}`, READ_OPTIONS)),
   generatePlan: (eventId = "demo-night-tour") =>
-    json<GeneratePlanResponse>(
-      fetch(`${API_BASE}/api/events/${eventId}/generate-plan`, mutationOptions())
-    ),
+    postJson<GeneratePlanResponse>(`/api/events/${eventId}/generate-plan`),
   approvePlan: (eventId = "demo-night-tour") =>
-    json<EventPlan>(fetch(`${API_BASE}/api/events/${eventId}/approve-plan`, mutationOptions())),
+    postJson<EventPlan>(`/api/events/${eventId}/approve-plan`),
   approvePlanVersion: (eventId: string, version: number) =>
-    json<PlanVersion>(
-      fetch(`${API_BASE}/api/events/${eventId}/plans/${version}/approve`, mutationOptions())
-    ),
+    postJson<PlanVersion>(`/api/events/${eventId}/plans/${version}/approve`),
   getPlan: (eventId = "demo-night-tour") =>
     json<EventPlan>(fetch(`${API_BASE}/api/events/${eventId}/plan`, READ_OPTIONS)),
   getCurrentPlan: (eventId: string) =>
@@ -102,44 +116,29 @@ export const api = {
   getPacks: (eventId = "demo-night-tour") =>
     json<MerchantPack[]>(fetch(`${API_BASE}/api/events/${eventId}/merchant-packs`, READ_OPTIONS)),
   draftEventPage: (eventId: string) =>
-    json<EventPage>(
-      fetch(`${API_BASE}/api/events/${eventId}/event-page/draft`, mutationOptions())
-    ),
+    postJson<EventPage>(`/api/events/${eventId}/event-page/draft`),
   publishEventPage: (eventId: string) =>
-    json<EventPage>(
-      fetch(`${API_BASE}/api/events/${eventId}/event-page/publish`, mutationOptions())
-    ),
+    postJson<EventPage>(`/api/events/${eventId}/event-page/publish`),
   getEventPage: (eventId: string) =>
     json<EventPage>(fetch(`${API_BASE}/api/events/${eventId}/event-page`, READ_OPTIONS)),
   generateMerchantEdgePackages: (eventId: string) =>
-    json<MerchantEdgePackagesResponse>(
-      fetch(`${API_BASE}/api/events/${eventId}/merchant-edge-packages/generate`, mutationOptions())
-    ),
+    postJson<MerchantEdgePackagesResponse>(`/api/events/${eventId}/merchant-edge-packages/generate`),
   getMerchantEdgePackages: (eventId: string) =>
     json<MerchantEdgePackagesResponse>(
       fetch(`${API_BASE}/api/events/${eventId}/merchant-edge-packages`, READ_OPTIONS)
     ),
   generateOperationSuggestions: (eventId: string) =>
-    json<OperationSuggestionsResponse>(
-      fetch(`${API_BASE}/api/events/${eventId}/operation-suggestions/generate`, mutationOptions())
-    ),
+    postJson<OperationSuggestionsResponse>(`/api/events/${eventId}/operation-suggestions/generate`),
   getOperationSuggestions: (eventId: string) =>
     json<OperationSuggestionsResponse>(
       fetch(`${API_BASE}/api/events/${eventId}/operation-suggestions`, READ_OPTIONS)
     ),
   approveOperationSuggestion: (eventId: string, suggestionId: string) =>
-    json<OperationSuggestion>(
-      fetch(
-        `${API_BASE}/api/events/${eventId}/operation-suggestions/${suggestionId}/approve`,
-        mutationOptions()
-      )
-    ),
+    postJson<OperationSuggestion>(`/api/events/${eventId}/operation-suggestions/${suggestionId}/approve`),
   runQwenPawShadowOrchestration: (eventId: string, incidentId?: string) =>
-    json<ShadowOrchestrationResponse>(
-      fetch(
-        `${API_BASE}/api/events/${eventId}/qwenpaw-shadow-orchestration/run`,
-        mutationOptions(incidentId ? { incident_id: incidentId } : {})
-      )
+    postJson<ShadowOrchestrationResponse>(
+      `/api/events/${eventId}/qwenpaw-shadow-orchestration/run`,
+      incidentId ? { incident_id: incidentId } : {}
     ),
   getRuntimeStates: () =>
     json<MerchantRuntimeState[]>(fetch(`${API_BASE}/api/merchants/runtime-states`, READ_OPTIONS)),
@@ -151,31 +150,19 @@ export const api = {
     merchantId: string,
     payload: Partial<Pick<MerchantRuntimeState, "inventory_status" | "queue_status" | "available_for_visitors" | "temporary_note">>
   ) =>
-    json<RuntimeStateUpdateResponse>(
-      fetch(`${API_BASE}/api/merchants/${merchantId}/runtime-state`, mutationOptions(payload))
-    ),
+    postJson<RuntimeStateUpdateResponse>(`/api/merchants/${merchantId}/runtime-state`, payload),
   triggerInventory: () =>
-    json<RecoveryAction>(
-      fetch(`${API_BASE}/api/events/demo-night-tour/trigger/inventory`, mutationOptions({ merchant_id: "m001" }))
-    ),
+    postJson<RecoveryAction>("/api/events/demo-night-tour/trigger/inventory", { merchant_id: "m001" }),
   triggerWeather: () =>
-    json<RecoveryAction>(
-      fetch(`${API_BASE}/api/events/demo-night-tour/trigger/weather`, mutationOptions())
-    ),
+    postJson<RecoveryAction>("/api/events/demo-night-tour/trigger/weather"),
   approveRecovery: (actionId: string) =>
-    json<RecoveryAction>(
-      fetch(`${API_BASE}/api/recovery-actions/${actionId}/approve`, mutationOptions())
-    ),
+    postJson<RecoveryAction>(`/api/recovery-actions/${actionId}/approve`),
   getIncidents: (eventId: string) =>
     json<Incident[]>(fetch(`${API_BASE}/api/events/${eventId}/incidents`, READ_OPTIONS)),
   createRecoveryProposal: (eventId: string, incidentId: string) =>
-    json<RecoveryProposal>(
-      fetch(`${API_BASE}/api/events/${eventId}/incidents/${incidentId}/recovery-proposals`, mutationOptions())
-    ),
+    postJson<RecoveryProposal>(`/api/events/${eventId}/incidents/${incidentId}/recovery-proposals`),
   approveRecoveryProposal: (eventId: string, proposalId: string) =>
-    json<ApproveRecoveryResponse>(
-      fetch(`${API_BASE}/api/events/${eventId}/recovery-proposals/${proposalId}/approve`, mutationOptions())
-    ),
+    postJson<ApproveRecoveryResponse>(`/api/events/${eventId}/recovery-proposals/${proposalId}/approve`),
   getPublicEvent: (eventId = "demo-night-tour") =>
     json<PublicEventV2 & PublicEvent>(fetch(`${API_BASE}/api/public/events/${eventId}`)),
   recordTouchpointInteraction: (
@@ -188,30 +175,19 @@ export const api = {
       metadata?: Record<string, unknown>;
     }
   ) =>
-    json<TouchpointInteraction>(
-      fetch(
-        `${API_BASE}/api/public/events/${eventId}/touchpoints/${touchpointId}/interactions`,
-        mutationOptions(payload)
-      )
+    postJson<TouchpointInteraction>(
+      `/api/public/events/${eventId}/touchpoints/${touchpointId}/interactions`,
+      payload
     ),
   claimCoupon: (eventId: string, couponRuleId: string, anonymousInteractionId: string) =>
-    json<CouponRedemption>(
-      fetch(
-        `${API_BASE}/api/public/events/${eventId}/coupons/${couponRuleId}/claim`,
-        mutationOptions({ anonymous_interaction_id: anonymousInteractionId })
-      )
+    postJson<CouponRedemption>(
+      `/api/public/events/${eventId}/coupons/${couponRuleId}/claim`,
+      { anonymous_interaction_id: anonymousInteractionId }
     ),
   redeemCoupon: (eventId: string, redemptionId: string) =>
-    json<CouponRedemption>(
-      fetch(
-        `${API_BASE}/api/public/events/${eventId}/coupon-redemptions/${redemptionId}/redeem`,
-        mutationOptions()
-      )
-    ),
+    postJson<CouponRedemption>(`/api/public/events/${eventId}/coupon-redemptions/${redemptionId}/redeem`),
   generateReport: (eventId = "demo-night-tour") =>
-    json<ReviewReport>(
-      fetch(`${API_BASE}/api/events/${eventId}/review-report`, mutationOptions())
-    ),
+    postJson<ReviewReport>(`/api/events/${eventId}/review-report`),
   getReviewReport: (eventId: string) =>
     json<ReviewReport>(fetch(`${API_BASE}/api/events/${eventId}/review-report`, READ_OPTIONS)),
   getAuditLogs: (eventId = "demo-night-tour") =>
