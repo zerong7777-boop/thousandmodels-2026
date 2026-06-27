@@ -76,23 +76,8 @@ def seed_demo_accounts(store: "MVPStore") -> None:
         )
 
 
-def seed_demo(store: "MVPStore", event_id: str = "demo-night-tour") -> EventBrief:
-    store.clear_demo(event_id)
-    brief = EventBrief.model_validate(load_json("demo_event.json"))
-    store.save_event_brief(brief)
+def seed_local_catalog(store: "MVPStore") -> None:
     now = datetime.now(UTC).isoformat()
-    store.save_event_summary(
-        EventSummary(
-            event_id=brief.event_id,
-            title="福隆新街周末旧区夜游",
-            area=brief.area,
-            date=brief.date,
-            time_window=brief.time_window,
-            status="draft",
-            current_plan_version=0,
-            public_release_status="draft",
-        )
-    )
     route_points = [
         RoutePoint(
             point_id="rp001",
@@ -175,6 +160,39 @@ def seed_demo(store: "MVPStore", event_id: str = "demo-night-tour") -> EventBrie
     ]
     for point in route_points:
         store.save_route_point(point)
+    for payload in load_json("merchants.json"):
+        merchant = MerchantProfile.model_validate(payload)
+        store.save_merchant(merchant)
+        if not store.get_runtime_state(merchant.merchant_id):
+            store.save_runtime_state(
+                MerchantRuntimeState(
+                    merchant_id=merchant.merchant_id,
+                    inventory_status="normal",
+                    queue_status="normal",
+                    available_for_visitors=True,
+                    temporary_note="",
+                    updated_at=now,
+                )
+            )
+
+
+def seed_demo(store: "MVPStore", event_id: str = "demo-night-tour") -> EventBrief:
+    store.clear_demo(event_id)
+    brief = EventBrief.model_validate(load_json("demo_event.json"))
+    store.save_event_brief(brief)
+    now = datetime.now(UTC).isoformat()
+    store.save_event_summary(
+        EventSummary(
+            event_id=brief.event_id,
+            title="福隆新街周末旧区夜游",
+            area=brief.area,
+            date=brief.date,
+            time_window=brief.time_window,
+            status="draft",
+            current_plan_version=0,
+            public_release_status="draft",
+        )
+    )
     for metric in [
         OperationalMetric(
             metric_id="metric_h5_visits",
@@ -223,17 +241,5 @@ def seed_demo(store: "MVPStore", event_id: str = "demo-night-tour") -> EventBrie
         ),
     ]:
         store.save_operational_metric(metric)
-    for payload in load_json("merchants.json"):
-        merchant = MerchantProfile.model_validate(payload)
-        store.save_merchant(merchant)
-        store.save_runtime_state(
-            MerchantRuntimeState(
-                merchant_id=merchant.merchant_id,
-                inventory_status="normal",
-                queue_status="normal",
-                available_for_visitors=True,
-                temporary_note="",
-                updated_at=now,
-            )
-        )
+    seed_local_catalog(store)
     return brief

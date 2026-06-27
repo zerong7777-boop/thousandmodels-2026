@@ -22,6 +22,33 @@ class EventBrief(BaseModel):
     priority_rules: list[str]
 
 
+class EventCreateRequest(BaseModel):
+    event_id: str | None = None
+    title: str
+    area: str
+    date: str
+    time_window: str
+    budget_mop: int = Field(gt=0)
+    target_audience: list[str]
+    event_goal: str
+    theme_preferences: list[str]
+    constraints: list[str]
+    priority_rules: list[str]
+
+
+class EventUpdateRequest(BaseModel):
+    title: str | None = None
+    area: str | None = None
+    date: str | None = None
+    time_window: str | None = None
+    budget_mop: int | None = Field(default=None, gt=0)
+    target_audience: list[str] | None = None
+    event_goal: str | None = None
+    theme_preferences: list[str] | None = None
+    constraints: list[str] | None = None
+    priority_rules: list[str] | None = None
+
+
 class MerchantProfile(BaseModel):
     merchant_id: str
     name: str

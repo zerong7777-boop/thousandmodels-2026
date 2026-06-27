@@ -304,6 +304,20 @@ shadcn/ui-inspired local component layer
 - Screenshot PNG files are generated as local inspection artifacts and are not committed by default.
 - v2.6 is still deterministic local/demo browser release evidence. It does not add cloud browser testing, real external integrations, Qwen/QwenPaw production orchestration, or real commercial business logic.
 
+## v2.7 Real Product Logic Foundation State
+
+- v2.7 adds the first non-demo event lifecycle foundation while preserving the deterministic demo release gates.
+- Organizers can create and update draft events through `POST /api/events` and `PATCH /api/events/{event_id}` before planning.
+- Non-demo plan generation now requires an explicit event brief and summary; it no longer silently seeds `demo-night-tour`.
+- Demo event seeding remains explicit through `/api/events/demo/seed`, while shared local merchant/route catalog seeding is separated from demo event and mock metric records.
+- Event lifecycle state now separates plan approval from public publication: generated plans move events to `pending_approval`, approved plans move events to `active`, and only event-page publish marks `public_release_status=published`.
+- Non-demo public event projection and public scan/claim/redeem mutations require a published current event page.
+- Public touchpoint scans, coupon claims, and coupon redeems are idempotent for repeated anonymous interactions and do not double-count stored review metrics or exposed process counters.
+- Public scan, claim, and redeem mutations reject stale touchpoint/coupon children after a merchant's current package changes.
+- Review reports continue deriving touchpoint summaries, merchant outcomes, and extension tasks from stored interaction and coupon redemption records.
+- Frontend API/types now expose `createEvent` and `updateEvent` contracts, but v2.7 does not add a full organizer event-creation UI.
+- v2.7 is a product-logic beta foundation, not pilot readiness or production commercial readiness.
+
 ## Demo Accounts
 
 - organizer: `organizer.demo`
@@ -313,6 +327,6 @@ shadcn/ui-inspired local component layer
 
 ## Current Boundary
 
-This is a stronger productized multilingual MVP, not a final commercial UI or commercial application. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview. v1.4 adds optional organizer-only QwenPaw shadow evidence, v1.8 adds guarded local QwenPaw advisory optimization evidence, v1.9 maps the P0/P1 commercial-readiness gaps, v2.0 adds local CI/repository hygiene gates, v2.1 adds beta auth/session/CSRF demo-boundary hardening, v2.2 adds migration-managed SQLite persistence, v2.3 adds deployment environment/readiness operations, v2.4 adds beta observability/runbook operations, v2.5 adds a deterministic live API release gate, and v2.6 adds deterministic live browser release evidence. The reliable demo path remains deterministic.
+This is a stronger productized multilingual MVP, not a final commercial UI or commercial application. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview. v1.4 adds optional organizer-only QwenPaw shadow evidence, v1.8 adds guarded local QwenPaw advisory optimization evidence, v1.9 maps the P0/P1 commercial-readiness gaps, v2.0 adds local CI/repository hygiene gates, v2.1 adds beta auth/session/CSRF demo-boundary hardening, v2.2 adds migration-managed SQLite persistence, v2.3 adds deployment environment/readiness operations, v2.4 adds beta observability/runbook operations, v2.5 adds a deterministic live API release gate, v2.6 adds deterministic live browser release evidence, and v2.7 adds the first real non-demo event lifecycle foundation. The reliable demo path remains deterministic.
 
 Do not continue into production QwenPaw orchestration, real merchant connections, hardware, real traffic prediction, model training, payment/POS integrations, open registration, real map APIs, or a marketing landing page without a new plan.

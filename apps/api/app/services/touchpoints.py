@@ -35,6 +35,24 @@ def _coupon_touchpoint_id(event_id: str, merchant_id: str, package_id: str | Non
     return touchpoints[0].id if touchpoints else None
 
 
+def _ensure_current_package_child(
+    event_id: str,
+    merchant_id: str,
+    package_id: str | None,
+    child_name: str,
+) -> None:
+    event = STORE.get_event_summary(event_id)
+    package = STORE.get_merchant_interaction_package(event_id, merchant_id)
+    if (
+        not event
+        or not package
+        or package.status != "active"
+        or package.id != package_id
+        or package.plan_version != event.current_plan_version
+    ):
+        raise ValueError(f"{child_name} is not in the current active package")
+
+
 def sanitize_public_metadata(metadata: dict | None) -> dict:
     clean = {}
     for key, value in (metadata or {}).items():
@@ -61,8 +79,23 @@ def record_touchpoint_interaction(
         raise ValueError("touchpoint not found")
     if touchpoint.status != "active":
         raise ValueError("touchpoint is not active")
+    _ensure_current_package_child(
+        event_id=event_id,
+        merchant_id=touchpoint.merchant_id,
+        package_id=touchpoint.package_id,
+        child_name="touchpoint",
+    )
 
     anonymous_id = anonymous_interaction_id or _new_id("anon")
+    existing = STORE.find_touchpoint_interaction(
+        event_id=event_id,
+        touchpoint_id=touchpoint_id,
+        anonymous_interaction_id=anonymous_id,
+        interaction_type=interaction_type,
+    )
+    if existing:
+        return existing
+
     interaction = TouchpointInteraction(
         id=_new_id("tpi"),
         event_id=event_id,
@@ -94,6 +127,20 @@ def claim_coupon(
         raise ValueError("coupon rule not found")
     if rule.status != "active":
         raise ValueError("coupon rule is not active")
+    _ensure_current_package_child(
+        event_id=event_id,
+        merchant_id=rule.merchant_id,
+        package_id=rule.package_id,
+        child_name="coupon rule",
+    )
+
+    existing_redemption = STORE.find_coupon_redemption_for_anonymous(
+        event_id=event_id,
+        coupon_rule_id=coupon_rule_id,
+        anonymous_interaction_id=anonymous_interaction_id,
+    )
+    if existing_redemption:
+        return existing_redemption
 
     existing = [
         redemption
@@ -138,38 +185,45 @@ def redeem_coupon(event_id: str, redemption_id: str) -> CouponRedemption:
     redemption = STORE.get_coupon_redemption(event_id, redemption_id)
     if not redemption:
         raise ValueError("coupon redemption not found")
+    rule = STORE.get_coupon_rule(event_id, redemption.coupon_rule_id)
+    if not rule:
+        raise ValueError("coupon rule not found")
+    _ensure_current_package_child(
+        event_id=event_id,
+        merchant_id=redemption.merchant_id,
+        package_id=rule.package_id,
+        child_name="coupon rule",
+    )
     if redemption.status == "redeemed":
         return redemption
     if redemption.status != "claimed":
         raise ValueError("coupon redemption is not claimable")
 
-    rule = STORE.get_coupon_rule(event_id, redemption.coupon_rule_id)
     active_redemptions = [
         item
         for item in STORE.list_coupon_redemptions(event_id, merchant_id=redemption.merchant_id)
         if item.coupon_rule_id == redemption.coupon_rule_id
         and item.status in {"claimed", "redeemed"}
     ]
-    if rule and len(active_redemptions) > rule.max_redemptions:
+    if len(active_redemptions) > rule.max_redemptions:
         raise ValueError("coupon max redemptions reached")
 
     redemption.status = "redeemed"
     redemption.redeemed_at = _now()
     saved = STORE.save_coupon_redemption(redemption)
-    if rule:
-        touchpoint_id = _coupon_touchpoint_id(event_id, redemption.merchant_id, rule.package_id)
-        if touchpoint_id:
-            record_touchpoint_interaction(
-                event_id=event_id,
-                touchpoint_id=touchpoint_id,
-                interaction_type="redeem",
-                source="coupon",
-                anonymous_interaction_id=redemption.anonymous_interaction_id,
-                metadata={
-                    "coupon_rule_id": redemption.coupon_rule_id,
-                    "redemption_id": redemption.id,
-                },
-            )
+    touchpoint_id = _coupon_touchpoint_id(event_id, redemption.merchant_id, rule.package_id)
+    if touchpoint_id:
+        record_touchpoint_interaction(
+            event_id=event_id,
+            touchpoint_id=touchpoint_id,
+            interaction_type="redeem",
+            source="coupon",
+            anonymous_interaction_id=redemption.anonymous_interaction_id,
+            metadata={
+                "coupon_rule_id": redemption.coupon_rule_id,
+                "redemption_id": redemption.id,
+            },
+        )
     return saved
 
 

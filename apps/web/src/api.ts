@@ -9,9 +9,11 @@ import type {
   AgentToolCall,
   ApproveRecoveryResponse,
   CouponRedemption,
+  EventCreateRequest,
   EventPage,
   EventPlan,
   EventSummary,
+  EventUpdateRequest,
   GeneratePlanResponse,
   Incident,
   MerchantEdgePackagesResponse,
@@ -77,6 +79,14 @@ export const api = {
   getEvents: () => json<EventSummary[]>(fetch(`${API_BASE}/api/events`, READ_OPTIONS)),
   getEvent: (eventId = "demo-night-tour") =>
     json<EventSummary>(fetch(`${API_BASE}/api/events/${eventId}`, READ_OPTIONS)),
+  createEvent: (payload: EventCreateRequest) =>
+    postJson<EventSummary>("/api/events", payload),
+  updateEvent: async (eventId: string, payload: EventUpdateRequest) => {
+    const options = await mutationOptions(payload);
+    return json<EventSummary>(
+      fetch(`${API_BASE}/api/events/${eventId}`, { ...options, method: "PATCH" })
+    );
+  },
   generatePlan: (eventId = "demo-night-tour") =>
     postJson<GeneratePlanResponse>(`/api/events/${eventId}/generate-plan`),
   approvePlan: (eventId = "demo-night-tour") =>
