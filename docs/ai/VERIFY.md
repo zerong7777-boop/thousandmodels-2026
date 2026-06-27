@@ -896,3 +896,45 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 - Local deployment smoke ran against a hidden `uvicorn` process on `127.0.0.1:8014`, then the process was stopped after verification.
 - The smoke service used a temporary SQLite database under the system temp directory because the existing default local runtime database was readonly for this process.
 - The live smoke did not enable `RUN_LIVE_QWENPAW_SMOKE` and did not call external model APIs.
+
+## v2.4 Observability And Release Runbook Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python -m pytest apps/api/tests/test_v24_request_id.py apps/api/tests/test_v24_structured_logs.py apps/api/tests/test_v24_error_envelope.py apps/api/tests/test_v24_metrics.py apps/api/tests/test_v24_runbook_docs.py -q` | project root | 0 | 16 v2.4 focused tests passed; covers request IDs, 500 request logs, embedded redaction, consistent error envelope, auth failure metrics, metrics endpoint, and runbook presence. |
+| `python -m pytest apps/api/tests/test_v24_request_id.py apps/api/tests/test_v24_structured_logs.py apps/api/tests/test_v24_error_envelope.py apps/api/tests/test_v24_metrics.py apps/api/tests/test_v24_runbook_docs.py apps/api/tests/test_api_flow.py apps/api/tests/test_v04_auth.py apps/api/tests/test_v12_event_page_merchant_edge.py -q` | project root | 0 | 40 v2.4 plus auth/API/H5 regression tests passed serially. |
+| `python -m pytest -q` | `apps/api` | 0 | 331 backend tests passed; only existing FastAPI/Starlette deprecation warnings. |
+| `npm.cmd run test` | `apps/web` | 0 | 29 frontend test files passed, 98 tests total. |
+| `npm.cmd run build` | `apps/web` | 0 | TypeScript and Vite production build passed; Vite reported the existing chunk-size warning. |
+| `python scripts\repo_hygiene.py --base origin/main` | project root | 0 | Secrets, local paths, node_modules, and generated-artifact checks passed. |
+| `git diff --check` | project root | 0 | No whitespace errors; Git reported Windows LF-to-CRLF working-copy warnings. |
+
+### Evidence Artifacts
+
+| Artifact | Summary |
+| --- | --- |
+| `apps/api/app/observability.py` | Request ID selection, structured JSON logging, redaction, and error envelope helpers. |
+| `apps/api/app/metrics.py` | Thread-safe in-process beta counter registry. |
+| `apps/api/app/main.py` | Registers request ID middleware, error handlers, `/api/metrics`, and core path counters. |
+| `apps/api/app/auth.py` | Adds authenticated actor context to request state and auth failure counters for missing/invalid/revoked/expired sessions, forbidden roles, invalid origins, and invalid CSRF tokens. |
+| `docs/ops/release-runbook.md` | Pre-release checks, CI, migration, deployment smoke, rollback, acceptable warnings, and evidence paths. |
+| `docs/ops/incident-response-runbook.md` | First checks and escalation paths for CI, startup, auth, migration, QwenPaw, public H5, and repo hygiene failures. |
+
+### v2.4 Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Every normal response includes `X-Request-ID` | pass. |
+| HTTPException and unhandled-error responses include `X-Request-ID` | pass. |
+| Public error envelope omits stack traces and private exception text | pass. |
+| HTTPException responses use the same top-level `error` envelope as unhandled errors | pass. |
+| Structured request logs include route/status/duration/request ID | pass. |
+| Unhandled 500 responses still emit an `api_request` log with status `500` | pass. |
+| Structured request logs include authenticated actor when available | pass. |
+| Structured logging redacts sensitive fields, embedded bearer tokens, and embedded local absolute paths, including paths with spaces | pass. |
+| Auth failure counters cover invalid credentials, missing sessions, and forbidden roles | pass. |
+| `/api/metrics` exposes only process-local counters | pass. |
+| Release and incident runbooks exist | pass. |
+| v2.4 adds vendor monitoring, durable metrics, alerting, or SLOs | no; it remains a beta operations baseline. |

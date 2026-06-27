@@ -516,7 +516,7 @@ def test_operation_suggestions_require_approved_current_plan(client: TestClient)
         headers=MUTATION_HEADERS,
     )
     assert suggestions.status_code == 400
-    assert suggestions.json()["detail"] == "current plan is not approved"
+    assert suggestions.json()["error"]["message"] == "current plan is not approved"
 
 
 def test_operation_suggestions_use_current_plan_scope(client: TestClient):
