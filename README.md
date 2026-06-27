@@ -78,9 +78,17 @@ Run a deployment smoke against a running API with:
 python apps\api\scripts\deployment_smoke.py --base-url http://127.0.0.1:8000
 ```
 
+Run the live E2E release gate against a running local/demo API with:
+
+```powershell
+python apps\api\scripts\release_gate.py --base-url http://127.0.0.1:8000 --output docs\research\assets\v2.5-live-e2e-release-gate\release-gate-result.json
+```
+
+The release gate uses real HTTP sessions and the deterministic demo accounts to verify health, readiness, auth boundary, organizer planning and approval, event-page publish, merchant-edge packages, public scan/claim/redeem, merchant workbench, review report, and process-local metrics. It does not start servers, run browsers, call Qwen/QwenPaw, or prove cloud production readiness.
+
 Staging/production-like startup must use `DEMO_MODE=false`, `CSRF_MODE=double-submit`, explicit HTTPS `ALLOWED_ORIGINS`, secure cookies, and `AUTO_MIGRATE=false`. `RUN_LIVE_QWENPAW_SMOKE=true` and localhost `QWENPAW_BASE_URL` values are rejected outside local/demo mode.
 
-v2.3 intentionally does not add Dockerfiles because the deployment target is still unspecified. Use the existing local commands plus the deployment smoke until a concrete hosting target is selected.
+v2.3 intentionally does not add Dockerfiles because the deployment target is still unspecified. Use the existing local commands plus the deployment smoke and v2.5 release gate until a concrete hosting target is selected.
 
 ## Observability And Runbooks
 

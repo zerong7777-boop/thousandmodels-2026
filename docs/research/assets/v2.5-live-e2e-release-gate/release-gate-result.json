@@ -1,0 +1,141 @@
+{
+  "base_url": "http://127.0.0.1:8025",
+  "duration_ms": 1688.74,
+  "event_id": "demo-night-tour",
+  "finished_at": "2026-06-27T16:26:56.163157+00:00",
+  "metrics_observed": {
+    "agent_runs_total|mode=deterministic,status=completed,trigger=merchant_edge_package_generation": 1,
+    "agent_runs_total|mode=deterministic,status=completed,trigger=planning_generation": 1,
+    "agent_runs_total|mode=deterministic,status=completed,trigger=review_generation": 1,
+    "auth_failures_total|reason=missing_session": 1,
+    "health_checks_total": 2,
+    "public_coupon_claims_total": 1,
+    "public_coupon_redemptions_total": 1,
+    "public_touchpoint_interactions_total": 1,
+    "review_reports_total": 1
+  },
+  "started_at": "2026-06-27T16:26:54.474753+00:00",
+  "status": "passed",
+  "steps": [
+    {
+      "ok": true,
+      "status_code": 200,
+      "step": "health",
+      "summary": "ok"
+    },
+    {
+      "ok": true,
+      "status_code": 200,
+      "step": "ready",
+      "summary": "ready"
+    },
+    {
+      "ok": true,
+      "status_code": 401,
+      "step": "unauthenticated_boundary",
+      "summary": "http_401"
+    },
+    {
+      "ok": true,
+      "status_code": 200,
+      "step": "organizer_login",
+      "summary": "organizer"
+    },
+    {
+      "ok": true,
+      "status_code": 200,
+      "step": "organizer_me",
+      "summary": "organizer"
+    },
+    {
+      "ok": true,
+      "status_code": 200,
+      "step": "seed_demo",
+      "summary": "seeded"
+    },
+    {
+      "ok": true,
+      "status_code": 200,
+      "step": "generate_plan",
+      "summary": "plan_generated"
+    },
+    {
+      "ok": true,
+      "status_code": 200,
+      "step": "approve_plan",
+      "summary": "approved"
+    },
+    {
+      "ok": true,
+      "status_code": 200,
+      "step": "draft_event_page",
+      "summary": "drafted"
+    },
+    {
+      "ok": true,
+      "status_code": 200,
+      "step": "publish_event_page",
+      "summary": "published"
+    },
+    {
+      "ok": true,
+      "status_code": 200,
+      "step": "generate_merchant_edge_packages",
+      "summary": "packages_generated"
+    },
+    {
+      "ok": true,
+      "status_code": 200,
+      "step": "public_event_projection",
+      "summary": "public_projection"
+    },
+    {
+      "ok": true,
+      "status_code": 200,
+      "step": "public_touchpoint_interaction",
+      "summary": "scan_recorded"
+    },
+    {
+      "ok": true,
+      "status_code": 200,
+      "step": "public_coupon_claim",
+      "summary": "coupon_claimed"
+    },
+    {
+      "ok": true,
+      "status_code": 200,
+      "step": "public_coupon_redeem",
+      "summary": "redeemed"
+    },
+    {
+      "ok": true,
+      "status_code": 200,
+      "step": "merchant_login",
+      "summary": "merchant"
+    },
+    {
+      "ok": true,
+      "status_code": 200,
+      "step": "merchant_workbench",
+      "summary": "workbench_ready"
+    },
+    {
+      "ok": true,
+      "status_code": 200,
+      "step": "organizer_relogin",
+      "summary": "organizer"
+    },
+    {
+      "ok": true,
+      "status_code": 200,
+      "step": "review_report",
+      "summary": "review_ready"
+    },
+    {
+      "ok": true,
+      "status_code": 200,
+      "step": "metrics",
+      "summary": "metrics_ready"
+    }
+  ]
+}

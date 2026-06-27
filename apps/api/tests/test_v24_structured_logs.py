@@ -92,6 +92,7 @@ def test_log_event_redacts_sensitive_fields_and_local_paths(caplog):
         message=r"failed at Q:\PrivateWorkspace\data\runtime\zhiyin.sqlite3 with Bearer secret-token",
         note="token=secret-token",
         spaced_path=r"failed at Q:\Jane Doe\secret.txt with Bearer sk-secret",
+        url="http://127.0.0.1:8025/api/health",
         safe="visible",
     )
 
@@ -105,4 +106,5 @@ def test_log_event_redacts_sensitive_fields_and_local_paths(caplog):
     assert "Jane Doe" not in event["spaced_path"]
     assert "secret.txt" not in event["spaced_path"]
     assert "sk-secret" not in event["spaced_path"]
+    assert event["url"] == "http://127.0.0.1:8025/api/health"
     assert event["safe"] == "visible"

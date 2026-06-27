@@ -284,6 +284,15 @@ shadcn/ui-inspired local component layer
 - Release and incident response runbooks are under `docs/ops/`.
 - v2.4 is a beta operations baseline. It does not add vendor monitoring, durable metrics, alert routing, formal SLOs, or customer incident management.
 
+## v2.5 Live E2E Release Gate State
+
+- v2.5 adds `apps/api/scripts/release_gate.py`, an API-first release gate for a real running local/demo API.
+- The gate checks health, readiness, the unauthenticated protected-route error envelope, organizer login, demo seed, plan generation, plan approval, event-page draft/publish, merchant-edge package generation, public event projection, public scan/claim/redeem, merchant login/workbench, review report generation, and process-local metrics.
+- The gate uses real HTTP sessions through `httpx.Client` and writes JSONL step output plus optional JSON evidence.
+- The recorded v2.5 evidence is `docs/research/assets/v2.5-live-e2e-release-gate/release-gate-result.json` with `status=passed` for 20 live API steps.
+- v2.5 also fixes local-path redaction so ordinary URLs such as `http://127.0.0.1:8025` are not mistaken for Windows absolute paths.
+- v2.5 is a deterministic local/demo release gate. It does not start servers, run browser screenshots, call Qwen/QwenPaw, add cloud hosting, or prove production readiness.
+
 ## Demo Accounts
 
 - organizer: `organizer.demo`
@@ -293,6 +302,6 @@ shadcn/ui-inspired local component layer
 
 ## Current Boundary
 
-This is a stronger productized multilingual MVP, not a final commercial UI or commercial application. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview. v1.4 adds optional organizer-only QwenPaw shadow evidence, v1.8 adds guarded local QwenPaw advisory optimization evidence, v1.9 maps the P0/P1 commercial-readiness gaps, v2.0 adds local CI/repository hygiene gates, v2.1 adds beta auth/session/CSRF demo-boundary hardening, v2.2 adds migration-managed SQLite persistence, v2.3 adds deployment environment/readiness operations, and v2.4 adds beta observability/runbook operations. The reliable demo path remains deterministic.
+This is a stronger productized multilingual MVP, not a final commercial UI or commercial application. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview. v1.4 adds optional organizer-only QwenPaw shadow evidence, v1.8 adds guarded local QwenPaw advisory optimization evidence, v1.9 maps the P0/P1 commercial-readiness gaps, v2.0 adds local CI/repository hygiene gates, v2.1 adds beta auth/session/CSRF demo-boundary hardening, v2.2 adds migration-managed SQLite persistence, v2.3 adds deployment environment/readiness operations, v2.4 adds beta observability/runbook operations, and v2.5 adds a deterministic live API release gate. The reliable demo path remains deterministic.
 
 Do not continue into production QwenPaw orchestration, real merchant connections, hardware, real traffic prediction, model training, payment/POS integrations, open registration, real map APIs, or a marketing landing page without a new plan.

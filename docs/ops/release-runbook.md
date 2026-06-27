@@ -61,6 +61,29 @@ The smoke must pass for:
 - `/api/ready`;
 - `/api/public/events/demo-night-tour`.
 
+## Live E2E Release Gate
+
+After the deployment smoke passes, run the release gate against the same local/demo API:
+
+```powershell
+python apps\api\scripts\release_gate.py --base-url http://127.0.0.1:8000 --output docs\research\assets\v2.5-live-e2e-release-gate\release-gate-result.json
+```
+
+The gate must pass these API-level checks:
+
+- health and readiness;
+- unauthenticated protected-route error envelope;
+- organizer login, demo seed, plan generation, and plan approval;
+- event-page draft and publish;
+- merchant-edge package generation;
+- public event projection without internal terms;
+- public scan, coupon claim, and redemption;
+- merchant login and workbench package visibility;
+- review report generation;
+- metrics counters touched by the gate.
+
+The release gate is deterministic and local/demo-scoped. It does not start servers, run Playwright, call Qwen/QwenPaw, or prove cloud deployment readiness.
+
 ## Rollback
 
 Use the hosting platform's previous deployment or the previous Git commit as the rollback target. After rollback, rerun the deployment smoke command against the restored service and record the commit SHA, smoke result, and operator initials in release evidence.
