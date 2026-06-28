@@ -1162,3 +1162,50 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 | `demo-night-tour` can still generate plans without manual roster setup | pass. |
 | Workspace disables Build route plan for non-demo events until setup is ready | pass. |
 | v2.9 adds merchant onboarding, external integrations, or production QwenPaw orchestration | no; it remains an event setup and planning-scope product package. |
+
+## v3.0 Merchant Network Pack Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python -m pytest tests/test_v30_merchant_network.py tests/test_v29_event_operations_setup.py -q` | `apps/api` | 0 | 12 focused backend tests passed after merchant network APIs, profile schemas, participation history, roster eligibility, and ineligible-ready rejection were implemented. |
+| `python -m pytest tests/test_v30_merchant_network.py tests/test_v29_event_operations_setup.py tests/test_v27_real_product_logic_foundation.py -q` | `apps/api` | 0 | 22 focused backend regression tests passed for v3.0, v2.9 setup, and v2.7 non-demo lifecycle compatibility. |
+| `npm.cmd run test -- v30-merchant-network v29-event-operations-setup` | `apps/web` | 0 | 2 focused frontend files passed, 8 tests total, covering merchant network create/edit/navigation and v2.9 eligibility display. |
+| `npm.cmd run test -- routes i18n product-shells` | `apps/web` | 0 | 5 regression frontend files passed, 18 tests total, covering route, dictionary, and shell behavior after semantic sidebar links. |
+| `python -m pytest -q` | `apps/api` | 0 | Full backend suite passed: 359 tests, with only existing FastAPI/Starlette warnings. |
+| `npm.cmd run test` | `apps/web` | 0 | Full frontend Vitest suite passed: 32 files and 116 tests. |
+| `npm.cmd run build` | `apps/web` | 0 | TypeScript and Vite production build passed; Vite reported the existing chunk-size warning for `assets/index-9NDJlmWG.js` at 875.55 kB. |
+| `python scripts\repo_hygiene.py --base origin/main` | project root | 0 | Secret, local-path, node-modules, and generated-artifact checks passed. |
+| `git diff --check` | project root | 0 | No whitespace errors; Git reported expected Windows LF-to-CRLF working-copy warnings for touched text files. |
+
+### Evidence Artifacts
+
+| Artifact | Summary |
+| --- | --- |
+| `docs/proposal/v3.0-merchant-network-pack-spec.md` | v3.0 scope, merchant profile contract, organizer APIs, eligibility rules, frontend behavior, boundaries, and acceptance criteria. |
+| `docs/proposal/v3.0-merchant-network-pack-implementation-plan.md` | v3.0 task plan, TDD checkpoints, and verification gates. |
+| `apps/api/app/services/merchant_network.py` | Merchant profile create/update helpers, operating-window parsing, participation-history construction, and event eligibility evaluation. |
+| `apps/api/app/schemas.py` | Extended merchant profile fields plus merchant create/update/detail/history/eligibility contracts. |
+| `apps/api/app/main.py` | Organizer-only merchant detail/create/update APIs and safe event-roster readiness error handling. |
+| `apps/api/app/services/event_merchants.py` | Roster summary eligibility and ineligible merchant ready-state guard. |
+| `apps/api/tests/test_v30_merchant_network.py` | Focused backend regression suite for merchant management, auth boundary, participation history, and eligibility behavior. |
+| `apps/web/src/pages/organizer/OrganizerMerchantNetworkPage.tsx` | Organizer merchant network page with list, create, edit, profile detail, and participation history. |
+| `apps/web/src/pages/organizer/EventMerchantSetupPanel.tsx` | Eligibility badges, area/window/constraint profile context, reasons, and ineligible mark-ready suppression. |
+| `apps/web/src/ui/sidebar.tsx` | Sidebar items now render as semantic links with hrefs while preserving client-side navigation. |
+| `apps/web/tests/v30-merchant-network.test.tsx` | Focused frontend suite for the merchant network route and navigation. |
+
+### Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Organizer can create a merchant profile with richer operations fields | pass. |
+| Organizer can read merchant detail and participation history derived from event rosters | pass. |
+| Organizer can update merchant contact/area/capacity/profile fields | pass. |
+| Merchant users cannot manage the organizer merchant network | pass. |
+| Invalid merchant payloads and unknown merchant updates are rejected | pass. |
+| Event roster summary includes merchant eligibility status and reasons | pass. |
+| Ineligible merchants cannot be marked ready | pass. |
+| Existing v2.9 event setup remains compatible and now displays eligibility context | pass. |
+| Organizer navigation exposes Merchant Network as a semantic link | pass. |
+| v3.0 adds public merchant onboarding, external merchant integrations, POS/payment/hardware/map/weather/traffic/identity, or production QwenPaw orchestration | no; it remains an organizer-managed local merchant network package. |

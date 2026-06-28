@@ -1,4 +1,4 @@
-import { AlertTriangle, BarChart3, CalendarDays, Gauge, Route } from "lucide-react";
+import { AlertTriangle, BarChart3, CalendarDays, Gauge, Route, Store } from "lucide-react";
 import type { ReactNode } from "react";
 import { useI18n } from "../i18n";
 import type { AuthUser } from "../types";
@@ -43,6 +43,7 @@ export function OrganizerProductShell({
       nav={[
         { label: t("shell.nav.dashboard"), href: "/organizer/dashboard", icon: <Gauge size={16} /> },
         { label: t("shell.nav.events"), href: "/organizer/events", icon: <CalendarDays size={16} /> },
+        { label: t("shell.nav.merchants"), href: "/organizer/merchants", icon: <Store size={16} /> },
         { label: t("shell.nav.workspace"), href: `/organizer/events/${selectedEventId}`, icon: <Route size={16} /> },
         {
           label: t("shell.nav.exceptions"),

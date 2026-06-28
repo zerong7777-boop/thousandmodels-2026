@@ -178,3 +178,36 @@ test("ready merchant roster allows selected event plan generation", async () => 
   fireEvent.click(build);
   await waitFor(() => expect(mockApi.generatePlan).toHaveBeenCalledWith("v29-harbor-fair"));
 });
+
+test("ineligible roster merchants show reasons and cannot be marked ready", async () => {
+  mockApi.getEventMerchantRoster.mockResolvedValue(
+    roster({
+      participants: [
+        {
+          event_id: "v29-harbor-fair",
+          merchant_id: "m001",
+          participation_status: "confirmed",
+          readiness_status: "needs_setup",
+          role_hint: null,
+          notes: "",
+          created_at: "2026-06-28T00:00:00Z",
+          updated_at: "2026-06-28T00:00:00Z"
+        }
+      ],
+      total_count: 1,
+      needs_setup_count: 1,
+      eligibility: {
+        m001: {
+          merchant_id: "m001",
+          status: "ineligible",
+          reasons: ["merchant operating window does not overlap event time"]
+        }
+      }
+    })
+  );
+
+  renderWithI18n(<OrganizerEventWorkspacePage eventId="v29-harbor-fair" />);
+
+  expect(await screen.findByText(/merchant operating window does not overlap event time/i)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /Mark ready/i })).not.toBeInTheDocument();
+});

@@ -59,6 +59,8 @@ const demoTextKeys: Record<string, string> = {
 
 const statusKeys: Record<string, string> = {
   active: "common.status.active",
+  inactive: "common.status.inactive",
+  suspended: "common.status.suspended",
   approved: "common.status.approved",
   open: "common.status.open",
   ready: "common.status.ready",
@@ -77,7 +79,10 @@ const statusKeys: Record<string, string> = {
   superseded: "common.status.superseded",
   completed: "common.status.completed",
   replaced: "common.status.replaced",
-  stale: "common.status.stale"
+  stale: "common.status.stale",
+  eligible: "common.status.eligible",
+  needs_review: "common.status.needs_review",
+  ineligible: "common.status.ineligible"
 };
 
 export function localizedDemoText(value: string | undefined | null, t: Translator): string {

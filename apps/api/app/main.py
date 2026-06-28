@@ -42,7 +42,9 @@ from app.schemas import (
     EventUpdateRequest,
     InventoryTriggerRequest,
     LoginRequest,
+    MerchantCreateRequest,
     MerchantRuntimeState,
+    MerchantUpdateRequest,
     PublicEvent,
     RuntimeStateUpdate,
 )
@@ -69,6 +71,12 @@ from app.services.event_merchants import (
     update_event_merchant_participant,
 )
 from app.services.merchant_edge import generate_merchant_interaction_packages
+from app.services.merchant_network import (
+    apply_merchant_update,
+    build_merchant_detail,
+    default_runtime_state,
+    merchant_from_create,
+)
 from app.services.operation_suggestions import (
     OperationSuggestionError,
     approve_operation_suggestion,
@@ -403,6 +411,8 @@ def update_event_merchant_participant_endpoint(
         summary = update_event_merchant_participant(STORE, event_id, merchant_id, payload)
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
     audit_user(event_id, user, "update_event_merchant_roster", merchant_id)
     return summary
 
@@ -764,6 +774,50 @@ def merchants(user: AuthUserRecord = Depends(require_organizer)):
 @app.get("/api/merchants/runtime-states")
 def runtime_states(user: AuthUserRecord = Depends(require_organizer)):
     return STORE.list_runtime_states()
+
+
+@app.get("/api/merchants/{merchant_id}")
+def get_merchant_detail(merchant_id: str, user: AuthUserRecord = Depends(require_organizer)):
+    if not STORE.list_merchants():
+        seed_local_catalog(STORE)
+    merchant = STORE.get_merchant(merchant_id)
+    if not merchant:
+        raise HTTPException(status_code=404, detail="merchant not found")
+    return build_merchant_detail(STORE, merchant)
+
+
+@app.post("/api/merchants")
+def create_merchant(
+    request: Request,
+    payload: MerchantCreateRequest,
+    user: AuthUserRecord = Depends(require_organizer),
+):
+    verify_mutation_origin(request)
+    if STORE.get_merchant(payload.merchant_id):
+        raise HTTPException(status_code=409, detail="merchant already exists")
+    merchant = merchant_from_create(payload)
+    STORE.save_merchant(merchant)
+    if not STORE.get_runtime_state(merchant.merchant_id):
+        STORE.save_runtime_state(default_runtime_state(merchant.merchant_id))
+    audit("merchant-network", user.role, user.user_id, "create_merchant", merchant.merchant_id)
+    return build_merchant_detail(STORE, merchant)
+
+
+@app.patch("/api/merchants/{merchant_id}")
+def update_merchant(
+    request: Request,
+    merchant_id: str,
+    payload: MerchantUpdateRequest,
+    user: AuthUserRecord = Depends(require_organizer),
+):
+    verify_mutation_origin(request)
+    merchant = STORE.get_merchant(merchant_id)
+    if not merchant:
+        raise HTTPException(status_code=404, detail="merchant not found")
+    next_merchant = apply_merchant_update(merchant, payload)
+    STORE.save_merchant(next_merchant)
+    audit("merchant-network", user.role, user.user_id, "update_merchant", merchant_id)
+    return build_merchant_detail(STORE, next_merchant)
 
 
 @app.post("/api/merchants/{merchant_id}/runtime-state")

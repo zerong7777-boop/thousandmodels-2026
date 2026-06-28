@@ -2,16 +2,16 @@
 
 ## Recommended Next Step
 
-Complete v2.9 closeout: review the event operations setup diff, then commit, push, and open a PR for `feat/v29-event-operations-setup-pack`.
+Complete v3.0 closeout: review the merchant network diff, then commit, push, and open a PR for `feat/v30-merchant-network-pack`.
 
-After v2.9 is merged, the recommended next implementation phase is `v3.0-merchant-network-pack`.
+After v3.0 is merged, the recommended next implementation phase is `v3.1-event-planning-eligibility-pack`.
 
-v2.9 makes non-demo events operationally configurable before route planning, but it still depends on a thin local merchant catalog. The next useful product package is to make the merchant network itself credible:
+v3.0 makes the merchant network credible enough for organizer setup, but route generation still mostly treats eligibility as a gate instead of using merchant fit as planning intelligence. The next useful product package is to make planner output use merchant-network data more directly:
 
-1. Add richer merchant profiles: contact owner, address/area, operating windows, capacity notes, category tags, and participation constraints.
-2. Add organizer-side merchant management for create/update/list/detail using the existing auth and store boundaries.
-3. Record merchant participation history across events so setup decisions are not isolated one-off choices.
-4. Use operating windows and constraints in event roster readiness and planning eligibility.
+1. Feed merchant category tags, capacity notes, operating windows, and participation constraints into non-demo route candidate selection.
+2. Explain why each selected merchant fits the event brief, target audience, weather/time context, and route role.
+3. Surface planner warnings when ready roster merchants are eligible but weak fits for the event.
+4. Keep planner output deterministic and evidence-backed before introducing any live model scoring.
 5. Preserve the deterministic `demo-night-tour` release-gate path and existing v2.9 roster gate.
 6. Avoid POS/payment/hardware/map/weather/traffic integrations until a separate integration plan exists.
 
@@ -34,4 +34,5 @@ v2.9 makes non-demo events operationally configurable before route planning, but
 - Do not treat v2.7 as production readiness; it is a beta product-logic foundation without real external integrations or a full organizer creation UI.
 - Do not treat v2.8 as production readiness; it is a frontend organizer workflow layer without merchant assignment setup or external integrations.
 - Do not treat v2.9 as real merchant onboarding or external merchant integration; it scopes planning to an event roster backed by the local catalog.
+- Do not treat v3.0 as real merchant onboarding or external merchant integration; it is an organizer-managed local merchant network baseline.
 - Do not assume GitHub Actions is green until the pushed workflow run is observed.

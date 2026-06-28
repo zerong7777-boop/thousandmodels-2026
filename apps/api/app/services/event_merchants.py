@@ -8,6 +8,7 @@ from app.schemas import (
     EventMerchantParticipantUpdateRequest,
     EventMerchantSetupSummary,
 )
+from app.services.merchant_network import evaluate_merchant_for_event
 
 if TYPE_CHECKING:
     from app.schemas import MerchantProfile
@@ -32,6 +33,13 @@ def unique_merchant_ids(merchant_ids: list[str]) -> list[str]:
 def summarize_event_merchants(store: MVPStore, event_id: str) -> EventMerchantSetupSummary:
     participants = store.list_event_merchant_participants(event_id)
     participants.sort(key=lambda item: item.merchant_id)
+    event = store.get_event_summary(event_id)
+    eligibility = {}
+    if event:
+        for participant in participants:
+            merchant = store.get_merchant(participant.merchant_id)
+            if merchant:
+                eligibility[participant.merchant_id] = evaluate_merchant_for_event(event, merchant)
     ready_count = sum(
         1
         for item in participants
@@ -46,6 +54,7 @@ def summarize_event_merchants(store: MVPStore, event_id: str) -> EventMerchantSe
         and declined_count == 0
         and missing_count == 0
         and needs_setup_count == 0
+        and not any(item.status == "ineligible" for item in eligibility.values())
     )
     return EventMerchantSetupSummary(
         event_id=event_id,
@@ -56,6 +65,7 @@ def summarize_event_merchants(store: MVPStore, event_id: str) -> EventMerchantSe
         missing_count=missing_count,
         declined_count=declined_count,
         ready_for_planning=ready_for_planning,
+        eligibility=eligibility,
     )
 
 
@@ -95,6 +105,13 @@ def update_event_merchant_participant(
     if not participant:
         raise LookupError("event merchant not found")
     updates = payload.model_dump(exclude_unset=True)
+    if updates.get("readiness_status") == "ready":
+        event = store.get_event_summary(event_id)
+        merchant = store.get_merchant(merchant_id)
+        if event and merchant:
+            eligibility = evaluate_merchant_for_event(event, merchant)
+            if eligibility.status == "ineligible":
+                raise ValueError("merchant is not eligible for this event")
     for key, value in updates.items():
         setattr(participant, key, value)
     participant.updated_at = now_iso()
