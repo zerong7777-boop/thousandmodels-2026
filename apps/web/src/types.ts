@@ -72,6 +72,58 @@ export interface MerchantRuntimeState {
   updated_at: string;
 }
 
+export interface MerchantProfile {
+  merchant_id: string;
+  name: string;
+  type: string;
+  location?: {
+    lat: number;
+    lng: number;
+    label: string;
+  };
+  opening_hours?: string;
+  capacity_level: "low" | "medium" | "high";
+  signature_products: string[];
+  story?: string;
+  suitable_activity_types: string[];
+  rainy_day_score: number;
+  night_score: number;
+  constraints: string[];
+}
+
+export interface EventMerchantParticipant {
+  event_id: string;
+  merchant_id: string;
+  participation_status: "invited" | "confirmed" | "declined";
+  readiness_status: "missing" | "needs_setup" | "ready";
+  role_hint?: string | null;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EventMerchantSetupSummary {
+  event_id: string;
+  participants: EventMerchantParticipant[];
+  total_count: number;
+  ready_count: number;
+  needs_setup_count: number;
+  missing_count: number;
+  declined_count: number;
+  ready_for_planning: boolean;
+}
+
+export interface EventMerchantRosterUpdateRequest {
+  merchant_ids: string[];
+}
+
+export interface EventMerchantParticipantUpdateRequest {
+  participation_status?: EventMerchantParticipant["participation_status"];
+  readiness_status?: EventMerchantParticipant["readiness_status"];
+  role_hint?: string | null;
+  notes?: string;
+}
+
 export interface RecoveryAction {
   action_id: string;
   event_id: string;

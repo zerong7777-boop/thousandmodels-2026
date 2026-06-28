@@ -2,17 +2,17 @@
 
 ## Recommended Next Step
 
-Complete v2.8 closeout: run repository hygiene and whitespace verification, then commit, push, and open a PR for `feat/v28-organizer-event-workspace`.
+Complete v2.9 closeout: review the event operations setup diff, then commit, push, and open a PR for `feat/v29-event-operations-setup-pack`.
 
-After v2.8 is merged, the recommended next implementation phase is `v2.9-event-merchant-setup`.
+After v2.9 is merged, the recommended next implementation phase is `v3.0-merchant-network-pack`.
 
-v2.8 makes non-demo event creation and selected-event workspace navigation usable from the organizer UI. The next useful work is to make a created event operationally configurable before route planning:
+v2.9 makes non-demo events operationally configurable before route planning, but it still depends on a thin local merchant catalog. The next useful product package is to make the merchant network itself credible:
 
-1. Add a minimal merchant participation setup for a selected event.
-2. Let organizers select from the existing local merchant/catalog data without inventing external merchant integrations.
-3. Show which merchants are included, missing, or not ready before plan generation.
-4. Keep planning, event page, packages, and review scoped to the selected event id.
-5. Preserve the deterministic `demo-night-tour` release-gate path.
+1. Add richer merchant profiles: contact owner, address/area, operating windows, capacity notes, category tags, and participation constraints.
+2. Add organizer-side merchant management for create/update/list/detail using the existing auth and store boundaries.
+3. Record merchant participation history across events so setup decisions are not isolated one-off choices.
+4. Use operating windows and constraints in event roster readiness and planning eligibility.
+5. Preserve the deterministic `demo-night-tour` release-gate path and existing v2.9 roster gate.
 6. Avoid POS/payment/hardware/map/weather/traffic integrations until a separate integration plan exists.
 
 ## Do Not Do Yet
@@ -33,4 +33,5 @@ v2.8 makes non-demo event creation and selected-event workspace navigation usabl
 - Do not treat v2.6 as cloud release proof; it is a live browser release gate for local/demo beta readiness.
 - Do not treat v2.7 as production readiness; it is a beta product-logic foundation without real external integrations or a full organizer creation UI.
 - Do not treat v2.8 as production readiness; it is a frontend organizer workflow layer without merchant assignment setup or external integrations.
+- Do not treat v2.9 as real merchant onboarding or external merchant integration; it scopes planning to an event roster backed by the local catalog.
 - Do not assume GitHub Actions is green until the pushed workflow run is observed.

@@ -1110,3 +1110,55 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 | Stale `getEvents()` responses cannot overwrite fresher event list state | pass. |
 | New visible v2.8 text has explicit English, simplified Chinese, and traditional Chinese dictionary entries | pass. |
 | v2.8 adds merchant assignment setup, event archive/delete/clone, external integrations, or QwenPaw production orchestration | no; it remains a frontend organizer workflow layer. |
+
+## v2.9 Event Operations Setup Pack Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python -m pytest apps/api/tests/test_v29_event_operations_setup.py -q` | project root | 0 | 6 v2.9 focused backend tests passed after the roster models, merchant catalog initialization endpoint, roster endpoints, and planning gate were implemented. The initial RED run failed before implementation because the roster endpoints did not exist. |
+| `python -m pytest apps/api/tests/test_v29_event_operations_setup.py apps/api/tests/test_v27_real_product_logic_foundation.py -q` | project root | 0 | 15 backend tests passed after v2.7 real-event tests were updated to create a ready roster before non-demo planning. |
+| `python -m pytest apps/api/tests/test_v29_event_operations_setup.py apps/api/tests/test_v27_real_product_logic_foundation.py apps/api/tests/test_v12_event_page_merchant_edge.py -q` | project root | 0 | 30 focused backend and merchant-edge regression tests passed; only existing FastAPI/Starlette warnings were reported. |
+| `npm.cmd run test -- v29-event-operations-setup` | `apps/web` | 0 | 3 v2.9 focused frontend tests passed after the merchant setup panel and workspace planning gate were implemented. The initial RED run failed before UI wiring existed. |
+| `npm.cmd run test -- v29-event-operations-setup v28-organizer-event-workspace i18n` | `apps/web` | 0 | 5 focused files passed, 24 tests total, covering v2.9, v2.8 workspace compatibility, and dictionary/source gates. |
+| `npm.cmd run test -- v29-event-operations-setup v28-organizer-event-workspace routes i18n` | `apps/web` | 0 | 6 regression files passed, 28 tests total, covering v2.9, v2.8, route wiring, and i18n gates. |
+| `python -m pytest -q` | `apps/api` | 0 | Full backend suite passed: 353 tests, with only existing FastAPI/Starlette warnings. |
+| `npm.cmd run test` | `apps/web` | 0 | Full frontend Vitest suite passed: 31 files and 111 tests. |
+| `npm.cmd run build` | `apps/web` | 0 | TypeScript and Vite production build passed; Vite reported the existing chunk-size warning for `assets/index-DgZItaWl.js` at 864.46 kB. |
+| `python scripts\repo_hygiene.py --base origin/main` | project root | 0 | Secret, local-path, node-modules, and generated-artifact checks passed. |
+| `git diff --check` | project root | 0 | No whitespace errors; Git reported expected Windows LF-to-CRLF working-copy warnings for touched text files. |
+
+### Evidence Artifacts
+
+| Artifact | Summary |
+| --- | --- |
+| `apps/api/app/services/event_merchants.py` | Event-scoped roster replacement, participant update, readiness summary, selected ready merchant scope, and plan-id merchant scope helpers. |
+| `apps/api/app/main.py` | Organizer-only merchant roster APIs plus non-demo planning, event-page, stale page rebuild, and merchant-edge package merchant scoping. |
+| `apps/api/app/services/planning.py` | Route point `linked_merchants` are filtered to selected merchant ids so unselected merchants do not leak into generated plans. |
+| `apps/api/tests/test_v29_event_operations_setup.py` | Focused backend regression suite for roster lifecycle, validation, planning gate, planning scope, and demo compatibility. |
+| `apps/web/src/pages/organizer/EventMerchantSetupPanel.tsx` | Selected-event merchant setup UI with catalog checkboxes, readiness summary, save action, and mark-ready actions. |
+| `apps/web/src/pages/organizer/OrganizerEventWorkspacePage.tsx` | Loads selected-event merchant setup state and blocks non-demo plan generation until setup is ready. |
+| `apps/web/tests/v29-event-operations-setup.test.tsx` | Focused UI regression suite for merchant setup visibility, roster save, and ready-roster plan generation. |
+| `docs/proposal/v2.9-event-operations-setup-pack-spec.md` | v2.9 scope, required behavior, boundaries, and acceptance criteria. |
+| `docs/proposal/v2.9-event-operations-setup-pack-implementation-plan.md` | v2.9 implementation plan and verification gates. |
+
+### Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Organizer can read an empty selected-event merchant roster | pass. |
+| Organizer can replace a selected-event merchant roster with de-duplicated existing merchant ids | pass. |
+| Organizer can mark selected merchants confirmed and ready | pass. |
+| Empty local merchant catalog is initialized through organizer `GET /api/merchants` without creating the demo event | pass. |
+| Unknown events and unknown merchant ids are rejected | pass. |
+| Non-demo plan generation is blocked when roster setup is empty or not ready | pass. |
+| Non-demo plan generation uses only selected ready merchants | pass. |
+| Merchant tasks are scoped to selected ready merchants | pass. |
+| Route point `linked_merchants` are scoped to selected ready merchants | pass. |
+| Event pages, stale event-page rebuilds, and merchant-edge packages use plan merchant scope | pass. |
+| Existing v2.7 non-demo lifecycle tests remain compatible when they create a ready roster | pass. |
+| Existing v1.2 merchant-edge public interaction tests remain compatible | pass. |
+| `demo-night-tour` can still generate plans without manual roster setup | pass. |
+| Workspace disables Build route plan for non-demo events until setup is ready | pass. |
+| v2.9 adds merchant onboarding, external integrations, or production QwenPaw orchestration | no; it remains an event setup and planning-scope product package. |

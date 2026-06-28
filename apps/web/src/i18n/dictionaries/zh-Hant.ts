@@ -439,6 +439,20 @@ export const zhHant: TranslationDictionary = {
   "public.event.redeemSuccess": "優惠已核銷。",
   "public.event.redeemError": "無法核銷優惠。",
 
+  "organizer.workspace.merchantSetupTitle": "Merchant setup",
+  "organizer.workspace.merchantSetupDescription": "Select participating merchants and mark them ready before route planning.",
+  "organizer.workspace.merchantSetupReadySummary": "{ready}/{total} ready",
+  "organizer.workspace.merchantSetupRequired": "Select and ready participating merchants before building the route plan.",
+  "organizer.workspace.merchantSetupSaved": "Merchant setup saved.",
+  "organizer.workspace.merchantSetupError": "Could not save merchant setup.",
+  "organizer.workspace.saveMerchantSetup": "Save merchant setup",
+  "organizer.workspace.markMerchantReady": "Mark ready",
+  "organizer.workspace.noMerchantsAvailable": "No merchants are available yet.",
+  "organizer.workspace.readyForPlanning": "Ready for planning",
+  "organizer.workspace.notReadyForPlanning": "Not ready for planning",
+  "organizer.workspace.selectedMerchants": "Selected merchants",
+  "organizer.workspace.noSelectedMerchants": "Select merchants for this event.",
+
   "test.missingInChinese": "",
   "test.interpolation": "{count} 個站點"
 };

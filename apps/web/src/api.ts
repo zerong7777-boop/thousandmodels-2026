@@ -10,6 +10,9 @@ import type {
   ApproveRecoveryResponse,
   CouponRedemption,
   EventCreateRequest,
+  EventMerchantParticipantUpdateRequest,
+  EventMerchantRosterUpdateRequest,
+  EventMerchantSetupSummary,
   EventPage,
   EventPlan,
   EventSummary,
@@ -18,6 +21,7 @@ import type {
   Incident,
   MerchantEdgePackagesResponse,
   MerchantPack,
+  MerchantProfile,
   MerchantTask,
   MerchantWorkbench,
   MerchantRuntimeState,
@@ -72,6 +76,16 @@ const json = async <T,>(request: Promise<Response>): Promise<T> => {
 
 const postJson = async <T,>(path: string, body?: unknown): Promise<T> =>
   json<T>(fetch(`${API_BASE}${path}`, await mutationOptions(body)));
+
+const putJson = async <T,>(path: string, body?: unknown): Promise<T> => {
+  const options = await mutationOptions(body);
+  return json<T>(fetch(`${API_BASE}${path}`, { ...options, method: "PUT" }));
+};
+
+const patchJson = async <T,>(path: string, body?: unknown): Promise<T> => {
+  const options = await mutationOptions(body);
+  return json<T>(fetch(`${API_BASE}${path}`, { ...options, method: "PATCH" }));
+};
 
 export const api = {
   seed: () =>
@@ -152,6 +166,23 @@ export const api = {
     ),
   getRuntimeStates: () =>
     json<MerchantRuntimeState[]>(fetch(`${API_BASE}/api/merchants/runtime-states`, READ_OPTIONS)),
+  getMerchants: () =>
+    json<MerchantProfile[]>(fetch(`${API_BASE}/api/merchants`, READ_OPTIONS)),
+  getEventMerchantRoster: (eventId: string) =>
+    json<EventMerchantSetupSummary>(
+      fetch(`${API_BASE}/api/events/${eventId}/merchant-roster`, READ_OPTIONS)
+    ),
+  replaceEventMerchantRoster: (eventId: string, payload: EventMerchantRosterUpdateRequest) =>
+    putJson<EventMerchantSetupSummary>(`/api/events/${eventId}/merchant-roster`, payload),
+  updateEventMerchantParticipant: (
+    eventId: string,
+    merchantId: string,
+    payload: EventMerchantParticipantUpdateRequest
+  ) =>
+    patchJson<EventMerchantSetupSummary>(
+      `/api/events/${eventId}/merchant-roster/${merchantId}`,
+      payload
+    ),
   getMerchantWorkbench: (merchantId: string, eventId = "demo-night-tour") =>
     json<MerchantWorkbench>(
       fetch(`${API_BASE}/api/merchants/${merchantId}/workbench?event_id=${eventId}`, READ_OPTIONS)

@@ -57,7 +57,20 @@ def generate_plan_version(
     reason: str,
 ) -> PlanVersion:
     selected_merchants = [merchant.merchant_id for merchant in merchants[:6]]
-    selected_points = route_points[:6]
+    selected_merchant_ids = set(selected_merchants)
+    selected_points = [
+        RoutePoint.model_validate(
+            {
+                **point.model_dump(),
+                "linked_merchants": [
+                    merchant_id
+                    for merchant_id in point.linked_merchants
+                    if merchant_id in selected_merchant_ids
+                ],
+            }
+        )
+        for point in route_points[:6]
+    ]
     contingency = int(brief.budget_mop * 0.15)
     return PlanVersion(
         plan_id=f"{brief.event_id}:v{version}",

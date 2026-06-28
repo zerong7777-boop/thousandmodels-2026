@@ -36,6 +36,8 @@ from app.schemas import (
     AuthResponse,
     AuthUserRecord,
     EventCreateRequest,
+    EventMerchantParticipantUpdateRequest,
+    EventMerchantRosterUpdateRequest,
     EventSummary,
     EventUpdateRequest,
     InventoryTriggerRequest,
@@ -58,6 +60,13 @@ from app.services.event_page import (
     build_event_page_draft,
     build_event_page_projection,
     publish_event_page as mark_event_page_published,
+)
+from app.services.event_merchants import (
+    merchant_scope_for_plan_ids,
+    merchant_scope_for_planning,
+    replace_event_merchant_roster,
+    summarize_event_merchants,
+    update_event_merchant_participant,
 )
 from app.services.merchant_edge import generate_merchant_interaction_packages
 from app.services.operation_suggestions import (
@@ -189,6 +198,13 @@ def current_event_and_plan(event_id: str):
     if not plan:
         raise HTTPException(status_code=404, detail="current plan not found")
     return event, plan
+
+
+def require_event_summary(event_id: str):
+    event = STORE.get_event_summary(event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="event not found")
+    return event
 
 
 def latest_published_event_page(event_id: str, plan_version: int | None = None):
@@ -344,6 +360,53 @@ def get_event_brief(event_id: str, user: AuthUserRecord = Depends(require_organi
     return brief
 
 
+@app.get("/api/events/{event_id}/merchant-roster")
+def get_event_merchant_roster(
+    event_id: str, user: AuthUserRecord = Depends(require_organizer)
+):
+    require_event_summary(event_id)
+    return summarize_event_merchants(STORE, event_id)
+
+
+@app.put("/api/events/{event_id}/merchant-roster")
+def replace_event_merchant_roster_endpoint(
+    request: Request,
+    event_id: str,
+    payload: EventMerchantRosterUpdateRequest,
+    user: AuthUserRecord = Depends(require_organizer),
+):
+    verify_mutation_origin(request)
+    require_event_summary(event_id)
+    if not STORE.list_merchants():
+        seed_local_catalog(STORE)
+    try:
+        summary = replace_event_merchant_roster(STORE, event_id, payload.merchant_ids)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    audit_user(event_id, user, "replace_event_merchant_roster", f"{summary.total_count} merchants")
+    return summary
+
+
+@app.patch("/api/events/{event_id}/merchant-roster/{merchant_id}")
+def update_event_merchant_participant_endpoint(
+    request: Request,
+    event_id: str,
+    merchant_id: str,
+    payload: EventMerchantParticipantUpdateRequest,
+    user: AuthUserRecord = Depends(require_organizer),
+):
+    verify_mutation_origin(request)
+    require_event_summary(event_id)
+    if not STORE.get_merchant(merchant_id):
+        raise HTTPException(status_code=404, detail="merchant not found")
+    try:
+        summary = update_event_merchant_participant(STORE, event_id, merchant_id, payload)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    audit_user(event_id, user, "update_event_merchant_roster", merchant_id)
+    return summary
+
+
 @app.post("/api/events/{event_id}/generate-plan")
 def generate_plan(
     request: Request,
@@ -355,12 +418,14 @@ def generate_plan(
     event = STORE.get_event_summary(event_id)
     if not brief or not event:
         raise HTTPException(status_code=404, detail="event brief not found")
-    merchants = STORE.list_merchants()
     route_points = STORE.list_route_points()
-    if not merchants or not route_points:
+    if not STORE.list_merchants() or not route_points:
         seed_local_catalog(STORE)
-        merchants = STORE.list_merchants()
         route_points = STORE.list_route_points()
+    try:
+        merchants = merchant_scope_for_planning(STORE, event_id)
+    except RuntimeError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
     plan = generate_event_plan(brief, merchants, choose_agent_backend())
     packs = generate_merchant_packs(plan, merchants)
     plan_v1 = generate_plan_version(
@@ -554,17 +619,18 @@ def generate_merchant_edge_packages(
     if plan_version.status != "approved":
         raise HTTPException(status_code=400, detail="current plan is not approved")
     run_id = f"run_{event_id}_merchant_edge_v{plan_version.version}"
+    merchants = merchant_scope_for_plan_ids(STORE, event_id, plan_version.merchant_assignments)
     packages = generate_merchant_interaction_packages(
         event_id=event_id,
         plan_version=plan_version,
-        merchants=STORE.list_merchants(),
+        merchants=merchants,
         tasks=STORE.list_merchant_tasks(event_id),
         run_id=run_id,
     )
     runtime_result = AgentRuntime(mode="deterministic").run_merchant_edge_package_generation(
         event_id=event_id,
         plan=plan_version,
-        merchants=STORE.list_merchants(),
+        merchants=merchants,
         tasks=STORE.list_merchant_tasks(event_id),
         packages=packages,
     )
@@ -690,6 +756,8 @@ def run_qwenpaw_shadow_orchestration_endpoint(
 
 @app.get("/api/merchants")
 def merchants(user: AuthUserRecord = Depends(require_organizer)):
+    if not STORE.list_merchants():
+        seed_local_catalog(STORE)
     return STORE.list_merchants()
 
 
@@ -972,11 +1040,12 @@ def draft_event_page(
     event, plan_version = current_event_and_plan(event_id)
     if plan_version.status != "approved":
         raise HTTPException(status_code=400, detail="current plan is not approved")
+    merchants = merchant_scope_for_plan_ids(STORE, event_id, plan_version.merchant_assignments)
     page = build_event_page_draft(
         event=event,
         plan_version=plan_version,
         route_points=plan_version.route_points,
-        merchants=STORE.list_merchants(),
+        merchants=merchants,
         notices=STORE.list_public_notices(event_id),
     )
     STORE.save_event_page(page)
@@ -1002,7 +1071,7 @@ def publish_event_page_endpoint(
             event=event,
             plan_version=plan_version,
             route_points=plan_version.route_points,
-            merchants=STORE.list_merchants(),
+            merchants=merchant_scope_for_plan_ids(STORE, event_id, plan_version.merchant_assignments),
             notices=STORE.list_public_notices(event_id),
         )
     published = mark_event_page_published(page)

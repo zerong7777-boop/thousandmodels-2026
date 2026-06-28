@@ -62,8 +62,25 @@ def _create_real_event(client: TestClient, event_id: str = REAL_EVENT_ID) -> dic
     return response.json()
 
 
+def _ready_real_event_roster(client: TestClient, event_id: str) -> None:
+    setup = client.put(
+        f"/api/events/{event_id}/merchant-roster",
+        json={"merchant_ids": ["m001", "m002"]},
+        headers=MUTATION_HEADERS,
+    )
+    assert setup.status_code == 200, setup.text
+    for merchant_id in ["m001", "m002"]:
+        ready = client.patch(
+            f"/api/events/{event_id}/merchant-roster/{merchant_id}",
+            json={"participation_status": "confirmed", "readiness_status": "ready"},
+            headers=MUTATION_HEADERS,
+        )
+        assert ready.status_code == 200, ready.text
+
+
 def _publish_real_event(client: TestClient, event_id: str) -> None:
     _create_real_event(client, event_id)
+    _ready_real_event_roster(client, event_id)
 
     generated = client.post(f"/api/events/{event_id}/generate-plan", headers=MUTATION_HEADERS)
     assert generated.status_code == 200, generated.text
@@ -249,6 +266,7 @@ def test_real_event_plan_approval_does_not_publish_until_event_page_publish():
     client = TestClient(app)
     login_as(client, "organizer.demo")
     _create_real_event(client, event_id)
+    _ready_real_event_roster(client, event_id)
 
     generated = client.post(f"/api/events/{event_id}/generate-plan", headers=MUTATION_HEADERS)
     assert generated.status_code == 200, generated.text
@@ -371,6 +389,7 @@ def test_real_event_public_mutations_require_published_event_page():
     client = TestClient(app)
     login_as(client, "organizer.demo")
     _create_real_event(client, event_id)
+    _ready_real_event_roster(client, event_id)
 
     generated = client.post(f"/api/events/{event_id}/generate-plan", headers=MUTATION_HEADERS)
     assert generated.status_code == 200, generated.text
