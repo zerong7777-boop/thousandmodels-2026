@@ -1060,3 +1060,53 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 | Demo public projection and existing API flow remain compatible when explicitly seeded | pass. |
 | v2.7 adds full organizer event creation UI | no; only API and frontend contract methods were added. |
 | v2.7 adds real external integrations or production readiness | no; it remains a product-logic beta foundation. |
+
+## v2.8 Organizer Event Workspace Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `npm.cmd run test -- v28-organizer-event-workspace` | `apps/web` | 0 | 10 v2.8 focused tests passed for event create, portfolio links, explicit demo seed, backend validation feedback, selected-event shell navigation, workspace context, missing-event feedback, action live-region feedback, and stale reload protection. |
+| `npm.cmd run test -- i18n v28-organizer-event-workspace` | `apps/web` | 0 | 4 focused files passed, 21 tests total, after adding explicit simplified and traditional Chinese entries for new v2.8 visible text. |
+| `npm.cmd run test -- v28-organizer-event-workspace routes v12-event-interaction-pages i18n` | `apps/web` | 0 | 6 regression files passed, 32 tests total, covering v2.8, routing, v1.2 event interaction pages, and dictionary/source gates. |
+| `npm.cmd run test` | `apps/web` | 0 | 30 frontend test files passed, 108 tests total. |
+| `npm.cmd run build` | `apps/web` | 0 | TypeScript and Vite production build passed; Vite reported the existing chunk-size warning for `assets/index-DYnpfHDe.js` at 856.22 kB. |
+| `python scripts\repo_hygiene.py --base origin/main` | project root | 0 | Secret, local-path, node-modules, and generated-artifact checks passed. |
+| `git diff --check` | project root | 0 | No whitespace errors; Git reported expected Windows LF-to-CRLF working-copy warnings for touched text files. |
+
+### Evidence Artifacts
+
+| Artifact | Summary |
+| --- | --- |
+| `apps/web/src/pages/organizer/EventCreatePanel.tsx` | Compact create-event form with list-field parsing, local validation, backend submit, and validation/conflict feedback. |
+| `apps/web/src/pages/organizer/OrganizerEventsPage.tsx` | Event portfolio, explicit demo seed action, stale reload guard, and event-specific workspace/exceptions/review links. |
+| `apps/web/src/pages/organizer/OrganizerEventWorkspacePage.tsx` | Selected event summary loading, event-aware header, draft no-plan state, missing-event link, selected-event actions, and alert/status feedback semantics. |
+| `apps/web/src/layout/OrganizerProductShell.tsx` | Selected-event id extraction for workspace, exceptions, and review navigation. |
+| `apps/web/src/i18n/dictionaries/en.ts` | English v2.8 event portfolio, create form, workspace context, and error feedback copy. |
+| `apps/web/src/i18n/dictionaries/zh-Hans.ts` | Simplified Chinese v2.8 event portfolio, create form, workspace context, and error feedback copy. |
+| `apps/web/src/i18n/dictionaries/zh-Hant.ts` | Traditional Chinese v2.8 event portfolio, create form, workspace context, and error feedback copy. |
+| `apps/web/tests/v28-organizer-event-workspace.test.tsx` | Focused regression suite for the v2.8 organizer event workspace workflow. |
+| `docs/proposal/v2.8-organizer-event-workspace-spec.md` | v2.8 scope, requirements, boundaries, and acceptance criteria. |
+| `docs/proposal/v2.8-organizer-event-workspace-implementation-plan.md` | v2.8 implementation plan and verification gates. |
+
+### Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| `/organizer/events` loads real event summaries from the frontend API contract | pass. |
+| Empty event lists do not fabricate non-demo events | pass. |
+| Demo seed remains an explicit separate action | pass. |
+| Create-event form submits a non-demo event through `api.createEvent` and does not call demo seed | pass. |
+| List-like create fields are parsed from comma/newline input into arrays | pass. |
+| Backend validation/conflict errors remain visible and do not navigate away | pass. |
+| Event rows link to workspace, exceptions, and review for the selected event id | pass. |
+| Organizer shell navigation follows the selected event id when present | pass. |
+| Workspace header displays selected event title, area, date, time window, lifecycle status, and public release status | pass. |
+| Draft events with no plan show a no-plan state and keep build-plan available | pass. |
+| Workspace plan/page/package/suggestion actions continue to use the selected event id | pass. |
+| Missing selected-event context shows visible feedback with a link back to the event portfolio | pass. |
+| Async action feedback is exposed through `alert`/`status` live-region semantics | pass. |
+| Stale `getEvents()` responses cannot overwrite fresher event list state | pass. |
+| New visible v2.8 text has explicit English, simplified Chinese, and traditional Chinese dictionary entries | pass. |
+| v2.8 adds merchant assignment setup, event archive/delete/clone, external integrations, or QwenPaw production orchestration | no; it remains a frontend organizer workflow layer. |

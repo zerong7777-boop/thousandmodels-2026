@@ -318,6 +318,22 @@ shadcn/ui-inspired local component layer
 - Frontend API/types now expose `createEvent` and `updateEvent` contracts, but v2.7 does not add a full organizer event-creation UI.
 - v2.7 is a product-logic beta foundation, not pilot readiness or production commercial readiness.
 
+## v2.8 Organizer Event Workspace State
+
+- v2.8 turns the v2.7 event API into an organizer-facing event workflow layer.
+- `/organizer/events` now acts as the event portfolio and loads events from `api.getEvents()`.
+- Organizers can create a non-demo draft event from a compact form backed by `api.createEvent()`.
+- The create form parses comma/newline list fields, validates required payload fields locally, keeps entered values on backend validation/conflict errors, and does not call demo seed.
+- Empty event lists remain empty by default; the demo event is only created through the explicit demo seed action.
+- Event portfolio rows show event title, area, date, time window, lifecycle status, public release status, current plan version, and event-specific workspace/exceptions/review links.
+- Organizer shell workspace, exceptions, and review navigation follows the selected event id when the route contains one, with `demo-night-tour` as the fallback.
+- `OrganizerEventWorkspacePage` loads selected event context through `api.getEvent(eventId)` and shows title, area, date, time window, event status, and public release state.
+- Draft events with no route plan show a clear no-plan state while keeping the build-plan action available.
+- Workspace action errors for plan/event-page/package/suggestion actions surface as visible feedback with alert/status semantics.
+- Event list reloads ignore stale responses so older `getEvents()` calls cannot overwrite newer create/seed refresh state.
+- New v2.8 visible copy has explicit `en`, `zh-Hans`, and `zh-Hant` dictionary entries.
+- v2.8 is a frontend product workflow layer. It does not add merchant assignment setup, event archive/delete/clone, external integrations, QwenPaw production orchestration, or production readiness.
+
 ## Demo Accounts
 
 - organizer: `organizer.demo`
@@ -327,6 +343,6 @@ shadcn/ui-inspired local component layer
 
 ## Current Boundary
 
-This is a stronger productized multilingual MVP, not a final commercial UI or commercial application. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview. v1.4 adds optional organizer-only QwenPaw shadow evidence, v1.8 adds guarded local QwenPaw advisory optimization evidence, v1.9 maps the P0/P1 commercial-readiness gaps, v2.0 adds local CI/repository hygiene gates, v2.1 adds beta auth/session/CSRF demo-boundary hardening, v2.2 adds migration-managed SQLite persistence, v2.3 adds deployment environment/readiness operations, v2.4 adds beta observability/runbook operations, v2.5 adds a deterministic live API release gate, v2.6 adds deterministic live browser release evidence, and v2.7 adds the first real non-demo event lifecycle foundation. The reliable demo path remains deterministic.
+This is a stronger productized multilingual MVP, not a final commercial UI or commercial application. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview. v1.4 adds optional organizer-only QwenPaw shadow evidence, v1.8 adds guarded local QwenPaw advisory optimization evidence, v1.9 maps the P0/P1 commercial-readiness gaps, v2.0 adds local CI/repository hygiene gates, v2.1 adds beta auth/session/CSRF demo-boundary hardening, v2.2 adds migration-managed SQLite persistence, v2.3 adds deployment environment/readiness operations, v2.4 adds beta observability/runbook operations, v2.5 adds a deterministic live API release gate, v2.6 adds deterministic live browser release evidence, v2.7 adds the first real non-demo event lifecycle foundation, and v2.8 exposes that foundation through organizer event portfolio/create/workspace navigation. The reliable demo path remains deterministic.
 
 Do not continue into production QwenPaw orchestration, real merchant connections, hardware, real traffic prediction, model training, payment/POS integrations, open registration, real map APIs, or a marketing landing page without a new plan.

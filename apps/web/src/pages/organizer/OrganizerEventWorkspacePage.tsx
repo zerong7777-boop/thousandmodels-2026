@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { localizedDemoList, localizedDemoText, localizedStatus, useI18n } from "../../i18n";
 import { AgentEvidencePanel, latestRunForTrigger, stepsForRun, toolCallsForRun } from "../../components/agent";
 import { MetricTile, ProductPageHeader, WorkflowStepper } from "../../components/product";
-import type { AgentToolCall, EventPage, MerchantEdgePackagesResponse } from "../../types";
+import type { AgentToolCall, EventPage, EventSummary, MerchantEdgePackagesResponse } from "../../types";
 import { asArray, useAsyncData } from "../productUtils";
 
 function countPackageTouchpoints(packages: MerchantEdgePackagesResponse["packages"]) {
@@ -22,11 +22,32 @@ function merchantLabel(merchantId: string, t: (key: string) => string) {
   return localizedDemoText(merchantId, t) || merchantId;
 }
 
+function getEventLoader() {
+  return (api as { getEvent?: (eventId: string) => Promise<EventSummary> }).getEvent;
+}
+
+function messageFromError(error: unknown, fallback: string): string {
+  const raw = error instanceof Error ? error.message : typeof error === "string" ? error : "";
+  if (!raw.trim()) return fallback;
+
+  try {
+    const parsed = JSON.parse(raw) as { detail?: unknown; message?: unknown };
+    if (typeof parsed.detail === "string") return parsed.detail;
+    if (typeof parsed.message === "string") return parsed.message;
+  } catch {
+    // Non-JSON backend errors are already displayable text.
+  }
+
+  return raw;
+}
+
 export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { eventId?: string }) {
   const { t } = useI18n();
   const [refreshKey, setRefreshKey] = useState(0);
   const [actionFeedback, setActionFeedback] = useState<{ tone: "success" | "danger"; text: string } | null>(null);
   const [suggestionFeedback, setSuggestionFeedback] = useState<{ tone: "success" | "danger"; text: string } | null>(null);
+  const [eventSummary, setEventSummary] = useState<EventSummary | null>(null);
+  const [eventContextError, setEventContextError] = useState(false);
   const { data: plans } = useAsyncData(() => api.getPlanVersions(eventId), [], [eventId, refreshKey]);
   const { data: traces } = useAsyncData(() => api.getAgentTraces(eventId), [], [eventId, refreshKey]);
   const { data: tasks } = useAsyncData(() => api.getMerchantTasks(eventId), [], [eventId, refreshKey]);
@@ -64,8 +85,41 @@ export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { e
   const currentPlan = planList.find((plan) => plan.status === "approved") ?? planList[0];
   const readinessCount = taskList.filter((task) => task.task_status === "active").length;
   const currentStatus = currentPlan?.status ?? "draft";
+  const eventStatus = eventSummary?.status ?? currentStatus;
+  const workspaceTitle = eventSummary ? localizedDemoText(eventSummary.title, t) : t("organizer.workspace.title");
+  const workspaceDescription = eventSummary
+    ? `${localizedDemoText(eventSummary.area, t)} / ${eventSummary.date} / ${eventSummary.time_window}`
+    : t("organizer.workspace.description");
   const approvalState =
     currentPlan?.status === "approved" ? t("common.status.confirmed") : t("organizer.workspace.needsConfirmation");
+
+  useEffect(() => {
+    let active = true;
+    const getEvent = getEventLoader();
+    setEventContextError(false);
+
+    if (!getEvent) {
+      setEventSummary(null);
+      return () => {
+        active = false;
+      };
+    }
+
+    getEvent(eventId)
+      .then((nextEventSummary) => {
+        if (active) setEventSummary(nextEventSummary);
+      })
+      .catch(() => {
+        if (active) {
+          setEventSummary(null);
+          setEventContextError(true);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [eventId, refreshKey]);
 
   useEffect(() => {
     let active = true;
@@ -101,20 +155,50 @@ export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { e
 
   const draftEventPage = async () => {
     const requestId = ++eventPageRequestRef.current;
-    const nextPage = await api.draftEventPage(eventId);
-    if (requestId === eventPageRequestRef.current) setEventPage(nextPage);
+    setActionFeedback(null);
+    try {
+      const nextPage = await api.draftEventPage(eventId);
+      if (requestId === eventPageRequestRef.current) setEventPage(nextPage);
+    } catch (error) {
+      if (requestId === eventPageRequestRef.current) {
+        setActionFeedback({
+          tone: "danger",
+          text: messageFromError(error, t("organizer.workspace.eventActionError"))
+        });
+      }
+    }
   };
 
   const publishEventPage = async () => {
     const requestId = ++eventPageRequestRef.current;
-    const nextPage = await api.publishEventPage(eventId);
-    if (requestId === eventPageRequestRef.current) setEventPage(nextPage);
+    setActionFeedback(null);
+    try {
+      const nextPage = await api.publishEventPage(eventId);
+      if (requestId === eventPageRequestRef.current) setEventPage(nextPage);
+    } catch (error) {
+      if (requestId === eventPageRequestRef.current) {
+        setActionFeedback({
+          tone: "danger",
+          text: messageFromError(error, t("organizer.workspace.eventActionError"))
+        });
+      }
+    }
   };
 
   const generateEdgePackages = async () => {
     const requestId = ++edgePackagesRequestRef.current;
-    const nextPackages = await api.generateMerchantEdgePackages(eventId);
-    if (requestId === edgePackagesRequestRef.current) setEdgePackages(nextPackages);
+    setActionFeedback(null);
+    try {
+      const nextPackages = await api.generateMerchantEdgePackages(eventId);
+      if (requestId === edgePackagesRequestRef.current) setEdgePackages(nextPackages);
+    } catch (error) {
+      if (requestId === edgePackagesRequestRef.current) {
+        setActionFeedback({
+          tone: "danger",
+          text: messageFromError(error, t("organizer.workspace.eventActionError"))
+        });
+      }
+    }
   };
 
   const refreshWorkspace = () => setRefreshKey((current) => current + 1);
@@ -160,26 +244,54 @@ export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { e
     <div className="space-y-4">
       <ProductPageHeader
         eyebrow={t("organizer.workspace.eyebrow")}
-        title={t("organizer.workspace.title")}
-        description={t("organizer.workspace.description")}
+        title={workspaceTitle}
+        description={workspaceDescription}
         meta={[
+          t("organizer.workspace.eventStatusMeta", { status: localizedStatus(eventStatus, t) }),
+          eventSummary
+            ? t("organizer.events.publicRelease", {
+                status: localizedStatus(eventSummary.public_release_status, t)
+              })
+            : null,
           t("organizer.workspace.planStatusMeta", { status: localizedStatus(currentStatus, t) }),
           t("organizer.workspace.readinessMeta", { ready: readinessCount, total: taskList.length || 1 }),
           t("organizer.workspace.approvalMeta", { state: approvalState })
         ]}
-        status={currentStatus}
+        status={eventStatus}
         actions={
-          <>
+          <div role="region" aria-label={t("organizer.workspace.actionsLabel")} className="flex flex-wrap gap-2">
             <Button onClick={() => void buildPlan()}>{t("organizer.workspace.buildPlan")}</Button>
             <Button variant="secondary" onClick={() => void approvePlan()}>
               {t("organizer.workspace.confirmPlan")}
             </Button>
-          </>
+          </div>
         }
       />
 
+      {eventContextError ? (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+        >
+          <span>{t("organizer.workspace.eventContextMissing")}</span>
+          <Button asChild size="sm" variant="secondary">
+            <a href="/organizer/events">{t("organizer.workspace.backToEvents")}</a>
+          </Button>
+        </div>
+      ) : null}
+
+      {eventSummary && !planList.length ? (
+        <section className="rounded-lg border border-dashed border-teal-200 bg-teal-50/60 p-4">
+          <h2 className="text-base font-semibold text-ink">{t("organizer.workspace.draftNoPlanTitle")}</h2>
+          <p className="mt-1 text-sm leading-5 text-slate-600">
+            {t("organizer.workspace.draftNoPlanDescription")}
+          </p>
+        </section>
+      ) : null}
+
       {actionFeedback ? (
         <div
+          role={actionFeedback.tone === "danger" ? "alert" : "status"}
           className={`rounded-md border p-3 text-sm ${
             actionFeedback.tone === "success"
               ? "border-emerald-200 bg-emerald-50 text-emerald-900"
@@ -238,7 +350,11 @@ export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { e
         <MetricTile
           label={t("organizer.workspace.planStatus")}
           value={currentPlan ? `v${currentPlan.version}` : localizedStatus("draft", t)}
-          detail={currentPlan?.created_reason ? localizedDemoText(currentPlan.created_reason, t) : t("organizer.workspace.noPlan")}
+          detail={
+            currentPlan?.created_reason
+              ? localizedDemoText(currentPlan.created_reason, t)
+              : t("organizer.workspace.noPlanMetricDetail")
+          }
           tone={currentPlan?.status === "approved" ? "success" : "warning"}
         />
         <MetricTile
@@ -308,6 +424,7 @@ export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { e
           <CardContent className="space-y-4">
             {suggestionFeedback ? (
               <div
+                role={suggestionFeedback.tone === "danger" ? "alert" : "status"}
                 className={`rounded-md border p-3 text-sm ${
                   suggestionFeedback.tone === "success"
                     ? "border-emerald-200 bg-emerald-50 text-emerald-900"
@@ -424,7 +541,7 @@ export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { e
                 </ul>
               </div>
             ))}
-            {!planList.length ? <p className="text-sm text-slate-500">{t("organizer.workspace.noPlan")}</p> : null}
+            {!planList.length ? <p className="text-sm text-slate-500">{t("organizer.workspace.routePlansEmpty")}</p> : null}
           </CardContent>
         </Card>
 
