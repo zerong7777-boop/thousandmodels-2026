@@ -32,6 +32,10 @@ export const en: TranslationDictionary = {
   "common.status.completed": "completed",
   "common.status.replaced": "replaced",
   "common.status.stale": "stale",
+  "common.status.invited": "invited",
+  "common.status.declined": "declined",
+  "common.status.missing": "missing",
+  "common.status.needs_setup": "needs setup",
 
   "auth.productAccess": "Product access",
   "auth.productPurpose":
@@ -161,6 +165,21 @@ export const en: TranslationDictionary = {
   "organizer.workspace.needsConfirmation": "needs confirmation",
   "organizer.workspace.buildPlan": "Build route plan",
   "organizer.workspace.confirmPlan": "Confirm plan",
+  "organizer.workspace.merchantSetupTitle": "Merchant setup",
+  "organizer.workspace.merchantSetupDescription":
+    "Select participating merchants and mark them ready before building a non-demo route plan.",
+  "organizer.workspace.merchantSetupReadySummary": "{ready}/{total} ready",
+  "organizer.workspace.merchantSetupRequired":
+    "Select and ready participating merchants before building the route plan.",
+  "organizer.workspace.merchantSetupSaved": "Merchant setup saved.",
+  "organizer.workspace.merchantSetupError": "Could not save merchant setup.",
+  "organizer.workspace.saveMerchantSetup": "Save merchant setup",
+  "organizer.workspace.markMerchantReady": "Mark ready",
+  "organizer.workspace.noMerchantsAvailable": "No merchants are available yet.",
+  "organizer.workspace.readyForPlanning": "Ready for planning",
+  "organizer.workspace.notReadyForPlanning": "Not ready for planning",
+  "organizer.workspace.selectedMerchants": "Selected merchants",
+  "organizer.workspace.noSelectedMerchants": "Select merchants for this event.",
   "organizer.workspace.stepperTitle": "Workflow stepper",
   "organizer.workspace.stepperDescription": "Operator-visible flow from route building to public release.",
   "organizer.workspace.stepBuild": "Build route plan",

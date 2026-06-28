@@ -73,6 +73,39 @@ class MerchantRuntimeState(BaseModel):
     updated_at: str
 
 
+class EventMerchantParticipant(BaseModel):
+    event_id: str
+    merchant_id: str
+    participation_status: Literal["invited", "confirmed", "declined"] = "confirmed"
+    readiness_status: Literal["missing", "needs_setup", "ready"] = "needs_setup"
+    role_hint: str | None = None
+    notes: str = ""
+    created_at: str
+    updated_at: str
+
+
+class EventMerchantRosterUpdateRequest(BaseModel):
+    merchant_ids: list[str]
+
+
+class EventMerchantParticipantUpdateRequest(BaseModel):
+    participation_status: Literal["invited", "confirmed", "declined"] | None = None
+    readiness_status: Literal["missing", "needs_setup", "ready"] | None = None
+    role_hint: str | None = None
+    notes: str | None = None
+
+
+class EventMerchantSetupSummary(BaseModel):
+    event_id: str
+    participants: list[EventMerchantParticipant]
+    total_count: int
+    ready_count: int
+    needs_setup_count: int
+    missing_count: int
+    declined_count: int
+    ready_for_planning: bool
+
+
 class MerchantAssignment(BaseModel):
     merchant_id: str
     role: str

@@ -6,8 +6,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { localizedDemoList, localizedDemoText, localizedStatus, useI18n } from "../../i18n";
 import { AgentEvidencePanel, latestRunForTrigger, stepsForRun, toolCallsForRun } from "../../components/agent";
 import { MetricTile, ProductPageHeader, WorkflowStepper } from "../../components/product";
-import type { AgentToolCall, EventPage, EventSummary, MerchantEdgePackagesResponse } from "../../types";
+import type {
+  AgentToolCall,
+  EventMerchantSetupSummary,
+  EventPage,
+  EventSummary,
+  MerchantEdgePackagesResponse,
+  MerchantProfile
+} from "../../types";
 import { asArray, useAsyncData } from "../productUtils";
+import { EventMerchantSetupPanel } from "./EventMerchantSetupPanel";
 
 function countPackageTouchpoints(packages: MerchantEdgePackagesResponse["packages"]) {
   return packages.reduce((total, item) => total + asArray(item.touchpoints).length, 0);
@@ -24,6 +32,34 @@ function merchantLabel(merchantId: string, t: (key: string) => string) {
 
 function getEventLoader() {
   return (api as { getEvent?: (eventId: string) => Promise<EventSummary> }).getEvent;
+}
+
+function getMerchantCatalogLoader() {
+  return (api as { getMerchants?: () => Promise<MerchantProfile[]> }).getMerchants;
+}
+
+function getEventMerchantRosterLoader() {
+  return (api as { getEventMerchantRoster?: (eventId: string) => Promise<EventMerchantSetupSummary> })
+    .getEventMerchantRoster;
+}
+
+function getReplaceEventMerchantRoster() {
+  return (api as {
+    replaceEventMerchantRoster?: (
+      eventId: string,
+      payload: { merchant_ids: string[] }
+    ) => Promise<EventMerchantSetupSummary>;
+  }).replaceEventMerchantRoster;
+}
+
+function getUpdateEventMerchantParticipant() {
+  return (api as {
+    updateEventMerchantParticipant?: (
+      eventId: string,
+      merchantId: string,
+      payload: { participation_status: "confirmed"; readiness_status: "ready" }
+    ) => Promise<EventMerchantSetupSummary>;
+  }).updateEventMerchantParticipant;
 }
 
 function messageFromError(error: unknown, fallback: string): string {
@@ -48,10 +84,24 @@ export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { e
   const [suggestionFeedback, setSuggestionFeedback] = useState<{ tone: "success" | "danger"; text: string } | null>(null);
   const [eventSummary, setEventSummary] = useState<EventSummary | null>(null);
   const [eventContextError, setEventContextError] = useState(false);
+  const getMerchantCatalog = getMerchantCatalogLoader();
+  const getEventMerchantRoster = getEventMerchantRosterLoader();
+  const replaceEventMerchantRoster = getReplaceEventMerchantRoster();
+  const updateEventMerchantParticipant = getUpdateEventMerchantParticipant();
   const { data: plans } = useAsyncData(() => api.getPlanVersions(eventId), [], [eventId, refreshKey]);
   const { data: traces } = useAsyncData(() => api.getAgentTraces(eventId), [], [eventId, refreshKey]);
   const { data: tasks } = useAsyncData(() => api.getMerchantTasks(eventId), [], [eventId, refreshKey]);
   const { data: agentRuns } = useAsyncData(() => api.getAgentRuns(eventId), [], [eventId, refreshKey]);
+  const { data: merchants } = useAsyncData(
+    () => (getMerchantCatalog ? getMerchantCatalog() : Promise.resolve([])),
+    [],
+    [refreshKey]
+  );
+  const { data: merchantSetup } = useAsyncData<EventMerchantSetupSummary | null>(
+    () => (getEventMerchantRoster ? getEventMerchantRoster(eventId) : Promise.resolve(null)),
+    null,
+    [eventId, refreshKey]
+  );
   const [eventPage, setEventPage] = useState<EventPage | null>(null);
   const [edgePackages, setEdgePackages] = useState<MerchantEdgePackagesResponse>({ packages: [] });
   const eventPageRequestRef = useRef(0);
@@ -60,6 +110,7 @@ export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { e
   const traceList = asArray(traces);
   const taskList = asArray(tasks);
   const packageList = asArray(edgePackages.packages);
+  const merchantList = asArray(merchants);
   const touchpointCount = countPackageTouchpoints(packageList);
   const couponRuleCount = countPackageCoupons(packageList);
   const planningRun = latestRunForTrigger(asArray(agentRuns), "planning_generation");
@@ -86,6 +137,12 @@ export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { e
   const readinessCount = taskList.filter((task) => task.task_status === "active").length;
   const currentStatus = currentPlan?.status ?? "draft";
   const eventStatus = eventSummary?.status ?? currentStatus;
+  const isDemoEvent = eventId === "demo-night-tour";
+  const merchantSetupApiAvailable = Boolean(
+    getEventMerchantRoster && replaceEventMerchantRoster && updateEventMerchantParticipant
+  );
+  const merchantSetupRequired = !isDemoEvent && Boolean(getEventMerchantRoster);
+  const merchantSetupReady = !merchantSetupRequired || merchantSetup?.ready_for_planning === true;
   const workspaceTitle = eventSummary ? localizedDemoText(eventSummary.title, t) : t("organizer.workspace.title");
   const workspaceDescription = eventSummary
     ? `${localizedDemoText(eventSummary.area, t)} / ${eventSummary.date} / ${eventSummary.time_window}`
@@ -203,14 +260,54 @@ export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { e
 
   const refreshWorkspace = () => setRefreshKey((current) => current + 1);
 
+  const saveMerchantSetup = async (merchantIds: string[]) => {
+    if (!replaceEventMerchantRoster) return;
+    setActionFeedback(null);
+    try {
+      await replaceEventMerchantRoster(eventId, { merchant_ids: merchantIds });
+      refreshWorkspace();
+      setActionFeedback({ tone: "success", text: t("organizer.workspace.merchantSetupSaved") });
+    } catch (error) {
+      setActionFeedback({
+        tone: "danger",
+        text: messageFromError(error, t("organizer.workspace.merchantSetupError"))
+      });
+    }
+  };
+
+  const markMerchantReady = async (merchantId: string) => {
+    if (!updateEventMerchantParticipant) return;
+    setActionFeedback(null);
+    try {
+      await updateEventMerchantParticipant(eventId, merchantId, {
+        participation_status: "confirmed",
+        readiness_status: "ready"
+      });
+      refreshWorkspace();
+      setActionFeedback({ tone: "success", text: t("organizer.workspace.merchantSetupSaved") });
+    } catch (error) {
+      setActionFeedback({
+        tone: "danger",
+        text: messageFromError(error, t("organizer.workspace.merchantSetupError"))
+      });
+    }
+  };
+
   const buildPlan = async () => {
     setActionFeedback(null);
+    if (!merchantSetupReady) {
+      setActionFeedback({ tone: "danger", text: t("organizer.workspace.merchantSetupRequired") });
+      return;
+    }
     try {
       await api.generatePlan(eventId);
       refreshWorkspace();
       setActionFeedback({ tone: "success", text: t("organizer.workspace.planBuildSuccess") });
-    } catch {
-      setActionFeedback({ tone: "danger", text: t("organizer.workspace.planBuildError") });
+    } catch (error) {
+      setActionFeedback({
+        tone: "danger",
+        text: messageFromError(error, t("organizer.workspace.planBuildError"))
+      });
     }
   };
 
@@ -260,7 +357,9 @@ export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { e
         status={eventStatus}
         actions={
           <div role="region" aria-label={t("organizer.workspace.actionsLabel")} className="flex flex-wrap gap-2">
-            <Button onClick={() => void buildPlan()}>{t("organizer.workspace.buildPlan")}</Button>
+            <Button onClick={() => void buildPlan()} disabled={!merchantSetupReady}>
+              {t("organizer.workspace.buildPlan")}
+            </Button>
             <Button variant="secondary" onClick={() => void approvePlan()}>
               {t("organizer.workspace.confirmPlan")}
             </Button>
@@ -300,6 +399,16 @@ export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { e
         >
           {actionFeedback.text}
         </div>
+      ) : null}
+
+      {merchantSetupApiAvailable && !isDemoEvent ? (
+        <EventMerchantSetupPanel
+          eventId={eventId}
+          merchants={merchantList}
+          setup={merchantSetup}
+          onSave={saveMerchantSetup}
+          onMarkReady={markMerchantReady}
+        />
       ) : null}
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
@@ -514,7 +623,9 @@ export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { e
 
       <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap gap-3">
-          <Button onClick={() => void buildPlan()}>{t("organizer.workspace.buildPlan")}</Button>
+          <Button onClick={() => void buildPlan()} disabled={!merchantSetupReady}>
+            {t("organizer.workspace.buildPlan")}
+          </Button>
           <Button variant="secondary" onClick={() => void approvePlan()}>
             {t("organizer.workspace.confirmPlan")}
           </Button>

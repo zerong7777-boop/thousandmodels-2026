@@ -334,6 +334,16 @@ shadcn/ui-inspired local component layer
 - New v2.8 visible copy has explicit `en`, `zh-Hans`, and `zh-Hant` dictionary entries.
 - v2.8 is a frontend product workflow layer. It does not add merchant assignment setup, event archive/delete/clone, external integrations, QwenPaw production orchestration, or production readiness.
 
+## v2.9 Event Operations Setup Pack State
+
+- v2.9 adds event-level merchant roster setup for organizer-managed non-demo events.
+- Organizers can read, replace, and update a selected event's merchant roster through organizer-only backend APIs.
+- Non-demo plan generation now requires at least one selected merchant and all selected participants to be confirmed and ready.
+- Planning merchant assignments, merchant tasks, route point linked merchants, event-page drafts, stale page rebuilds, and merchant-edge packages are scoped to selected ready merchants.
+- The organizer workspace shows merchant setup, selected merchant readiness, save actions, and mark-ready actions for the selected event.
+- The workspace disables Build route plan for non-demo events until merchant setup is ready, while the deterministic `demo-night-tour` path remains backward compatible.
+- v2.9 uses the existing local merchant catalog only. It does not add merchant onboarding, external merchant integrations, POS/payment/hardware/map/weather/traffic/identity, production QwenPaw orchestration, or production readiness.
+
 ## Demo Accounts
 
 - organizer: `organizer.demo`
@@ -343,6 +353,6 @@ shadcn/ui-inspired local component layer
 
 ## Current Boundary
 
-This is a stronger productized multilingual MVP, not a final commercial UI or commercial application. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview. v1.4 adds optional organizer-only QwenPaw shadow evidence, v1.8 adds guarded local QwenPaw advisory optimization evidence, v1.9 maps the P0/P1 commercial-readiness gaps, v2.0 adds local CI/repository hygiene gates, v2.1 adds beta auth/session/CSRF demo-boundary hardening, v2.2 adds migration-managed SQLite persistence, v2.3 adds deployment environment/readiness operations, v2.4 adds beta observability/runbook operations, v2.5 adds a deterministic live API release gate, v2.6 adds deterministic live browser release evidence, v2.7 adds the first real non-demo event lifecycle foundation, and v2.8 exposes that foundation through organizer event portfolio/create/workspace navigation. The reliable demo path remains deterministic.
+This is a stronger productized multilingual MVP, not a final commercial UI or commercial application. The organizer pages are credible but conservative; the merchant and tourist mobile flows are functional and role-specific; the public H5 no longer reads as a backend preview. v1.4 adds optional organizer-only QwenPaw shadow evidence, v1.8 adds guarded local QwenPaw advisory optimization evidence, v1.9 maps the P0/P1 commercial-readiness gaps, v2.0 adds local CI/repository hygiene gates, v2.1 adds beta auth/session/CSRF demo-boundary hardening, v2.2 adds migration-managed SQLite persistence, v2.3 adds deployment environment/readiness operations, v2.4 adds beta observability/runbook operations, v2.5 adds a deterministic live API release gate, v2.6 adds deterministic live browser release evidence, v2.7 adds the first real non-demo event lifecycle foundation, v2.8 exposes that foundation through organizer event portfolio/create/workspace navigation, and v2.9 adds event-level merchant setup gating before non-demo planning. The reliable demo path remains deterministic.
 
 Do not continue into production QwenPaw orchestration, real merchant connections, hardware, real traffic prediction, model training, payment/POS integrations, open registration, real map APIs, or a marketing landing page without a new plan.

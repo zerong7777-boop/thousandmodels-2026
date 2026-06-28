@@ -21,6 +21,7 @@ from app.schemas import (
     CouponRule,
     EventPage,
     EventBrief,
+    EventMerchantParticipant,
     EventPlan,
     EventSummary,
     InShopTouchpoint,
@@ -188,6 +189,7 @@ class MVPStore:
             "operational_metrics",
             "reports",
             "event_pages",
+            "event_merchant_participants",
             "merchant_interaction_packages",
             "in_shop_touchpoints",
             "coupon_rules",
@@ -292,6 +294,44 @@ class MVPStore:
 
     def get_merchant(self, merchant_id: str) -> MerchantProfile | None:
         return self.get_model("merchants", merchant_id, MerchantProfile)
+
+    def save_event_merchant_participant(self, participant: EventMerchantParticipant) -> None:
+        self.upsert_model(
+            "event_merchant_participants",
+            f"{participant.event_id}:{participant.merchant_id}",
+            participant,
+        )
+
+    def get_event_merchant_participant(
+        self, event_id: str, merchant_id: str
+    ) -> EventMerchantParticipant | None:
+        return self.get_model(
+            "event_merchant_participants",
+            f"{event_id}:{merchant_id}",
+            EventMerchantParticipant,
+        )
+
+    def list_event_merchant_participants(self, event_id: str) -> list[EventMerchantParticipant]:
+        return self.list_models(
+            "event_merchant_participants",
+            EventMerchantParticipant,
+            prefix=f"{event_id}:",
+        )
+
+    def delete_event_merchant_participants_except(
+        self, event_id: str, merchant_ids: set[str]
+    ) -> None:
+        existing = self.list_event_merchant_participants(event_id)
+        for participant in existing:
+            if participant.merchant_id not in merchant_ids:
+                self.conn.execute(
+                    "DELETE FROM records WHERE collection = ? AND item_key = ?",
+                    (
+                        "event_merchant_participants",
+                        f"{event_id}:{participant.merchant_id}",
+                    ),
+                )
+        self.conn.commit()
 
     def save_runtime_state(self, state: MerchantRuntimeState) -> None:
         self.upsert_model("runtime_states", state.merchant_id, state)
