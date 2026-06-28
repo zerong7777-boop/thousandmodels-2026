@@ -93,7 +93,7 @@ export function resolveRoute(
       shell: "organizer",
       activeKey: "events",
       title: "Events",
-      content: <OrganizerEventsPage />
+      content: <OrganizerEventsPage onNavigate={onNavigate} />
     };
   }
 

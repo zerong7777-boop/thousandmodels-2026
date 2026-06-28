@@ -2,18 +2,18 @@
 
 ## Recommended Next Step
 
-Complete v2.7 closeout: run full backend, frontend, build, repository hygiene, and whitespace verification; then commit, push, and open a PR for `feat/v27-real-product-logic-foundation`.
+Complete v2.8 closeout: run repository hygiene and whitespace verification, then commit, push, and open a PR for `feat/v28-organizer-event-workspace`.
 
-After v2.7 is merged, the recommended next implementation phase is `v2.8-organizer-event-workspace`.
+After v2.8 is merged, the recommended next implementation phase is `v2.9-event-merchant-setup`.
 
-v2.7 adds the first real non-demo event lifecycle foundation. The next useful work is to expose that foundation in a practical organizer workflow:
+v2.8 makes non-demo event creation and selected-event workspace navigation usable from the organizer UI. The next useful work is to make a created event operationally configurable before route planning:
 
-1. Add an organizer event list that is not hardwired to `demo-night-tour`.
-2. Add a focused create-event form using the v2.7 `POST /api/events` contract.
-3. Add event selection/navigation so organizer pages can operate on a chosen event id.
-4. Keep demo routes available for release gates and screenshots.
-5. Avoid broad visual redesign; the goal is usable event workspace routing, not a landing page.
-6. Keep merchant assignment/catalog management for a later phase unless a minimal selector is needed to make event creation usable.
+1. Add a minimal merchant participation setup for a selected event.
+2. Let organizers select from the existing local merchant/catalog data without inventing external merchant integrations.
+3. Show which merchants are included, missing, or not ready before plan generation.
+4. Keep planning, event page, packages, and review scoped to the selected event id.
+5. Preserve the deterministic `demo-night-tour` release-gate path.
+6. Avoid POS/payment/hardware/map/weather/traffic integrations until a separate integration plan exists.
 
 ## Do Not Do Yet
 
@@ -32,4 +32,5 @@ v2.7 adds the first real non-demo event lifecycle foundation. The next useful wo
 - Do not treat v2.5 as browser or cloud release proof; it is a live API release gate for local/demo beta readiness.
 - Do not treat v2.6 as cloud release proof; it is a live browser release gate for local/demo beta readiness.
 - Do not treat v2.7 as production readiness; it is a beta product-logic foundation without real external integrations or a full organizer creation UI.
+- Do not treat v2.8 as production readiness; it is a frontend organizer workflow layer without merchant assignment setup or external integrations.
 - Do not assume GitHub Actions is green until the pushed workflow run is observed.
