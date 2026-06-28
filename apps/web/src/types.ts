@@ -72,6 +72,12 @@ export interface MerchantRuntimeState {
   updated_at: string;
 }
 
+export interface MerchantOperatingWindow {
+  label: string;
+  start_time: string;
+  end_time: string;
+}
+
 export interface MerchantProfile {
   merchant_id: string;
   name: string;
@@ -89,6 +95,39 @@ export interface MerchantProfile {
   rainy_day_score: number;
   night_score: number;
   constraints: string[];
+  contact_name?: string;
+  contact_phone?: string;
+  address_label?: string;
+  area?: string;
+  operating_windows?: MerchantOperatingWindow[];
+  capacity_notes?: string;
+  category_tags?: string[];
+  participation_constraints?: string[];
+  status?: "active" | "inactive" | "suspended";
+}
+
+export type MerchantCreateRequest = Omit<MerchantProfile, "merchant_id"> & { merchant_id: string };
+export type MerchantUpdateRequest = Partial<Omit<MerchantProfile, "merchant_id">>;
+
+export interface MerchantEligibility {
+  merchant_id: string;
+  status: "eligible" | "needs_review" | "ineligible";
+  reasons: string[];
+}
+
+export interface MerchantParticipationHistoryItem {
+  event_id: string;
+  event_title: string;
+  event_date: string;
+  participation_status: string;
+  readiness_status: string;
+  latest_plan_version: number;
+  has_interaction_package: boolean;
+}
+
+export interface MerchantDetail {
+  merchant: MerchantProfile;
+  participation_history: MerchantParticipationHistoryItem[];
 }
 
 export interface EventMerchantParticipant {
@@ -111,6 +150,7 @@ export interface EventMerchantSetupSummary {
   missing_count: number;
   declined_count: number;
   ready_for_planning: boolean;
+  eligibility?: Record<string, MerchantEligibility>;
 }
 
 export interface EventMerchantRosterUpdateRequest {

@@ -20,9 +20,12 @@ import type {
   GeneratePlanResponse,
   Incident,
   MerchantEdgePackagesResponse,
+  MerchantCreateRequest,
+  MerchantDetail,
   MerchantPack,
   MerchantProfile,
   MerchantTask,
+  MerchantUpdateRequest,
   MerchantWorkbench,
   MerchantRuntimeState,
   OperationSuggestion,
@@ -168,6 +171,12 @@ export const api = {
     json<MerchantRuntimeState[]>(fetch(`${API_BASE}/api/merchants/runtime-states`, READ_OPTIONS)),
   getMerchants: () =>
     json<MerchantProfile[]>(fetch(`${API_BASE}/api/merchants`, READ_OPTIONS)),
+  getMerchant: (merchantId: string) =>
+    json<MerchantDetail>(fetch(`${API_BASE}/api/merchants/${merchantId}`, READ_OPTIONS)),
+  createMerchant: (payload: MerchantCreateRequest) =>
+    postJson<MerchantDetail>("/api/merchants", payload),
+  updateMerchant: (merchantId: string, payload: MerchantUpdateRequest) =>
+    patchJson<MerchantDetail>(`/api/merchants/${merchantId}`, payload),
   getEventMerchantRoster: (eventId: string) =>
     json<EventMerchantSetupSummary>(
       fetch(`${API_BASE}/api/events/${eventId}/merchant-roster`, READ_OPTIONS)

@@ -24,6 +24,16 @@ interface ProductShellProps {
   accent?: "harbor" | "lotus" | "amber";
 }
 
+function navItemMatches(pathname: string, href: string): boolean {
+  return pathname === href || (href !== "/" && pathname.startsWith(`${href}/`));
+}
+
+function activeNavItem(nav: SidebarItem[], pathname: string): SidebarItem | undefined {
+  return [...nav]
+    .sort((left, right) => right.href.length - left.href.length)
+    .find((item) => navItemMatches(pathname, item.href));
+}
+
 export function ProductShell({
   user,
   label,
@@ -40,7 +50,7 @@ export function ProductShell({
   const { t } = useI18n();
   const accentClass =
     accent === "lotus" ? "text-lotus" : accent === "amber" ? "text-amberline" : "text-harbor";
-  const activeNav = nav.find((item) => pathname === item.href || pathname.startsWith(item.href));
+  const activeNav = activeNavItem(nav, pathname);
 
   return (
     <div className={cn("min-h-screen bg-mist text-ink", compact ? "pb-20" : "")} data-testid={testId}>

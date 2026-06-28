@@ -1,6 +1,7 @@
+import re
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class Location(BaseModel):
@@ -49,6 +50,28 @@ class EventUpdateRequest(BaseModel):
     priority_rules: list[str] | None = None
 
 
+class MerchantOperatingWindow(BaseModel):
+    label: str = "daily"
+    start_time: str
+    end_time: str
+
+    @field_validator("start_time", "end_time")
+    @classmethod
+    def validate_time(cls, value: str) -> str:
+        if not re.fullmatch(r"\d{2}:\d{2}", value):
+            raise ValueError("time must use HH:MM")
+        hour, minute = (int(part) for part in value.split(":"))
+        if hour > 23 or minute > 59:
+            raise ValueError("time must use HH:MM")
+        return value
+
+    @model_validator(mode="after")
+    def validate_range(self):
+        if self.start_time >= self.end_time:
+            raise ValueError("overnight operating windows are not supported")
+        return self
+
+
 class MerchantProfile(BaseModel):
     merchant_id: str
     name: str
@@ -62,6 +85,83 @@ class MerchantProfile(BaseModel):
     rainy_day_score: int = Field(ge=1, le=5)
     night_score: int = Field(ge=1, le=5)
     constraints: list[str]
+    contact_name: str = ""
+    contact_phone: str = ""
+    address_label: str = ""
+    area: str = ""
+    operating_windows: list[MerchantOperatingWindow] = Field(default_factory=list)
+    capacity_notes: str = ""
+    category_tags: list[str] = Field(default_factory=list)
+    participation_constraints: list[str] = Field(default_factory=list)
+    status: Literal["active", "inactive", "suspended"] = "active"
+
+
+class MerchantCreateRequest(BaseModel):
+    merchant_id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    type: str = Field(min_length=1)
+    location: Location
+    opening_hours: str = Field(min_length=1)
+    capacity_level: Literal["low", "medium", "high"]
+    signature_products: list[str] = Field(default_factory=list)
+    story: str = ""
+    suitable_activity_types: list[str] = Field(default_factory=list)
+    rainy_day_score: int = Field(ge=1, le=5)
+    night_score: int = Field(ge=1, le=5)
+    constraints: list[str] = Field(default_factory=list)
+    contact_name: str = ""
+    contact_phone: str = ""
+    address_label: str = ""
+    area: str = ""
+    operating_windows: list[MerchantOperatingWindow] = Field(default_factory=list)
+    capacity_notes: str = ""
+    category_tags: list[str] = Field(default_factory=list)
+    participation_constraints: list[str] = Field(default_factory=list)
+    status: Literal["active", "inactive", "suspended"] = "active"
+
+
+class MerchantUpdateRequest(BaseModel):
+    name: str | None = None
+    type: str | None = None
+    location: Location | None = None
+    opening_hours: str | None = None
+    capacity_level: Literal["low", "medium", "high"] | None = None
+    signature_products: list[str] | None = None
+    story: str | None = None
+    suitable_activity_types: list[str] | None = None
+    rainy_day_score: int | None = Field(default=None, ge=1, le=5)
+    night_score: int | None = Field(default=None, ge=1, le=5)
+    constraints: list[str] | None = None
+    contact_name: str | None = None
+    contact_phone: str | None = None
+    address_label: str | None = None
+    area: str | None = None
+    operating_windows: list[MerchantOperatingWindow] | None = None
+    capacity_notes: str | None = None
+    category_tags: list[str] | None = None
+    participation_constraints: list[str] | None = None
+    status: Literal["active", "inactive", "suspended"] | None = None
+
+
+class MerchantEligibility(BaseModel):
+    merchant_id: str
+    status: Literal["eligible", "needs_review", "ineligible"]
+    reasons: list[str] = Field(default_factory=list)
+
+
+class MerchantParticipationHistoryItem(BaseModel):
+    event_id: str
+    event_title: str
+    event_date: str
+    participation_status: str
+    readiness_status: str
+    latest_plan_version: int
+    has_interaction_package: bool
+
+
+class MerchantDetail(BaseModel):
+    merchant: MerchantProfile
+    participation_history: list[MerchantParticipationHistoryItem] = Field(default_factory=list)
 
 
 class MerchantRuntimeState(BaseModel):
@@ -104,6 +204,7 @@ class EventMerchantSetupSummary(BaseModel):
     missing_count: int
     declined_count: int
     ready_for_planning: bool
+    eligibility: dict[str, MerchantEligibility] = Field(default_factory=dict)
 
 
 class MerchantAssignment(BaseModel):

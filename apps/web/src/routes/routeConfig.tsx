@@ -9,6 +9,7 @@ import { OrganizerDashboardPage } from "../pages/organizer/OrganizerDashboardPag
 import { OrganizerEventWorkspacePage } from "../pages/organizer/OrganizerEventWorkspacePage";
 import { OrganizerEventsPage } from "../pages/organizer/OrganizerEventsPage";
 import { OrganizerExceptionCenterPage } from "../pages/organizer/OrganizerExceptionCenterPage";
+import { OrganizerMerchantNetworkPage } from "../pages/organizer/OrganizerMerchantNetworkPage";
 import { OrganizerReviewPage } from "../pages/organizer/OrganizerReviewPage";
 import { PublicEventPage } from "../pages/public/PublicEventPage";
 import { TouristEventHomePage } from "../pages/tourist/TouristEventHomePage";
@@ -85,6 +86,15 @@ export function resolveRoute(
       activeKey: "workspace",
       title: "Event workspace",
       content: <OrganizerEventWorkspacePage eventId={segment(pathname, 2) || "demo-night-tour"} />
+    };
+  }
+
+  if (pathname === "/organizer/merchants") {
+    return {
+      shell: "organizer",
+      activeKey: "merchants",
+      title: "Merchant Network",
+      content: <OrganizerMerchantNetworkPage />
     };
   }
 

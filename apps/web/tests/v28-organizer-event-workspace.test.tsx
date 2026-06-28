@@ -264,9 +264,11 @@ test("organizer shell links follow the selected event id", () => {
     </OrganizerProductShell>
   );
 
-  fireEvent.click(screen.getByRole("button", { name: /workspace/i }));
-  fireEvent.click(screen.getByRole("button", { name: /exceptions/i }));
-  fireEvent.click(screen.getByRole("button", { name: /review/i }));
+  expect(screen.getByRole("link", { name: /workspace/i })).toHaveAttribute("aria-current", "page");
+  expect(screen.getByRole("link", { name: /events/i })).not.toHaveAttribute("aria-current");
+  fireEvent.click(screen.getByRole("link", { name: /workspace/i }));
+  fireEvent.click(screen.getByRole("link", { name: /exceptions/i }));
+  fireEvent.click(screen.getByRole("link", { name: /review/i }));
 
   expect(onNavigate).toHaveBeenNthCalledWith(1, "/organizer/events/real-harbor-fair");
   expect(onNavigate).toHaveBeenNthCalledWith(2, "/organizer/events/real-harbor-fair/exceptions");

@@ -12,6 +12,21 @@ type EventMerchantSetupPanelProps = {
   onMarkReady: (merchantId: string) => Promise<void>;
 };
 
+function operatingWindowSummary(merchant: MerchantProfile): string {
+  const windows = merchant.operating_windows ?? [];
+  if (windows.length) {
+    return windows.map((window) => `${window.start_time}-${window.end_time}`).join(", ");
+  }
+  return merchant.opening_hours ?? "";
+}
+
+function eligibilityLabel(status: string | undefined, t: ReturnType<typeof useI18n>["t"]): string {
+  if (status === "eligible") return t("organizer.workspace.eligibilityEligible");
+  if (status === "needs_review") return t("organizer.workspace.eligibilityNeedsReview");
+  if (status === "ineligible") return t("organizer.workspace.eligibilityIneligible");
+  return t("organizer.workspace.eligibilityNeedsReview");
+}
+
 export function EventMerchantSetupPanel({
   merchants,
   setup,
@@ -89,6 +104,7 @@ export function EventMerchantSetupPanel({
         <div className="grid gap-2 sm:grid-cols-2">
           {merchants.map((merchant) => {
             const selected = selectedIds.includes(merchant.merchant_id);
+            const eligibility = setup?.eligibility?.[merchant.merchant_id];
             return (
               <label
                 key={merchant.merchant_id}
@@ -108,6 +124,16 @@ export function EventMerchantSetupPanel({
                   <span className="mt-1 block text-xs text-slate-500">
                     {merchant.type} / {localizedStatus(merchant.capacity_level, t)}
                   </span>
+                  <span className="mt-1 block text-xs text-slate-500">
+                    {merchant.area || merchant.location?.label || "-"} / {operatingWindowSummary(merchant)}
+                  </span>
+                  {eligibility ? (
+                    <span className="mt-2 block">
+                      <Badge variant={eligibility.status === "ineligible" ? "danger" : eligibility.status === "eligible" ? "success" : "warning"}>
+                        {eligibilityLabel(eligibility.status, t)}
+                      </Badge>
+                    </span>
+                  ) : null}
                 </span>
               </label>
             );
@@ -130,15 +156,39 @@ export function EventMerchantSetupPanel({
             {selectedMerchants.map((merchant) => {
               const participant = participantsByMerchantId.get(merchant.merchant_id);
               const isReady = participant?.readiness_status === "ready";
+              const eligibility = setup?.eligibility?.[merchant.merchant_id];
+              const isIneligible = eligibility?.status === "ineligible";
               return (
                 <div key={merchant.merchant_id} className="rounded-md border border-slate-200 bg-white p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="font-medium text-ink">{merchant.name}</span>
-                    <Badge variant={isReady ? "success" : "warning"}>
-                      {localizedStatus(participant?.readiness_status ?? "needs_setup", t)}
-                    </Badge>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant={isReady ? "success" : "warning"}>
+                        {localizedStatus(participant?.readiness_status ?? "needs_setup", t)}
+                      </Badge>
+                      {eligibility ? (
+                        <Badge variant={isIneligible ? "danger" : eligibility.status === "eligible" ? "success" : "warning"}>
+                          {eligibilityLabel(eligibility.status, t)}
+                        </Badge>
+                      ) : null}
+                    </div>
                   </div>
-                  {!isReady && participant ? (
+                  <p className="mt-2 text-xs text-slate-500">
+                    {merchant.area || merchant.location?.label || "-"} / {operatingWindowSummary(merchant)}
+                  </p>
+                  {merchant.participation_constraints?.length ? (
+                    <p className="mt-1 text-xs text-slate-500">
+                      {merchant.participation_constraints.join(", ")}
+                    </p>
+                  ) : null}
+                  {eligibility?.reasons.length ? (
+                    <ul className="mt-2 space-y-1 text-xs text-slate-600">
+                      {eligibility.reasons.map((reason) => (
+                        <li key={reason}>{reason}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {!isReady && participant && !isIneligible ? (
                     <Button
                       className="mt-3"
                       size="sm"
