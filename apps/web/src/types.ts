@@ -389,6 +389,15 @@ export interface RoutePoint {
   current_status: "active" | "paused" | "replaced";
 }
 
+export interface MerchantFitResult {
+  merchant_id: string;
+  score: number;
+  fit_level: "strong" | "medium" | "weak";
+  matched_signals: string[];
+  warnings: string[];
+  rationale: string;
+}
+
 export interface PlanVersion {
   plan_id: string;
   event_id: string;
@@ -403,6 +412,8 @@ export interface PlanVersion {
   diff_from_previous: string[];
   approved_by?: string | null;
   approved_at?: string | null;
+  merchant_fit?: MerchantFitResult[];
+  planner_warnings?: string[];
 }
 
 export interface MerchantTask {

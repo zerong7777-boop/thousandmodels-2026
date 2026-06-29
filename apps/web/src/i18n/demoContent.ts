@@ -82,7 +82,10 @@ const statusKeys: Record<string, string> = {
   stale: "common.status.stale",
   eligible: "common.status.eligible",
   needs_review: "common.status.needs_review",
-  ineligible: "common.status.ineligible"
+  ineligible: "common.status.ineligible",
+  strong: "common.status.strong",
+  medium: "common.status.medium",
+  weak: "common.status.weak"
 };
 
 export function localizedDemoText(value: string | undefined | null, t: Translator): string {

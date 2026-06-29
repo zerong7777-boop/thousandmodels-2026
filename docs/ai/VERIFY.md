@@ -1209,3 +1209,57 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 | Existing v2.9 event setup remains compatible and now displays eligibility context | pass. |
 | Organizer navigation exposes Merchant Network as a semantic link | pass. |
 | v3.0 adds public merchant onboarding, external merchant integrations, POS/payment/hardware/map/weather/traffic/identity, or production QwenPaw orchestration | no; it remains an organizer-managed local merchant network package. |
+
+## v3.1 Event Planning Eligibility Pack Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python -m pytest tests/test_v31_event_planning_eligibility.py -q` | `apps/api` | 0 | 3 v3.1 focused backend tests passed after the initial RED import failure for missing `app.services.merchant_fit`. |
+| `python -m pytest tests/test_v31_event_planning_eligibility.py tests/test_v29_event_operations_setup.py tests/test_v30_merchant_network.py -q` | `apps/api` | 0 | 15 backend tests passed, covering v3.1 fit scoring/plan evidence plus v2.9 roster and v3.0 eligibility regressions. |
+| `python -m pytest tests/test_v08_planning_agent.py tests/test_v12_event_page_merchant_edge.py tests/test_v31_event_planning_eligibility.py -q` | `apps/api` | 0 | 18 backend regression tests passed after fixing the legacy demo no-roster merchant-order compatibility and updating the planning Agent tool-call expectation. |
+| `python -m pytest -q` | `apps/api` | 0 | Full backend suite passed: 362 tests, with only existing FastAPI/Starlette deprecation warnings. |
+| `npm.cmd run test -- v31-event-planning-eligibility` | `apps/web` | 0 | 1 v3.1 focused frontend test passed after the initial RED failure for missing planner warning rendering. |
+| `npm.cmd run test -- v31-event-planning-eligibility v28-organizer-event-workspace v29-event-operations-setup v30-merchant-network routes i18n` | `apps/web` | 0 | 8 frontend regression files passed, 34 tests total, covering v3.1 rendering and adjacent workspace/event/merchant/route/i18n behavior. |
+| `npm.cmd run test` | `apps/web` | 0 | Full frontend Vitest suite passed: 33 files and 117 tests. |
+| `npm.cmd run build` | `apps/web` | 0 | TypeScript and Vite production build passed; Vite reported the existing chunk-size warning for `assets/index-DNiHgps3.js` at 877.98 kB. |
+| `python scripts\repo_hygiene.py --base origin/main` | project root | 0 | Secret, local-path, node-modules, and generated-artifact checks passed. |
+| `git diff --check` | project root | 0 | No whitespace errors; Git reported expected Windows LF-to-CRLF working-copy warnings for touched text files. |
+
+### Evidence Artifacts
+
+| Artifact | Summary |
+| --- | --- |
+| `apps/api/app/services/merchant_fit.py` | Deterministic event-to-merchant fit scoring that reuses v3.0 eligibility, excludes ineligible merchants, ranks eligible merchants, and emits warnings/rationales. |
+| `apps/api/app/schemas.py` | `MerchantFitResult` plus defaulted `PlanVersion.merchant_fit` and `PlanVersion.planner_warnings`. |
+| `apps/api/app/services/planning.py` | Fit-ranked merchant assignment ordering, plan evidence attachment, and a compatibility option to preserve input order while still filtering ineligible merchants. |
+| `apps/api/app/main.py` | Enables the compatibility option only for the legacy `demo-night-tour` no-roster fallback. |
+| `apps/api/app/agents/runtime.py` | Planning Agent merchant step now records `merchant_fit` and `planner_warnings` from the generated plan. |
+| `apps/api/tests/test_v08_planning_agent.py` | Updated the Agent tool-call evidence contract from generic night merchant selection to deterministic fit scoring. |
+| `apps/api/tests/test_v31_event_planning_eligibility.py` | Backend RED/GREEN coverage for scoring order, ineligible exclusion, generated plan assignment order, plan warnings, and Agent trace evidence. |
+| `apps/web/src/pages/organizer/OrganizerEventWorkspacePage.tsx` | Organizer-visible planner warnings and merchant-fit rationale section. |
+| `apps/web/tests/v31-event-planning-eligibility.test.tsx` | Frontend RED/GREEN coverage for planner warnings and merchant-fit rationales. |
+| `docs/proposal/v3.1-event-planning-eligibility-pack-spec.md` | v3.1 requirements, scope, non-goals, scoring rules, and acceptance criteria. |
+| `docs/proposal/v3.1-event-planning-eligibility-pack-implementation-plan.md` | v3.1 implementation plan and verification gates. |
+
+### Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Fit scoring is deterministic and local-testable | pass. |
+| v3.0 ineligible merchants remain excluded | pass. |
+| Weak but eligible merchants produce planner warnings | pass. |
+| Non-demo plan merchant assignments are ordered by fit score | pass. |
+| Generated plan versions include merchant-fit evidence and warnings | pass. |
+| Planning Agent merchant step includes fit evidence | pass. |
+| Organizer workspace renders fit rationales and planner warnings | pass. |
+| Legacy `demo-night-tour` no-roster planning remains catalog-order compatible while still recording fit evidence | pass. |
+| v2.9 roster readiness and v3.0 eligibility regressions remain compatible | pass. |
+| v3.1 adds live model scoring, Qwen/QwenPaw production orchestration, map/weather/traffic/POS/payment integrations, or automatic publication | no; it remains deterministic local planning intelligence. |
+
+### Regression Notes
+
+- A first full backend run exposed four real regressions: the old Agent tool-call expectation still used `merchant.select_night_merchants`, and fit ordering had changed the legacy no-roster demo plan enough to include merchants outside the historical first-six catalog path.
+- The fix keeps fit ranking active for explicit event rosters and non-demo planning, while preserving the legacy demo fallback order when no roster exists.
+- Backend pytest must be run serially against the default SQLite store; parallel pytest processes can interfere because demo cleanup clears global merchant/catalog records.

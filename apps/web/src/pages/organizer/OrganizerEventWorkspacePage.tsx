@@ -134,6 +134,8 @@ export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { e
     planningRun?.run_id
   );
   const currentPlan = planList.find((plan) => plan.status === "approved") ?? planList[0];
+  const plannerWarnings = asArray(currentPlan?.planner_warnings);
+  const merchantFit = asArray(currentPlan?.merchant_fit);
   const readinessCount = taskList.filter((task) => task.task_status === "active").length;
   const currentStatus = currentPlan?.status ?? "draft";
   const eventStatus = eventSummary?.status ?? currentStatus;
@@ -454,6 +456,77 @@ export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { e
         evaluations={asArray(planningEvaluations)}
         emptyMessage={t("organizer.agentEvidence.emptyPlanning")}
       />
+
+      {plannerWarnings.length || merchantFit.length ? (
+        <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="grid gap-4 lg:grid-cols-[minmax(260px,0.8fr)_minmax(0,1.2fr)]">
+            {plannerWarnings.length ? (
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+                <h2 className="text-sm font-semibold text-amber-950">
+                  {t("organizer.workspace.plannerWarnings")}
+                </h2>
+                <ul className="mt-2 space-y-1 text-sm text-amber-900">
+                  {plannerWarnings.map((warning) => (
+                    <li key={warning}>{warning}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {merchantFit.length ? (
+              <div className="space-y-3">
+                <div>
+                  <h2 className="text-sm font-semibold text-ink">{t("organizer.workspace.merchantFit")}</h2>
+                  <p className="mt-1 text-sm text-slate-600">{t("organizer.workspace.merchantFitDescription")}</p>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {merchantFit.slice(0, 6).map((fit) => (
+                    <div key={fit.merchant_id} className="rounded-md border border-slate-200 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-medium text-ink">{merchantLabel(fit.merchant_id, t)}</span>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge
+                            variant={
+                              fit.fit_level === "strong"
+                                ? "success"
+                                : fit.fit_level === "medium"
+                                  ? "warning"
+                                  : "danger"
+                            }
+                          >
+                            {localizedStatus(fit.fit_level, t)}
+                          </Badge>
+                          <Badge variant="neutral">{t("organizer.workspace.fitScore", { score: fit.score })}</Badge>
+                        </div>
+                      </div>
+                      <p className="mt-2 text-sm leading-5 text-slate-700">{fit.rationale}</p>
+                      {asArray(fit.matched_signals).length ? (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {asArray(fit.matched_signals)
+                            .slice(0, 3)
+                            .map((signal) => (
+                              <Badge key={signal} variant="neutral">
+                                {signal}
+                              </Badge>
+                            ))}
+                        </div>
+                      ) : null}
+                      {asArray(fit.warnings).length ? (
+                        <ul className="mt-3 list-disc pl-5 text-sm text-amber-800">
+                          {asArray(fit.warnings)
+                            .slice(0, 3)
+                            .map((warning) => (
+                              <li key={warning}>{warning}</li>
+                            ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-3">
         <MetricTile

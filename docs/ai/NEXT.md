@@ -2,18 +2,18 @@
 
 ## Recommended Next Step
 
-Complete v3.0 closeout: review the merchant network diff, then commit, push, and open a PR for `feat/v30-merchant-network-pack`.
+v3.1 is implemented and locally verified. The immediate closeout step is to commit, push, and open a PR for `feat/v31-event-planning-eligibility-pack`.
 
-After v3.0 is merged, the recommended next implementation phase is `v3.1-event-planning-eligibility-pack`.
+After v3.1 is merged, the recommended next implementation phase is `v3.2-route-assembly-quality-pack`.
 
-v3.0 makes the merchant network credible enough for organizer setup, but route generation still mostly treats eligibility as a gate instead of using merchant fit as planning intelligence. The next useful product package is to make planner output use merchant-network data more directly:
+v3.1 makes selected merchants fit-ranked and explainable, but route generation is still a simple first-six route-point assembly. The next useful product package is to make route assembly itself more product-real:
 
-1. Feed merchant category tags, capacity notes, operating windows, and participation constraints into non-demo route candidate selection.
-2. Explain why each selected merchant fits the event brief, target audience, weather/time context, and route role.
-3. Surface planner warnings when ready roster merchants are eligible but weak fits for the event.
-4. Keep planner output deterministic and evidence-backed before introducing any live model scoring.
-5. Preserve the deterministic `demo-night-tour` release-gate path and existing v2.9 roster gate.
-6. Avoid POS/payment/hardware/map/weather/traffic integrations until a separate integration plan exists.
+1. Score route points against the selected event brief, time window, indoor/outdoor constraints, rainy-day needs, and linked selected merchants.
+2. Build a deterministic route sequence with explainable stop roles instead of slicing the first six route points.
+3. Warn organizers when selected merchants have no suitable route point linkage or when route coverage is thin.
+4. Keep route-point `linked_merchants` scoped to selected plan merchants.
+5. Preserve the deterministic `demo-night-tour` release-gate path, v2.9 roster gate, v3.0 eligibility gate, and v3.1 merchant-fit evidence.
+6. Avoid live map/weather/traffic integrations until a separate integration plan exists.
 
 ## Do Not Do Yet
 
@@ -35,4 +35,5 @@ v3.0 makes the merchant network credible enough for organizer setup, but route g
 - Do not treat v2.8 as production readiness; it is a frontend organizer workflow layer without merchant assignment setup or external integrations.
 - Do not treat v2.9 as real merchant onboarding or external merchant integration; it scopes planning to an event roster backed by the local catalog.
 - Do not treat v3.0 as real merchant onboarding or external merchant integration; it is an organizer-managed local merchant network baseline.
+- Do not treat v3.1 as route optimization or real external planning intelligence; it is deterministic local merchant-fit ranking and evidence.
 - Do not assume GitHub Actions is green until the pushed workflow run is observed.

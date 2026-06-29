@@ -42,6 +42,9 @@ export const en: TranslationDictionary = {
   "common.status.eligible": "eligible",
   "common.status.needs_review": "needs review",
   "common.status.ineligible": "ineligible",
+  "common.status.strong": "strong",
+  "common.status.medium": "medium",
+  "common.status.weak": "weak",
 
   "auth.productAccess": "Product access",
   "auth.productPurpose":
@@ -270,6 +273,10 @@ export const en: TranslationDictionary = {
   "organizer.workspace.linkedEvidenceRefs": "Linked evidence",
   "organizer.workspace.packageEvidenceEmpty": "No evidence reference attached.",
   "organizer.workspace.packageReadinessEmpty": "Generate merchant packages to review readiness.",
+  "organizer.workspace.plannerWarnings": "Planner warnings",
+  "organizer.workspace.merchantFit": "Merchant fit",
+  "organizer.workspace.merchantFitDescription": "Fit scoring explains why merchants were selected for this event plan.",
+  "organizer.workspace.fitScore": "Score {score}",
 
   "organizer.agentEvidence.title": "Agent evidence",
   "organizer.agentEvidence.description": "Specialist Agent runs, tool evidence, controlled drafts, and approval boundaries.",

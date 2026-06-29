@@ -49,7 +49,6 @@ from app.schemas import (
 from app.services.recovery import build_recovery_proposal
 from app.store import STORE
 from app.tools.budget import split_budget
-from app.tools.merchant import select_night_merchants
 from app.tools.route import build_static_route
 
 
@@ -566,9 +565,12 @@ class AgentRuntime:
 
         selected = recorder.call(
             step_id="step_merchant",
-            tool_name="merchant.select_night_merchants",
-            input_payload={"merchant_count": len(merchants), "limit": 6},
-            fn=lambda: [merchant.merchant_id for merchant in select_night_merchants(merchants, limit=6)],
+            tool_name="merchant.score_event_fit",
+            input_payload={
+                "merchant_count": len(merchants),
+                "assigned_count": len(plan.merchant_assignments),
+            },
+            fn=lambda: list(plan.merchant_assignments),
         )
         route = recorder.call(
             step_id="step_route",
@@ -640,8 +642,12 @@ class AgentRuntime:
                 input_refs=["merchants", "event_brief"],
                 tool_calls=[call.model_dump() for call in recorder.calls if call.step_id == "step_merchant"],
                 tool_call_refs=[call.tool_call_id for call in recorder.calls if call.step_id == "step_merchant"],
-                structured_output={"selected_merchants": selected},
-                decision_reason="Selected merchants have high night score and route compatibility.",
+                structured_output={
+                    "selected_merchants": selected,
+                    "merchant_fit": [item.model_dump() for item in plan.merchant_fit],
+                    "planner_warnings": plan.planner_warnings,
+                },
+                decision_reason="Selected merchants are ordered by deterministic merchant-fit scoring.",
                 confidence=0.84,
                 requires_human_approval=False,
                 schema_name="MerchantTask",

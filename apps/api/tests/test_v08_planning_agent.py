@@ -33,5 +33,5 @@ def test_generate_plan_persists_agent_run_steps_and_tool_calls(monkeypatch):
     assert tool_calls.status_code == 200
     tool_names = {call["tool_name"] for call in tool_calls.json()}
     assert "route.build_static_route" in tool_names
-    assert "merchant.select_night_merchants" in tool_names
+    assert "merchant.score_event_fit" in tool_names
     assert "budget.split_budget" in tool_names
