@@ -277,6 +277,12 @@ export const en: TranslationDictionary = {
   "organizer.workspace.merchantFit": "Merchant fit",
   "organizer.workspace.merchantFitDescription": "Fit scoring explains why merchants were selected for this event plan.",
   "organizer.workspace.fitScore": "Score {score}",
+  "organizer.workspace.routeWarnings": "Route warnings",
+  "organizer.workspace.routeAssembly": "Route assembly",
+  "organizer.workspace.routeAssemblyDescription":
+    "Route scoring explains why route points were selected and how merchant coverage is handled.",
+  "organizer.workspace.routeScore": "Score {score}",
+  "organizer.workspace.routeRole": "Role {role}",
 
   "organizer.agentEvidence.title": "Agent evidence",
   "organizer.agentEvidence.description": "Specialist Agent runs, tool evidence, controlled drafts, and approval boundaries.",

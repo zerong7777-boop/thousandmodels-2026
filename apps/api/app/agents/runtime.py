@@ -49,7 +49,6 @@ from app.schemas import (
 from app.services.recovery import build_recovery_proposal
 from app.store import STORE
 from app.tools.budget import split_budget
-from app.tools.route import build_static_route
 
 
 @dataclass
@@ -574,9 +573,12 @@ class AgentRuntime:
         )
         route = recorder.call(
             step_id="step_route",
-            tool_name="route.build_static_route",
-            input_payload={"rainy": False},
-            fn=lambda: build_static_route(rainy=False),
+            tool_name="route.assemble_route_points",
+            input_payload={
+                "route_point_count": len(plan.route_points),
+                "assigned_merchant_count": len(plan.merchant_assignments),
+            },
+            fn=lambda: [point.point_id for point in plan.route_points],
         )
         budget = recorder.call(
             step_id="step_budget",
@@ -627,8 +629,13 @@ class AgentRuntime:
                 input_refs=["route_points", "weather:mock"],
                 tool_calls=[call.model_dump() for call in recorder.calls if call.step_id == "step_route"],
                 tool_call_refs=[call.tool_call_id for call in recorder.calls if call.step_id == "step_route"],
-                structured_output={"route": route, "route_points": [point.point_id for point in plan.route_points]},
-                decision_reason="The route fits the seeded event window and keeps backup points available.",
+                structured_output={
+                    "route": route,
+                    "route_points": [point.point_id for point in plan.route_points],
+                    "route_fit": [item.model_dump() for item in plan.route_fit],
+                    "route_warnings": plan.route_warnings,
+                },
+                decision_reason="The route is assembled from deterministic route-point fit and selected merchant coverage.",
                 confidence=0.88,
                 requires_human_approval=False,
                 schema_name="PlanVersion",

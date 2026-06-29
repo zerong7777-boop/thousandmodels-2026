@@ -10,6 +10,7 @@ from app.schemas import (
     RoutePoint,
 )
 from app.services.merchant_fit import score_merchants_for_event
+from app.services.route_assembly import assemble_route_points_for_plan
 
 
 def generate_event_plan(
@@ -86,20 +87,11 @@ def generate_plan_version(
     else:
         merchant_candidates = ordered_merchants
     selected_merchants = [merchant.merchant_id for merchant in merchant_candidates[:6]]
-    selected_merchant_ids = set(selected_merchants)
-    selected_points = [
-        RoutePoint.model_validate(
-            {
-                **point.model_dump(),
-                "linked_merchants": [
-                    merchant_id
-                    for merchant_id in point.linked_merchants
-                    if merchant_id in selected_merchant_ids
-                ],
-            }
-        )
-        for point in route_points[:6]
-    ]
+    selected_points, route_fit, route_warnings = assemble_route_points_for_plan(
+        brief,
+        route_points,
+        selected_merchants,
+    )
     contingency = int(brief.budget_mop * 0.15)
     return PlanVersion(
         plan_id=f"{brief.event_id}:v{version}",
@@ -121,6 +113,8 @@ def generate_plan_version(
         diff_from_previous=[] if version == 1 else [f"created version {version}"],
         merchant_fit=merchant_fit,
         planner_warnings=planner_warnings,
+        route_fit=route_fit,
+        route_warnings=route_warnings,
     )
 
 

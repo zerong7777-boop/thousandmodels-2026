@@ -241,5 +241,6 @@ def seed_demo(store: "MVPStore", event_id: str = "demo-night-tour") -> EventBrie
         ),
     ]:
         store.save_operational_metric(metric)
+    store.clear_route_points()
     seed_local_catalog(store)
     return brief

@@ -1263,3 +1263,59 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 - A first full backend run exposed four real regressions: the old Agent tool-call expectation still used `merchant.select_night_merchants`, and fit ordering had changed the legacy no-roster demo plan enough to include merchants outside the historical first-six catalog path.
 - The fix keeps fit ranking active for explicit event rosters and non-demo planning, while preserving the legacy demo fallback order when no roster exists.
 - Backend pytest must be run serially against the default SQLite store; parallel pytest processes can interfere because demo cleanup clears global merchant/catalog records.
+
+## v3.2 Route Assembly Quality Pack Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python -m pytest tests/test_v32_route_assembly_quality.py -q` | `apps/api` | 0 | 5 v3.2 backend tests passed after RED/GREEN implementation, covering route scoring, route assembly API evidence, Agent route evidence, and stale route-catalog reset. |
+| `python -m pytest tests/test_v32_route_assembly_quality.py tests/test_v29_event_operations_setup.py tests/test_v30_merchant_network.py tests/test_v31_event_planning_eligibility.py -q` | `apps/api` | 0 | 19 backend tests passed after route assembly was wired into `generate_plan_version()`. |
+| `python -m pytest tests/test_v32_route_assembly_quality.py tests/test_v08_planning_agent.py -q` | `apps/api` | 0 | 5 backend tests passed after planning Agent route evidence moved to `route.assemble_route_points`. |
+| `python -m pytest tests/test_v32_route_assembly_quality.py tests/test_v29_event_operations_setup.py tests/test_v30_merchant_network.py tests/test_v31_event_planning_eligibility.py tests/test_v08_planning_agent.py -q` | `apps/api` | 0 | 20 focused backend tests passed, covering route assembly, roster gates, merchant network eligibility, merchant-fit compatibility, and Agent route evidence. |
+| `python -m pytest tests/test_v32_route_assembly_quality.py::test_demo_seed_replaces_stale_route_catalog_before_assembly -q` | `apps/api` | 0 | 1 regression test passed after adding demo seed route-catalog reset; the initial RED run failed because stale global route points survived demo seeding. |
+| `python -m pytest tests/test_v12_event_page_merchant_edge.py::test_operation_suggestions_use_current_plan_scope -q` | `apps/api` | 0 | 1 existing scope regression passed after demo seed route-catalog reset prevented stale route points from entering generated plans. |
+| `python -m pytest tests/test_v32_route_assembly_quality.py tests/test_v12_event_page_merchant_edge.py::test_operation_suggestions_use_current_plan_scope tests/test_v29_event_operations_setup.py tests/test_v30_merchant_network.py tests/test_v31_event_planning_eligibility.py tests/test_v08_planning_agent.py -q` | `apps/api` | 0 | 22 backend tests passed, covering v3.2 plus the stale route-catalog scope regression. |
+| `python -m pytest -q` | `apps/api` | 0 | Full backend suite passed: 367 tests, with only existing FastAPI/Starlette deprecation warnings. An earlier full run failed once on stale `rp999` route scope before the demo seed route-catalog reset fix. |
+| `npm.cmd run test -- v32-route-assembly-quality` | `apps/web` | 0 | 1 v3.2 focused frontend test passed after the initial RED failure for missing route warning rendering. |
+| `npm.cmd run test -- v32-route-assembly-quality v31-event-planning-eligibility v28-organizer-event-workspace v29-event-operations-setup v30-merchant-network routes i18n` | `apps/web` | 0 | 9 frontend regression files passed, 35 tests total, covering route evidence rendering and adjacent workspace/event/merchant/route/i18n behavior. |
+| `npm.cmd run test` | `apps/web` | 0 | Full frontend Vitest suite passed: 34 files and 118 tests. |
+| `npm.cmd run build` | `apps/web` | 0 | TypeScript and Vite production build passed; Vite reported the existing chunk-size warning for `assets/index-ClNklY-r.js` at 880.46 kB. |
+| `python scripts\repo_hygiene.py --base origin/main` | project root | 0 | Secret, local-path, node-modules, and generated-artifact checks passed. |
+| `git diff --check` | project root | 0 | No whitespace errors; Git reported expected Windows LF-to-CRLF working-copy warnings for touched text files. |
+
+### Evidence Artifacts
+
+| Artifact | Summary |
+| --- | --- |
+| `apps/api/app/services/route_assembly.py` | Deterministic route-point scoring and assembly helper that covers selected merchant linkage, rainy-day/indoor fit, event-token matches, stay duration, crowd risk, status, selected-point warning generation, and missing-link warnings. |
+| `apps/api/app/schemas.py` | `RouteFitResult` plus defaulted `PlanVersion.route_fit` and `PlanVersion.route_warnings`. |
+| `apps/api/app/seed.py` and `apps/api/app/store.py` | Demo seeding now clears stale global route points before reseeding the deterministic local catalog. |
+| `apps/api/app/services/planning.py` | Replaces first-six route-point slicing with route assembly output while preserving selected merchant scoping for route-point `linked_merchants`. |
+| `apps/api/app/agents/runtime.py` | Planning Agent route step now records `route.assemble_route_points`, route point ids, route fit evidence, and route warnings. |
+| `apps/api/tests/test_v32_route_assembly_quality.py` | Backend RED/GREEN coverage for route scoring, generated plan route assembly, route warnings, and Agent trace evidence. |
+| `apps/web/src/pages/organizer/OrganizerEventWorkspacePage.tsx` | Organizer-visible route warnings and route-fit rationale section. |
+| `apps/web/tests/v32-route-assembly-quality.test.tsx` | Frontend RED/GREEN coverage for route warnings, route rationales, and route score rendering. |
+| `docs/proposal/v3.2-route-assembly-quality-pack-spec.md` | v3.2 requirements, scope, non-goals, route scoring rules, and acceptance criteria. |
+| `docs/proposal/v3.2-route-assembly-quality-pack-implementation-plan.md` | v3.2 implementation plan and verification gates. |
+
+### Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Route-point scoring is deterministic and local-testable | pass. |
+| Route assembly covers selected merchants with linked route points where possible | pass. |
+| Generated plans include route-fit evidence and route warnings | pass. |
+| Route point `linked_merchants` remain scoped to selected plan merchants | pass. |
+| Planning Agent route step includes route-fit evidence | pass. |
+| Organizer workspace renders route rationales and route warnings | pass. |
+| v2.9 roster readiness, v3.0 eligibility, and v3.1 merchant-fit regressions remain compatible | pass. |
+| Stale global route points do not survive explicit demo seeding and cannot pollute later demo plan scope | pass. |
+| v3.2 adds route geometry optimization, live map/weather/traffic APIs, Qwen/QwenPaw production orchestration, POS/payment integrations, or automatic publication | no; it remains deterministic local route assembly evidence. |
+
+### Regression Notes
+
+- A first full backend run exposed one real regression: a stale global route point `rp999` could be selected by the new route assembly if it survived in the shared route catalog before `demo-night-tour` planning.
+- Root cause: `route_points` are a global catalog collection, while `STORE.clear_demo("demo-night-tour")` did not delete route point keys such as `rp999`; v3.2 route assembly made these stale linked points visible where first-six slicing previously masked them.
+- Fix: explicit demo seeding now clears the global route-point catalog before writing the deterministic seed route points. A v3.2 regression test locks this boundary.

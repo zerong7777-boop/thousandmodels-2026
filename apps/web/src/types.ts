@@ -398,6 +398,17 @@ export interface MerchantFitResult {
   rationale: string;
 }
 
+export interface RouteFitResult {
+  point_id: string;
+  score: number;
+  fit_level: "strong" | "medium" | "weak";
+  role: "start" | "story" | "merchant_stop" | "rest" | "backup" | "finish";
+  linked_selected_merchants: string[];
+  matched_signals: string[];
+  warnings: string[];
+  rationale: string;
+}
+
 export interface PlanVersion {
   plan_id: string;
   event_id: string;
@@ -414,6 +425,8 @@ export interface PlanVersion {
   approved_at?: string | null;
   merchant_fit?: MerchantFitResult[];
   planner_warnings?: string[];
+  route_fit?: RouteFitResult[];
+  route_warnings?: string[];
 }
 
 export interface MerchantTask {
