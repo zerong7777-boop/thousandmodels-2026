@@ -432,6 +432,10 @@ def generate_plan(
     if not STORE.list_merchants() or not route_points:
         seed_local_catalog(STORE)
         route_points = STORE.list_route_points()
+    preserve_demo_merchant_order = (
+        event_id == "demo-night-tour"
+        and not STORE.list_event_merchant_participants(event_id)
+    )
     try:
         merchants = merchant_scope_for_planning(STORE, event_id)
     except RuntimeError as error:
@@ -444,6 +448,7 @@ def generate_plan(
         route_points=route_points,
         version=1,
         reason="initial_plan",
+        preserve_merchant_order=preserve_demo_merchant_order,
     )
     runtime_result = AgentRuntime(mode="deterministic").run_planning(
         event_id=event_id,

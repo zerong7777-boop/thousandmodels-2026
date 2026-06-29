@@ -2,12 +2,14 @@ from app.agents.base import AgentBackend
 from app.schemas import (
     EventBrief,
     EventPlan,
+    MerchantFitResult,
     MerchantExecutionPack,
     MerchantProfile,
     MerchantTask,
     PlanVersion,
     RoutePoint,
 )
+from app.services.merchant_fit import score_merchants_for_event
 
 
 def generate_event_plan(
@@ -49,14 +51,41 @@ def generate_merchant_packs(
     return packs
 
 
+def ordered_merchants_by_fit(
+    brief: EventBrief,
+    merchants: list[MerchantProfile],
+) -> tuple[list[MerchantProfile], list[MerchantFitResult], list[str]]:
+    fit = score_merchants_for_event(brief, merchants)
+    merchant_by_id = {merchant.merchant_id: merchant for merchant in merchants}
+    ordered = [
+        merchant_by_id[item.merchant_id]
+        for item in fit
+        if item.merchant_id in merchant_by_id
+    ]
+    warnings = [f"{item.merchant_id}: {warning}" for item in fit for warning in item.warnings]
+    return ordered, fit, warnings
+
+
 def generate_plan_version(
     brief: EventBrief,
     merchants: list[MerchantProfile],
     route_points: list[RoutePoint],
     version: int,
     reason: str,
+    preserve_merchant_order: bool = False,
 ) -> PlanVersion:
-    selected_merchants = [merchant.merchant_id for merchant in merchants[:6]]
+    ordered_merchants, merchant_fit, planner_warnings = ordered_merchants_by_fit(
+        brief,
+        merchants,
+    )
+    if preserve_merchant_order:
+        eligible_ids = {item.merchant_id for item in merchant_fit}
+        merchant_candidates = [
+            merchant for merchant in merchants if merchant.merchant_id in eligible_ids
+        ]
+    else:
+        merchant_candidates = ordered_merchants
+    selected_merchants = [merchant.merchant_id for merchant in merchant_candidates[:6]]
     selected_merchant_ids = set(selected_merchants)
     selected_points = [
         RoutePoint.model_validate(
@@ -90,6 +119,8 @@ def generate_plan_version(
         },
         risk_plan=["inventory", "queue", "weather"],
         diff_from_previous=[] if version == 1 else [f"created version {version}"],
+        merchant_fit=merchant_fit,
+        planner_warnings=planner_warnings,
     )
 
 

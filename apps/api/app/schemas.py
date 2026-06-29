@@ -467,6 +467,15 @@ class RoutePoint(BaseModel):
     current_status: Literal["active", "paused", "replaced"]
 
 
+class MerchantFitResult(BaseModel):
+    merchant_id: str
+    score: int
+    fit_level: Literal["strong", "medium", "weak"]
+    matched_signals: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    rationale: str
+
+
 class PlanVersion(BaseModel):
     plan_id: str
     event_id: str
@@ -481,6 +490,8 @@ class PlanVersion(BaseModel):
     diff_from_previous: list[str]
     approved_by: str | None = None
     approved_at: str | None = None
+    merchant_fit: list[MerchantFitResult] = Field(default_factory=list)
+    planner_warnings: list[str] = Field(default_factory=list)
 
 
 class MerchantTask(BaseModel):
