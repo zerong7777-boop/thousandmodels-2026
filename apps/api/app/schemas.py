@@ -476,6 +476,17 @@ class MerchantFitResult(BaseModel):
     rationale: str
 
 
+class RouteFitResult(BaseModel):
+    point_id: str
+    score: int
+    fit_level: Literal["strong", "medium", "weak"]
+    role: Literal["start", "story", "merchant_stop", "rest", "backup", "finish"]
+    linked_selected_merchants: list[str] = Field(default_factory=list)
+    matched_signals: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    rationale: str
+
+
 class PlanVersion(BaseModel):
     plan_id: str
     event_id: str
@@ -492,6 +503,8 @@ class PlanVersion(BaseModel):
     approved_at: str | None = None
     merchant_fit: list[MerchantFitResult] = Field(default_factory=list)
     planner_warnings: list[str] = Field(default_factory=list)
+    route_fit: list[RouteFitResult] = Field(default_factory=list)
+    route_warnings: list[str] = Field(default_factory=list)
 
 
 class MerchantTask(BaseModel):

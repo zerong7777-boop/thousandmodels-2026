@@ -2,18 +2,18 @@
 
 ## Recommended Next Step
 
-v3.1 is implemented and locally verified. The immediate closeout step is to commit, push, and open a PR for `feat/v31-event-planning-eligibility-pack`.
+v3.2 is implemented and locally verified. The immediate closeout step is to commit, push, and open a PR for `feat/v32-route-assembly-quality-pack`.
 
-After v3.1 is merged, the recommended next implementation phase is `v3.2-route-assembly-quality-pack`.
+After v3.2 is merged, the recommended next implementation phase is `v3.3-merchant-portal-setup-pack`.
 
-v3.1 makes selected merchants fit-ranked and explainable, but route generation is still a simple first-six route-point assembly. The next useful product package is to make route assembly itself more product-real:
+v3.2 makes merchant-linked route assembly scored and explainable, but the merchant side is still mostly a demo workbench. The next useful product package is to make merchant participation setup more product-real:
 
-1. Score route points against the selected event brief, time window, indoor/outdoor constraints, rainy-day needs, and linked selected merchants.
-2. Build a deterministic route sequence with explainable stop roles instead of slicing the first six route points.
-3. Warn organizers when selected merchants have no suitable route point linkage or when route coverage is thin.
-4. Keep route-point `linked_merchants` scoped to selected plan merchants.
-5. Preserve the deterministic `demo-night-tour` release-gate path, v2.9 roster gate, v3.0 eligibility gate, and v3.1 merchant-fit evidence.
-6. Avoid live map/weather/traffic integrations until a separate integration plan exists.
+1. Let merchants complete required setup fields for a selected event instead of relying only on organizer-side mark-ready.
+2. Add merchant-facing event participation context: assigned event, requested role, readiness checklist, capacity notes, and constraints.
+3. Keep organizer roster authority intact while allowing merchant setup evidence to inform readiness.
+4. Surface setup gaps and merchant-submitted notes back in organizer workspace before planning.
+5. Preserve v2.9 roster gates, v3.0 eligibility checks, v3.1 merchant-fit evidence, and v3.2 route-fit evidence.
+6. Avoid real merchant onboarding, identity administration, POS/payment, hardware, or production integrations until a separate plan exists.
 
 ## Do Not Do Yet
 
@@ -36,4 +36,5 @@ v3.1 makes selected merchants fit-ranked and explainable, but route generation i
 - Do not treat v2.9 as real merchant onboarding or external merchant integration; it scopes planning to an event roster backed by the local catalog.
 - Do not treat v3.0 as real merchant onboarding or external merchant integration; it is an organizer-managed local merchant network baseline.
 - Do not treat v3.1 as route optimization or real external planning intelligence; it is deterministic local merchant-fit ranking and evidence.
+- Do not treat v3.2 as route optimization or real map/weather/traffic intelligence; it is deterministic local route assembly and evidence.
 - Do not assume GitHub Actions is green until the pushed workflow run is observed.

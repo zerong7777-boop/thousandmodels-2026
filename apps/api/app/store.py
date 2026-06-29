@@ -604,6 +604,10 @@ class MVPStore:
     def list_route_points(self) -> list[RoutePoint]:
         return self.list_models("route_points", RoutePoint)
 
+    def clear_route_points(self) -> None:
+        self.conn.execute("DELETE FROM records WHERE collection = ?", ("route_points",))
+        self.conn.commit()
+
     def save_plan_version(self, plan: PlanVersion) -> None:
         self.upsert_model("plan_versions", f"{plan.event_id}:v{plan.version}", plan)
 
