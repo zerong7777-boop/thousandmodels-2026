@@ -14,6 +14,7 @@ const mockApi = vi.hoisted(() => ({
   claimCoupon: vi.fn(),
   redeemCoupon: vi.fn(),
   getMerchantWorkbench: vi.fn(),
+  getMyMerchantEvents: vi.fn(),
   getPlanVersions: vi.fn(),
   getAgentTraces: vi.fn(),
   getMerchantTasks: vi.fn(),
@@ -156,6 +157,7 @@ test("merchant dashboard displays interaction package fields and counts", async 
     touchpoint_summary: { interactions: 12 },
     coupon_summary: { claims: 5, redemptions: 2 }
   });
+  mockApi.getMyMerchantEvents.mockResolvedValue([]);
 
   renderWithI18n(<MerchantDashboardPage merchantId="m001" />);
 

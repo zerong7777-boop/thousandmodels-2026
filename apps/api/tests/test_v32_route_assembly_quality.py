@@ -2,9 +2,17 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.schemas import EventBrief, Location, MerchantOperatingWindow, MerchantProfile, RoutePoint
+from app.schemas import (
+    EventBrief,
+    Location,
+    MerchantOperatingWindow,
+    MerchantProfile,
+    MerchantSetupSubmitRequest,
+    RoutePoint,
+)
 from app.seed import seed_demo
 from app.services.route_assembly import score_route_points_for_event
+from app.services.merchant_setup import submit_merchant_setup
 from app.store import STORE
 from tests.conftest import login_as
 
@@ -167,6 +175,21 @@ def ready_roster(client: TestClient, merchant_ids: list[str]) -> None:
     )
     assert replaced.status_code == 200, replaced.text
     for merchant_id in merchant_ids:
+        submit_merchant_setup(
+            STORE,
+            merchant_id,
+            EVENT_ID,
+            MerchantSetupSubmitRequest(
+                capacity_commitment="medium",
+                staffing_ready=True,
+                stock_ready=True,
+                indoor_backup_ready=True,
+                operating_window_confirmed=True,
+                merchant_contact_name=f"Contact {merchant_id}",
+                merchant_contact_phone="+853-6000-0101",
+                merchant_notes="Prepared for route assembly test.",
+            ),
+        )
         ready = client.patch(
             f"/api/events/{EVENT_ID}/merchant-roster/{merchant_id}",
             json={"participation_status": "confirmed", "readiness_status": "ready"},

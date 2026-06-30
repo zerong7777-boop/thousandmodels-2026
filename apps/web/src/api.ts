@@ -20,10 +20,12 @@ import type {
   GeneratePlanResponse,
   Incident,
   MerchantEdgePackagesResponse,
+  MerchantAssignedEvent,
   MerchantCreateRequest,
   MerchantDetail,
   MerchantPack,
   MerchantProfile,
+  MerchantSetupSubmitRequest,
   MerchantTask,
   MerchantUpdateRequest,
   MerchantWorkbench,
@@ -192,6 +194,14 @@ export const api = {
       `/api/events/${eventId}/merchant-roster/${merchantId}`,
       payload
     ),
+  getMyMerchantEvents: () =>
+    json<MerchantAssignedEvent[]>(fetch(`${API_BASE}/api/merchants/me/events`, READ_OPTIONS)),
+  getMyMerchantEventSetup: (eventId: string) =>
+    json<MerchantAssignedEvent>(
+      fetch(`${API_BASE}/api/merchants/me/events/${eventId}/setup`, READ_OPTIONS)
+    ),
+  submitMyMerchantEventSetup: (eventId: string, payload: MerchantSetupSubmitRequest) =>
+    patchJson<MerchantAssignedEvent>(`/api/merchants/me/events/${eventId}/setup`, payload),
   getMerchantWorkbench: (merchantId: string, eventId = "demo-night-tour") =>
     json<MerchantWorkbench>(
       fetch(`${API_BASE}/api/merchants/${merchantId}/workbench?event_id=${eventId}`, READ_OPTIONS)

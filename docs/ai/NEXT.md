@@ -2,18 +2,18 @@
 
 ## Recommended Next Step
 
-v3.2 is implemented and locally verified. The immediate closeout step is to commit, push, and open a PR for `feat/v32-route-assembly-quality-pack`.
+v3.3 is implemented and locally verified. The immediate closeout step is to commit, push, and open a PR for `feat/v33-merchant-portal-setup-pack`.
 
-After v3.2 is merged, the recommended next implementation phase is `v3.3-merchant-portal-setup-pack`.
+After v3.3 is merged, the recommended next implementation phase is `v3.4-event-operations-command-center-pack`.
 
-v3.2 makes merchant-linked route assembly scored and explainable, but the merchant side is still mostly a demo workbench. The next useful product package is to make merchant participation setup more product-real:
+v3.3 makes merchant setup evidence real enough to gate planning, but the organizer still has to mentally connect roster readiness, plan state, event page publication, merchant-edge packages, public notices, and incident suggestions across several surfaces. The next useful product package is to make the organizer day-of command center more commercial-grade:
 
-1. Let merchants complete required setup fields for a selected event instead of relying only on organizer-side mark-ready.
-2. Add merchant-facing event participation context: assigned event, requested role, readiness checklist, capacity notes, and constraints.
-3. Keep organizer roster authority intact while allowing merchant setup evidence to inform readiness.
-4. Surface setup gaps and merchant-submitted notes back in organizer workspace before planning.
-5. Preserve v2.9 roster gates, v3.0 eligibility checks, v3.1 merchant-fit evidence, and v3.2 route-fit evidence.
-6. Avoid real merchant onboarding, identity administration, POS/payment, hardware, or production integrations until a separate plan exists.
+1. Add one event operations command center that summarizes readiness across plan approval, event page publication, merchant setup, package generation, public notices, and active incidents.
+2. Add explicit pre-launch checks so organizers can see which operational steps are blocking launch or package readiness.
+3. Add event-scoped action history and operator-facing audit evidence for setup submission, mark-ready, plan generation, approval, page publish, package generation, and public notices.
+4. Add better day-of exception triage states: open, suggested, approved, resolved, and stale.
+5. Keep human approval boundaries intact: no automatic plan approval, public publication, or Qwen/QwenPaw authoritative mutation.
+6. Preserve the deterministic demo path, v2.9-v3.3 gates, and local-catalog constraints.
 
 ## Do Not Do Yet
 
@@ -24,7 +24,7 @@ v3.2 makes merchant-linked route assembly scored and explainable, but the mercha
 - Do not add real merchant, POS, payment, hardware, map, weather, traffic, or visitor identity integrations before a new plan.
 - Do not use optional Qwen or QwenPaw live evidence as a business-success claim; it is only provider reachability/advisory evidence.
 - Do not run backend pytest in parallel against the default SQLite database; use serial runs or isolated database paths.
-- Do not stage the historical screenshot PNG diffs unless a separate evidence-refresh task explicitly owns them.
+- Do not stage historical screenshot PNG diffs unless a separate evidence-refresh task explicitly owns them.
 - Do not treat v2.1 as complete production identity; it is a beta auth/session/CSRF baseline.
 - Do not treat v2.2 as production database operations; it is schema ownership and migration discipline for the current SQLite store.
 - Do not treat v2.3 as a real cloud launch; it is an environment/readiness operations baseline without hosting, TLS, managed secrets, backups, or monitoring.
@@ -37,4 +37,5 @@ v3.2 makes merchant-linked route assembly scored and explainable, but the mercha
 - Do not treat v3.0 as real merchant onboarding or external merchant integration; it is an organizer-managed local merchant network baseline.
 - Do not treat v3.1 as route optimization or real external planning intelligence; it is deterministic local merchant-fit ranking and evidence.
 - Do not treat v3.2 as route optimization or real map/weather/traffic intelligence; it is deterministic local route assembly and evidence.
+- Do not treat v3.3 as real merchant onboarding or identity administration; it is selected-event setup evidence for already-known local merchants.
 - Do not assume GitHub Actions is green until the pushed workflow run is observed.

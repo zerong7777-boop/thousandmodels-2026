@@ -2,9 +2,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.schemas import EventCreateRequest, MerchantRuntimeState, PlanVersion
+from app.schemas import EventCreateRequest, MerchantRuntimeState, MerchantSetupSubmitRequest, PlanVersion
 from app.seed import seed_local_catalog
 from app.services.events import create_event
+from app.services.merchant_setup import submit_merchant_setup
 from app.services.planning import generate_merchant_tasks
 from app.store import STORE
 from tests.conftest import login_as
@@ -70,6 +71,21 @@ def _ready_real_event_roster(client: TestClient, event_id: str) -> None:
     )
     assert setup.status_code == 200, setup.text
     for merchant_id in ["m001", "m002"]:
+        submit_merchant_setup(
+            STORE,
+            merchant_id,
+            event_id,
+            MerchantSetupSubmitRequest(
+                capacity_commitment="medium",
+                staffing_ready=True,
+                stock_ready=True,
+                indoor_backup_ready=True,
+                operating_window_confirmed=True,
+                merchant_contact_name=f"Contact {merchant_id}",
+                merchant_contact_phone="+853-6000-0101",
+                merchant_notes="Prepared for v27 real product test.",
+            ),
+        )
         ready = client.patch(
             f"/api/events/{event_id}/merchant-roster/{merchant_id}",
             json={"participation_status": "confirmed", "readiness_status": "ready"},

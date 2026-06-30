@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { DemoSession } from "../auth/session";
 import { LoginPage } from "../pages/login/LoginPage";
 import { MerchantDashboardPage } from "../pages/merchant/MerchantDashboardPage";
+import { MerchantEventSetupPage } from "../pages/merchant/MerchantEventSetupPage";
 import { MerchantNotificationsPage } from "../pages/merchant/MerchantNotificationsPage";
 import { MerchantStatusPage } from "../pages/merchant/MerchantStatusPage";
 import { MerchantTasksPage } from "../pages/merchant/MerchantTasksPage";
@@ -122,6 +123,15 @@ export function resolveRoute(
       activeKey: "tasks",
       title: "Assigned tasks",
       content: <MerchantTasksPage merchantId={session?.merchant_id || "m001"} />
+    };
+  }
+
+  if (pathname.startsWith("/merchant/events/") && pathname.endsWith("/setup")) {
+    return {
+      shell: "merchant",
+      activeKey: "setup",
+      title: "Event setup",
+      content: <MerchantEventSetupPage eventId={segment(pathname, 2) || "demo-night-tour"} />
     };
   }
 

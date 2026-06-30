@@ -180,6 +180,18 @@ class EventMerchantParticipant(BaseModel):
     readiness_status: Literal["missing", "needs_setup", "ready"] = "needs_setup"
     role_hint: str | None = None
     notes: str = ""
+    setup_status: Literal["not_started", "submitted", "approved"] = "not_started"
+    capacity_commitment: Literal["low", "medium", "high"] | None = None
+    staffing_ready: bool = False
+    stock_ready: bool = False
+    indoor_backup_ready: bool = False
+    operating_window_confirmed: bool = False
+    merchant_contact_name: str = ""
+    merchant_contact_phone: str = ""
+    merchant_notes: str = ""
+    submitted_at: str | None = None
+    submitted_by: str | None = None
+    setup_gaps: list[str] = Field(default_factory=list)
     created_at: str
     updated_at: str
 
@@ -193,6 +205,17 @@ class EventMerchantParticipantUpdateRequest(BaseModel):
     readiness_status: Literal["missing", "needs_setup", "ready"] | None = None
     role_hint: str | None = None
     notes: str | None = None
+
+
+class MerchantSetupSubmitRequest(BaseModel):
+    capacity_commitment: Literal["low", "medium", "high"]
+    staffing_ready: bool
+    stock_ready: bool
+    indoor_backup_ready: bool
+    operating_window_confirmed: bool
+    merchant_contact_name: str = Field(min_length=1)
+    merchant_contact_phone: str = Field(min_length=1)
+    merchant_notes: str = ""
 
 
 class EventMerchantSetupSummary(BaseModel):
@@ -451,6 +474,14 @@ class EventSummary(BaseModel):
     status: Literal["draft", "pending_approval", "active", "ended"]
     current_plan_version: int
     public_release_status: Literal["draft", "published", "stale"]
+
+
+class MerchantAssignedEvent(BaseModel):
+    event: EventSummary
+    participant: EventMerchantParticipant
+    eligibility: MerchantEligibility | None = None
+    setup_gaps: list[str] = Field(default_factory=list)
+    ready_for_planning: bool
 
 
 class RoutePoint(BaseModel):

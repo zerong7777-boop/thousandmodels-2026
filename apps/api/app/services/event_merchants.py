@@ -8,6 +8,7 @@ from app.schemas import (
     EventMerchantParticipantUpdateRequest,
     EventMerchantSetupSummary,
 )
+from app.services.merchant_setup import participant_ready_for_planning, setup_gaps
 from app.services.merchant_network import evaluate_merchant_for_event
 
 if TYPE_CHECKING:
@@ -34,12 +35,15 @@ def summarize_event_merchants(store: MVPStore, event_id: str) -> EventMerchantSe
     participants = store.list_event_merchant_participants(event_id)
     participants.sort(key=lambda item: item.merchant_id)
     event = store.get_event_summary(event_id)
+    brief = store.get_event_brief(event_id)
     eligibility = {}
     if event:
         for participant in participants:
             merchant = store.get_merchant(participant.merchant_id)
             if merchant:
                 eligibility[participant.merchant_id] = evaluate_merchant_for_event(event, merchant)
+    for participant in participants:
+        participant.setup_gaps = setup_gaps(participant, brief)
     ready_count = sum(
         1
         for item in participants
@@ -50,11 +54,14 @@ def summarize_event_merchants(store: MVPStore, event_id: str) -> EventMerchantSe
     declined_count = sum(1 for item in participants if item.participation_status == "declined")
     ready_for_planning = (
         bool(participants)
-        and ready_count == len(participants)
-        and declined_count == 0
-        and missing_count == 0
-        and needs_setup_count == 0
-        and not any(item.status == "ineligible" for item in eligibility.values())
+        and all(
+            participant_ready_for_planning(
+                item,
+                brief,
+                eligibility.get(item.merchant_id),
+            )
+            for item in participants
+        )
     )
     return EventMerchantSetupSummary(
         event_id=event_id,

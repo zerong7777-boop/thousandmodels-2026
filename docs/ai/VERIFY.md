@@ -1319,3 +1319,62 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 - A first full backend run exposed one real regression: a stale global route point `rp999` could be selected by the new route assembly if it survived in the shared route catalog before `demo-night-tour` planning.
 - Root cause: `route_points` are a global catalog collection, while `STORE.clear_demo("demo-night-tour")` did not delete route point keys such as `rp999`; v3.2 route assembly made these stale linked points visible where first-six slicing previously masked them.
 - Fix: explicit demo seeding now clears the global route-point catalog before writing the deterministic seed route points. A v3.2 regression test locks this boundary.
+
+## v3.3 Merchant Portal Setup Pack Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python -m pytest tests/test_v33_merchant_portal_setup.py -q` | `apps/api` | 0 | 6 v3.3 backend tests passed after RED/GREEN implementation for merchant setup submission, assigned-event context, planning gate, indoor-backup gaps, auth boundary, and demo compatibility. |
+| `python -m pytest tests/test_v33_merchant_portal_setup.py tests/test_v29_event_operations_setup.py tests/test_v30_merchant_network.py tests/test_v31_event_planning_eligibility.py tests/test_v32_route_assembly_quality.py tests/test_v04_authorization.py -q` | `apps/api` | 0 | 32 focused backend tests passed, covering v3.3 setup gates plus adjacent roster, merchant network, fit, route assembly, and authorization regressions. |
+| `npm.cmd run test -- v33-merchant-portal-setup` | `apps/web` | 0 | 1 focused frontend file passed after the initial RED failure for the missing merchant setup page and organizer setup evidence rendering. |
+| `npm.cmd run test -- v33-merchant-portal-setup v29-event-operations-setup v30-merchant-network v31-event-planning-eligibility v32-route-assembly-quality routes i18n` | `apps/web` | 0 | 9 focused frontend regression files passed, 27 tests total, covering merchant setup UI, organizer setup evidence, route config, and dictionary gates. |
+| `npm.cmd run test -- v12-event-interaction-pages app.test login-page` | `apps/web` | 0 | 3 regression frontend files passed, 12 tests total, after adding the new `getMyMerchantEvents` mock to the existing merchant dashboard test. |
+| `python -m pytest tests/test_v27_real_product_logic_foundation.py -q` | `apps/api` | 0 | 10 v2.7 real product lifecycle tests passed after updating their ready-roster helper to submit merchant setup evidence before non-demo planning. |
+| `python -m pytest -q` | `apps/api` | 0 | Full backend suite passed: 373 tests, with only existing FastAPI/Starlette deprecation warnings. |
+| `npm.cmd run test` | `apps/web` | 0 | Full frontend Vitest suite passed: 35 files and 120 tests. |
+| `npm.cmd run build` | `apps/web` | 0 | TypeScript and Vite production build passed; Vite reported the existing chunk-size warning for `assets/index-DNLUqQkD.js` at 892.15 kB. |
+| `python scripts\repo_hygiene.py --base origin/main` | project root | 0 | Secret, local-path, node-modules, and generated-artifact checks passed. |
+| `git diff --check` | project root | 0 | No whitespace errors; Git reported expected Windows LF-to-CRLF working-copy warnings for touched text files. |
+
+### Evidence Artifacts
+
+| Artifact | Summary |
+| --- | --- |
+| `apps/api/app/services/merchant_setup.py` | Event-specific merchant setup gap computation, rainy/indoor-backup requirement detection, assigned-event context building, and merchant-owned setup submission. |
+| `apps/api/app/schemas.py` | `EventMerchantParticipant` setup fields plus `MerchantSetupSubmitRequest` and `MerchantAssignedEvent` contracts. |
+| `apps/api/app/services/event_merchants.py` | Organizer roster summaries now compute setup gaps and require setup-complete participants for non-demo planning readiness. |
+| `apps/api/app/main.py` | Merchant-owned assigned-event setup endpoints under `/api/merchants/me/events...`. |
+| `apps/api/tests/test_v33_merchant_portal_setup.py` | Backend RED/GREEN coverage for setup submission, assigned-event listing, setup-only versus organizer-ready separation, indoor-backup gaps, unassigned-event access, planning gate, and demo compatibility. |
+| `apps/web/src/pages/merchant/MerchantEventSetupPage.tsx` | Merchant-facing selected-event setup page with context, setup gaps, readiness fields, contact fields, notes, and submit feedback. |
+| `apps/web/src/pages/merchant/MerchantDashboardPage.tsx` | Assigned-event setup card and links from the merchant dashboard. |
+| `apps/web/src/pages/organizer/EventMerchantSetupPanel.tsx` | Organizer-visible setup evidence, setup gaps, merchant notes, and mark-ready disablement when setup gaps remain. |
+| `apps/web/tests/v33-merchant-portal-setup.test.tsx` | Frontend RED/GREEN coverage for merchant setup submission and organizer evidence rendering. |
+| `docs/proposal/v3.3-merchant-portal-setup-pack-spec.md` | v3.3 scope, requirements, API behavior, auth boundaries, and acceptance criteria. |
+| `docs/proposal/v3.3-merchant-portal-setup-pack-implementation-plan.md` | v3.3 task plan and verification gates. |
+
+### Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Merchant users can list assigned event setup contexts | pass. |
+| Merchant users can submit setup evidence for their own selected event | pass. |
+| Merchant users cannot submit setup for an unassigned event | pass. |
+| Merchant setup submission does not mark organizer readiness ready | pass. |
+| Organizer roster summaries show setup status, contact, capacity, readiness confirmations, notes, and gap reasons | pass. |
+| Non-demo plan generation remains blocked until setup evidence, organizer readiness, and eligibility all pass | pass. |
+| Rainy/indoor-backup event briefs add an indoor-backup setup requirement | pass. |
+| Existing v2.7 real event lifecycle tests remain compatible after their helpers submit merchant setup evidence | pass. |
+| Existing v2.9-v3.2 roster, merchant-network, merchant-fit, and route-fit regressions remain compatible | pass. |
+| `demo-night-tour` can still generate plans without manual setup when no manual demo roster exists | pass. |
+| v3.3 adds public merchant onboarding, identity administration, POS/payment/hardware/map/weather/traffic integrations, production QwenPaw orchestration, or automatic approval/publication | no; it remains selected-event setup evidence for already-known local merchants. |
+
+### Regression Notes
+
+- The first full frontend run exposed one real test-boundary regression: `MerchantDashboardPage` now calls `api.getMyMerchantEvents()`, while the v1.2 dashboard test mock only defined `getMerchantWorkbench()`.
+- Fix: add `getMyMerchantEvents` to that test mock and return an empty assigned-event list for the legacy interaction-package assertion.
+- The first frontend build exposed one source regression: the dashboard setup card used `StatusPill` without importing it.
+- Fix: import `StatusPill` from the existing product component barrel.
+- The first full backend run exposed four v2.7 lifecycle failures because v3.3 correctly blocks non-demo planning when real-event helper rosters are organizer-ready but merchant setup evidence is missing.
+- Fix: update the v2.7 ready-roster helper to submit complete merchant setup evidence before marking organizer readiness, preserving the stricter planning gate instead of weakening it.
