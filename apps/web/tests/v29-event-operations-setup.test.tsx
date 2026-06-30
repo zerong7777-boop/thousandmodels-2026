@@ -21,6 +21,7 @@ const mockApi = vi.hoisted(() => ({
   draftEventPage: vi.fn(),
   publishEventPage: vi.fn(),
   generateMerchantEdgePackages: vi.fn(),
+  getEventOperationsSummary: vi.fn(),
   generateOperationSuggestions: vi.fn(),
   getMerchants: vi.fn(),
   getEventMerchantRoster: vi.fn(),
@@ -104,6 +105,7 @@ beforeEach(() => {
   mockApi.draftEventPage.mockResolvedValue(null);
   mockApi.publishEventPage.mockResolvedValue(null);
   mockApi.generateMerchantEdgePackages.mockResolvedValue({ packages: [] });
+  mockApi.getEventOperationsSummary.mockResolvedValue(null);
   mockApi.generateOperationSuggestions.mockResolvedValue({ suggestions: [] });
   mockApi.getMerchants.mockResolvedValue(merchants);
   mockApi.getEventMerchantRoster.mockResolvedValue(roster());

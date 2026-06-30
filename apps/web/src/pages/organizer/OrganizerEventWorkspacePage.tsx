@@ -9,6 +9,7 @@ import { MetricTile, ProductPageHeader, WorkflowStepper } from "../../components
 import type {
   AgentToolCall,
   EventMerchantSetupSummary,
+  EventOperationsSummary,
   EventPage,
   EventSummary,
   MerchantEdgePackagesResponse,
@@ -16,6 +17,7 @@ import type {
 } from "../../types";
 import { asArray, useAsyncData } from "../productUtils";
 import { EventMerchantSetupPanel } from "./EventMerchantSetupPanel";
+import { EventOperationsCommandPanel } from "./EventOperationsCommandPanel";
 
 function countPackageTouchpoints(packages: MerchantEdgePackagesResponse["packages"]) {
   return packages.reduce((total, item) => total + asArray(item.touchpoints).length, 0);
@@ -99,6 +101,11 @@ export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { e
   );
   const { data: merchantSetup } = useAsyncData<EventMerchantSetupSummary | null>(
     () => (getEventMerchantRoster ? getEventMerchantRoster(eventId) : Promise.resolve(null)),
+    null,
+    [eventId, refreshKey]
+  );
+  const { data: operationsSummary } = useAsyncData<EventOperationsSummary | null>(
+    () => api.getEventOperationsSummary(eventId),
     null,
     [eventId, refreshKey]
   );
@@ -404,6 +411,8 @@ export function OrganizerEventWorkspacePage({ eventId = "demo-night-tour" }: { e
           {actionFeedback.text}
         </div>
       ) : null}
+
+      <EventOperationsCommandPanel summary={operationsSummary} />
 
       {merchantSetupApiAvailable && !isDemoEvent ? (
         <EventMerchantSetupPanel
