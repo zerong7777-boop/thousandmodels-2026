@@ -235,10 +235,10 @@ test("organizer workspace shows package readiness and can request operation sugg
   renderWithI18n(<OrganizerEventWorkspacePage eventId="demo-night-tour" />);
 
   expect(await screen.findByText("Package readiness")).toBeInTheDocument();
-  expect(screen.getByText("Package for Merchant m001")).toBeInTheDocument();
-  expect(screen.getByText("1/1 touchpoints active")).toBeInTheDocument();
-  expect(screen.getByText("1/1 offers active")).toBeInTheDocument();
-  expect(screen.getByText("plan:v1")).toBeInTheDocument();
+  expect(await screen.findByText("Package for Merchant m001")).toBeInTheDocument();
+  expect(await screen.findByText("1/1 touchpoints active")).toBeInTheDocument();
+  expect(await screen.findByText("1/1 offers active")).toBeInTheDocument();
+  expect(await screen.findByText("plan:v1")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Generate operation suggestions" }));
   expect(await screen.findByText("1 operation suggestions are ready for review.")).toBeInTheDocument();
   expect(mockApi.generateOperationSuggestions).toHaveBeenCalledWith("demo-night-tour");
