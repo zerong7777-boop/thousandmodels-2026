@@ -1,7 +1,14 @@
 import pytest
 from app.main import app
-from app.schemas import EventBrief, Location, MerchantOperatingWindow, MerchantProfile
+from app.schemas import (
+    EventBrief,
+    Location,
+    MerchantOperatingWindow,
+    MerchantProfile,
+    MerchantSetupSubmitRequest,
+)
 from app.services.merchant_fit import score_merchants_for_event
+from app.services.merchant_setup import submit_merchant_setup
 from app.store import STORE
 from fastapi.testclient import TestClient
 from tests.conftest import login_as
@@ -99,6 +106,21 @@ def ready_roster(client: TestClient, event_id: str, merchant_ids: list[str]) -> 
     )
     assert replaced.status_code == 200, replaced.text
     for merchant_id in merchant_ids:
+        submit_merchant_setup(
+            STORE,
+            merchant_id,
+            event_id,
+            MerchantSetupSubmitRequest(
+                capacity_commitment="medium",
+                staffing_ready=True,
+                stock_ready=True,
+                indoor_backup_ready=True,
+                operating_window_confirmed=True,
+                merchant_contact_name=f"Contact {merchant_id}",
+                merchant_contact_phone="+853-6000-0101",
+                merchant_notes="Prepared for planning fit test.",
+            ),
+        )
         ready = client.patch(
             f"/api/events/{event_id}/merchant-roster/{merchant_id}",
             json={"participation_status": "confirmed", "readiness_status": "ready"},

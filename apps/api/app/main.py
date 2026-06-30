@@ -43,6 +43,7 @@ from app.schemas import (
     InventoryTriggerRequest,
     LoginRequest,
     MerchantCreateRequest,
+    MerchantSetupSubmitRequest,
     MerchantRuntimeState,
     MerchantUpdateRequest,
     PublicEvent,
@@ -76,6 +77,11 @@ from app.services.merchant_network import (
     build_merchant_detail,
     default_runtime_state,
     merchant_from_create,
+)
+from app.services.merchant_setup import (
+    get_assigned_event_context,
+    list_assigned_event_contexts,
+    submit_merchant_setup,
 )
 from app.services.operation_suggestions import (
     OperationSuggestionError,
@@ -936,6 +942,38 @@ def merchant_workbench(
             "event_merchant_redemptions": touchpoint_metrics["coupon_redemptions"],
         },
     }
+
+
+@app.get("/api/merchants/me/events")
+def list_my_merchant_events(user: AuthUserRecord = Depends(require_merchant)):
+    return list_assigned_event_contexts(STORE, user.merchant_id or "")
+
+
+@app.get("/api/merchants/me/events/{event_id}/setup")
+def get_my_merchant_event_setup(
+    event_id: str,
+    user: AuthUserRecord = Depends(require_merchant),
+):
+    try:
+        return get_assigned_event_context(STORE, user.merchant_id or "", event_id)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@app.patch("/api/merchants/me/events/{event_id}/setup")
+def submit_my_merchant_event_setup(
+    request: Request,
+    event_id: str,
+    payload: MerchantSetupSubmitRequest,
+    user: AuthUserRecord = Depends(require_merchant),
+):
+    verify_mutation_origin(request)
+    try:
+        context = submit_merchant_setup(STORE, user.merchant_id or "", event_id, payload)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    audit_user(event_id, user, "submit_merchant_event_setup", user.merchant_id or "")
+    return context
 
 
 @app.post("/api/events/{event_id}/trigger/inventory")

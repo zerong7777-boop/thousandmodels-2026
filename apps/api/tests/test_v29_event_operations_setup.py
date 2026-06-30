@@ -2,6 +2,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.schemas import MerchantSetupSubmitRequest
+from app.services.merchant_setup import submit_merchant_setup
 from app.store import STORE
 from tests.conftest import login_as
 
@@ -45,6 +47,7 @@ def ready_roster(client: TestClient, event_id: str, merchant_ids: list[str]) -> 
     )
     assert replaced.status_code == 200, replaced.text
     for merchant_id in merchant_ids:
+        submit_complete_setup(event_id, merchant_id)
         patched = client.patch(
             f"/api/events/{event_id}/merchant-roster/{merchant_id}",
             json={"participation_status": "confirmed", "readiness_status": "ready"},
@@ -52,6 +55,24 @@ def ready_roster(client: TestClient, event_id: str, merchant_ids: list[str]) -> 
         )
         assert patched.status_code == 200, patched.text
     return patched.json()
+
+
+def submit_complete_setup(event_id: str, merchant_id: str) -> None:
+    submit_merchant_setup(
+        STORE,
+        merchant_id,
+        event_id,
+        MerchantSetupSubmitRequest(
+            capacity_commitment="medium",
+            staffing_ready=True,
+            stock_ready=True,
+            indoor_backup_ready=True,
+            operating_window_confirmed=True,
+            merchant_contact_name=f"Contact {merchant_id}",
+            merchant_contact_phone="+853-6000-0101",
+            merchant_notes="Prepared for event test.",
+        ),
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -84,6 +105,8 @@ def test_event_merchant_roster_can_be_replaced_and_marked_ready():
     assert [item["merchant_id"] for item in payload["participants"]] == ["m001", "m002"]
     assert payload["needs_setup_count"] == 2
     assert payload["ready_for_planning"] is False
+    submit_complete_setup(EVENT_ID, "m001")
+    submit_complete_setup(EVENT_ID, "m002")
 
     ready = client.patch(
         f"/api/events/{EVENT_ID}/merchant-roster/m001",

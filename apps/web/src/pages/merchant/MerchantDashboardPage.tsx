@@ -1,5 +1,5 @@
 import { api } from "../../api";
-import { MetricTile, ProductPageHeader } from "../../components/product";
+import { MetricTile, ProductPageHeader, StatusPill } from "../../components/product";
 import { localizedDemoText, localizedStatus, useI18n } from "../../i18n";
 import { Button } from "../../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
@@ -29,7 +29,9 @@ function touchpointTypeLabel(value: string | undefined, t: (key: string) => stri
 export function MerchantDashboardPage({ merchantId = "m001" }: { merchantId?: string }) {
   const { t } = useI18n();
   const { data: workbench } = useAsyncData(() => api.getMerchantWorkbench(merchantId), { tasks: [] }, [merchantId]);
+  const { data: assignedEvents } = useAsyncData(() => api.getMyMerchantEvents(), [], [merchantId]);
   const nextTask = asArray(workbench.tasks)[0];
+  const nextAssignedEvent = asArray(assignedEvents)[0];
   const taskCount = asArray(workbench.tasks).length;
   const taskCountKey = taskCount === 1 ? "merchant.dashboard.assignedTask" : "merchant.dashboard.assignedTasks";
   const inventoryStatus = workbench.runtime_state?.inventory_status ?? "normal";
@@ -98,6 +100,39 @@ export function MerchantDashboardPage({ merchantId = "m001" }: { merchantId?: st
           <Button asChild>
             <a href="/merchant/events/demo-night-tour/status">{t("merchant.dashboard.reportStatus")}</a>
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("merchant.setup.cardTitle")}</CardTitle>
+          <CardDescription>{t("merchant.setup.cardDescription")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {asArray(assignedEvents).map((item) => (
+            <div key={item.event.event_id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 p-3">
+              <div>
+                <div className="font-medium text-ink">{item.event.title}</div>
+                <div className="mt-1 text-sm text-slate-600">
+                  {item.event.area} / {item.event.date} / {item.event.time_window}
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusPill tone={item.ready_for_planning ? "success" : "warning"}>
+                  {localizedStatus(item.participant.setup_status ?? "not_started", t)}
+                </StatusPill>
+                <Button asChild variant="secondary" size="sm">
+                  <a href={`/merchant/events/${item.event.event_id}/setup`}>{t("merchant.setup.openSetup")}</a>
+                </Button>
+              </div>
+            </div>
+          ))}
+          {!asArray(assignedEvents).length ? (
+            <p className="text-sm text-slate-500">{t("merchant.setup.noAssignedEvents")}</p>
+          ) : null}
+          {nextAssignedEvent ? (
+            <p className="text-xs text-slate-500">{t("merchant.setup.nextEvent", { title: nextAssignedEvent.event.title })}</p>
+          ) : null}
         </CardContent>
       </Card>
 

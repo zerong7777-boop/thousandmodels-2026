@@ -27,6 +27,10 @@ function eligibilityLabel(status: string | undefined, t: ReturnType<typeof useI1
   return t("organizer.workspace.eligibilityNeedsReview");
 }
 
+function readinessLabel(value: boolean | undefined, t: ReturnType<typeof useI18n>["t"]): string {
+  return value ? t("organizer.workspace.setupReady") : t("organizer.workspace.setupMissing");
+}
+
 export function EventMerchantSetupPanel({
   merchants,
   setup,
@@ -158,6 +162,8 @@ export function EventMerchantSetupPanel({
               const isReady = participant?.readiness_status === "ready";
               const eligibility = setup?.eligibility?.[merchant.merchant_id];
               const isIneligible = eligibility?.status === "ineligible";
+              const setupGaps = participant?.setup_gaps ?? [];
+              const hasSetupGaps = setupGaps.length > 0;
               return (
                 <div key={merchant.merchant_id} className="rounded-md border border-slate-200 bg-white p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -171,6 +177,9 @@ export function EventMerchantSetupPanel({
                           {eligibilityLabel(eligibility.status, t)}
                         </Badge>
                       ) : null}
+                      <Badge variant={participant?.setup_status === "submitted" || participant?.setup_status === "approved" ? "success" : "warning"}>
+                        {localizedStatus(participant?.setup_status ?? "not_started", t)}
+                      </Badge>
                     </div>
                   </div>
                   <p className="mt-2 text-xs text-slate-500">
@@ -188,12 +197,34 @@ export function EventMerchantSetupPanel({
                       ))}
                     </ul>
                   ) : null}
+                  {participant ? (
+                    <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-2 text-xs text-slate-600">
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <span>{t("organizer.workspace.setupContact", { name: participant.merchant_contact_name || "-", phone: participant.merchant_contact_phone || "-" })}</span>
+                        <span>{t("organizer.workspace.setupCapacity", { value: participant.capacity_commitment || "-" })}</span>
+                        <span>{t("organizer.workspace.setupStaffing", { value: readinessLabel(participant.staffing_ready, t) })}</span>
+                        <span>{t("organizer.workspace.setupStock", { value: readinessLabel(participant.stock_ready, t) })}</span>
+                        <span>{t("organizer.workspace.setupIndoor", { value: readinessLabel(participant.indoor_backup_ready, t) })}</span>
+                        <span>{t("organizer.workspace.setupWindow", { value: readinessLabel(participant.operating_window_confirmed, t) })}</span>
+                      </div>
+                      {participant.merchant_notes ? (
+                        <p className="mt-2 text-slate-700">{participant.merchant_notes}</p>
+                      ) : null}
+                      {setupGaps.length ? (
+                        <ul className="mt-2 space-y-1 text-amber-800">
+                          {setupGaps.map((gap) => (
+                            <li key={gap}>{gap}</li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                  ) : null}
                   {!isReady && participant && !isIneligible ? (
                     <Button
                       className="mt-3"
                       size="sm"
                       variant="secondary"
-                      disabled={readyingMerchantId === merchant.merchant_id}
+                      disabled={readyingMerchantId === merchant.merchant_id || hasSetupGaps}
                       onClick={() => void markReady(merchant.merchant_id)}
                     >
                       {t("organizer.workspace.markMerchantReady")}

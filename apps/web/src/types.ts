@@ -137,6 +137,18 @@ export interface EventMerchantParticipant {
   readiness_status: "missing" | "needs_setup" | "ready";
   role_hint?: string | null;
   notes: string;
+  setup_status?: "not_started" | "submitted" | "approved";
+  capacity_commitment?: "low" | "medium" | "high" | null;
+  staffing_ready?: boolean;
+  stock_ready?: boolean;
+  indoor_backup_ready?: boolean;
+  operating_window_confirmed?: boolean;
+  merchant_contact_name?: string;
+  merchant_contact_phone?: string;
+  merchant_notes?: string;
+  submitted_at?: string | null;
+  submitted_by?: string | null;
+  setup_gaps?: string[];
   created_at: string;
   updated_at: string;
 }
@@ -162,6 +174,17 @@ export interface EventMerchantParticipantUpdateRequest {
   readiness_status?: EventMerchantParticipant["readiness_status"];
   role_hint?: string | null;
   notes?: string;
+}
+
+export interface MerchantSetupSubmitRequest {
+  capacity_commitment: "low" | "medium" | "high";
+  staffing_ready: boolean;
+  stock_ready: boolean;
+  indoor_backup_ready: boolean;
+  operating_window_confirmed: boolean;
+  merchant_contact_name: string;
+  merchant_contact_phone: string;
+  merchant_notes: string;
 }
 
 export interface RecoveryAction {
@@ -357,6 +380,14 @@ export interface EventSummary {
   status: "draft" | "pending_approval" | "active" | "ended";
   current_plan_version: number;
   public_release_status: "draft" | "published" | "stale";
+}
+
+export interface MerchantAssignedEvent {
+  event: EventSummary;
+  participant: EventMerchantParticipant;
+  eligibility?: MerchantEligibility | null;
+  setup_gaps: string[];
+  ready_for_planning: boolean;
 }
 
 export type EventCreateRequest = {

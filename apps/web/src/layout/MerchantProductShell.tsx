@@ -1,4 +1,4 @@
-import { Bell, ClipboardList, Store, ToggleLeft } from "lucide-react";
+import { Bell, ClipboardCheck, ClipboardList, Store, ToggleLeft } from "lucide-react";
 import type { ReactNode } from "react";
 import { useI18n } from "../i18n";
 import type { AuthUser } from "../types";
@@ -31,6 +31,7 @@ export function MerchantProductShell({
       accent="amber"
       testId="merchant-shell"
       nav={[
+        { label: t("shell.nav.setup"), href: "/merchant/events/demo-night-tour/setup", icon: <ClipboardCheck size={16} /> },
         { label: t("shell.nav.tasks"), href: "/merchant/events/demo-night-tour/tasks", icon: <ClipboardList size={16} /> },
         { label: t("shell.nav.status"), href: "/merchant/events/demo-night-tour/status", icon: <ToggleLeft size={16} /> },
         { label: t("shell.nav.notices"), href: "/merchant/notifications", icon: <Bell size={16} /> },
