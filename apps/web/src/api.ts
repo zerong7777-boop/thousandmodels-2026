@@ -12,6 +12,7 @@ import type {
   EventCreateRequest,
   EventMerchantParticipantUpdateRequest,
   EventMerchantRosterUpdateRequest,
+  EventOperationsSummary,
   EventMerchantSetupSummary,
   EventPage,
   EventPlan,
@@ -155,6 +156,10 @@ export const api = {
   getMerchantEdgePackages: (eventId: string) =>
     json<MerchantEdgePackagesResponse>(
       fetch(`${API_BASE}/api/events/${eventId}/merchant-edge-packages`, READ_OPTIONS)
+    ),
+  getEventOperationsSummary: (eventId: string) =>
+    json<EventOperationsSummary>(
+      fetch(`${API_BASE}/api/events/${eventId}/operations-summary`, READ_OPTIONS)
     ),
   generateOperationSuggestions: (eventId: string) =>
     postJson<OperationSuggestionsResponse>(`/api/events/${eventId}/operation-suggestions/generate`),

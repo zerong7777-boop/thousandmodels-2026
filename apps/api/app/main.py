@@ -89,6 +89,7 @@ from app.services.operation_suggestions import (
     generate_operation_suggestions,
     list_current_operation_suggestions,
 )
+from app.services.operations_command import build_event_operations_summary
 from app.services.planning import (
     generate_event_plan,
     generate_merchant_packs,
@@ -678,6 +679,14 @@ def generate_merchant_edge_packages(
 @app.get("/api/events/{event_id}/merchant-edge-packages")
 def list_merchant_edge_packages(event_id: str, user: AuthUserRecord = Depends(require_organizer)):
     return {"packages": STORE.list_merchant_interaction_packages(event_id)}
+
+
+@app.get("/api/events/{event_id}/operations-summary")
+def event_operations_summary(event_id: str, user: AuthUserRecord = Depends(require_organizer)):
+    try:
+        return build_event_operations_summary(STORE, event_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @app.post("/api/events/{event_id}/operation-suggestions/generate")

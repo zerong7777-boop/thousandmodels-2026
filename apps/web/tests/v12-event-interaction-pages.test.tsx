@@ -29,6 +29,7 @@ const mockApi = vi.hoisted(() => ({
   getIncidents: vi.fn(),
   getOperationSuggestions: vi.fn(),
   approveOperationSuggestion: vi.fn(),
+  getEventOperationsSummary: vi.fn(),
   generateOperationSuggestions: vi.fn(),
   createRecoveryProposal: vi.fn(),
   approveRecoveryProposal: vi.fn()
@@ -231,6 +232,7 @@ test("organizer workspace shows package readiness and can request operation sugg
     ]
   });
   mockApi.generateOperationSuggestions.mockResolvedValue({ suggestions: [{ id: "os-001" }] });
+  mockApi.getEventOperationsSummary.mockResolvedValue(null);
 
   renderWithI18n(<OrganizerEventWorkspacePage eventId="demo-night-tour" />);
 

@@ -589,6 +589,52 @@ class PublicNotice(BaseModel):
     published_at: str | None = None
 
 
+OperationReadinessStatus = Literal["ready", "warning", "blocked"]
+OperationActionStatus = Literal["todo", "watch", "done"]
+OperationActionSeverity = Literal["info", "warning", "critical"]
+
+
+class OperationReadinessCheck(BaseModel):
+    check_id: str
+    label: str
+    status: OperationReadinessStatus
+    summary: str
+    blocking: bool
+    evidence_refs: list[str] = Field(default_factory=list)
+
+
+class OperationActionItem(BaseModel):
+    action_id: str
+    label: str
+    status: OperationActionStatus
+    severity: OperationActionSeverity
+    target: str
+    evidence_refs: list[str] = Field(default_factory=list)
+
+
+class OperationTimelineItem(BaseModel):
+    item_id: str
+    actor_type: str
+    actor_id: str
+    action_type: str
+    summary: str
+    timestamp: str
+    evidence_ref: str
+
+
+class EventOperationsSummary(BaseModel):
+    event: EventSummary
+    overall_status: OperationReadinessStatus
+    blocker_count: int
+    warning_count: int
+    checks: list[OperationReadinessCheck]
+    action_items: list[OperationActionItem] = Field(default_factory=list)
+    timeline: list[OperationTimelineItem] = Field(default_factory=list)
+    incident_summary: dict[str, Any] = Field(default_factory=dict)
+    package_summary: dict[str, Any] = Field(default_factory=dict)
+    notice_summary: dict[str, Any] = Field(default_factory=dict)
+
+
 AgentTrigger = Literal[
     "planning_generation",
     "merchant_edge_package_generation",

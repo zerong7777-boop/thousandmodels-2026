@@ -511,6 +511,51 @@ export interface PublicNotice {
   published_at?: string | null;
 }
 
+export type OperationReadinessStatus = "ready" | "warning" | "blocked";
+export type OperationActionStatus = "todo" | "watch" | "done";
+export type OperationActionSeverity = "info" | "warning" | "critical";
+
+export interface OperationReadinessCheck {
+  check_id: string;
+  label: string;
+  status: OperationReadinessStatus;
+  summary: string;
+  blocking: boolean;
+  evidence_refs: string[];
+}
+
+export interface OperationActionItem {
+  action_id: string;
+  label: string;
+  status: OperationActionStatus;
+  severity: OperationActionSeverity;
+  target: string;
+  evidence_refs: string[];
+}
+
+export interface OperationTimelineItem {
+  item_id: string;
+  actor_type: string;
+  actor_id: string;
+  action_type: string;
+  summary: string;
+  timestamp: string;
+  evidence_ref: string;
+}
+
+export interface EventOperationsSummary {
+  event: EventSummary;
+  overall_status: OperationReadinessStatus;
+  blocker_count: number;
+  warning_count: number;
+  checks: OperationReadinessCheck[];
+  action_items: OperationActionItem[];
+  timeline: OperationTimelineItem[];
+  incident_summary: Record<string, unknown>;
+  package_summary: Record<string, unknown>;
+  notice_summary: Record<string, unknown>;
+}
+
 export type AgentRunTrigger =
   | "planning_generation"
   | "merchant_edge_package_generation"

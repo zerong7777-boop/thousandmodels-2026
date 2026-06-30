@@ -2,26 +2,27 @@
 
 ## Recommended Next Step
 
-v3.3 is implemented and locally verified. The immediate closeout step is to commit, push, and open a PR for `feat/v33-merchant-portal-setup-pack`.
+v3.4 is implemented and full local release verification has passed. The immediate closeout step is to commit, push, and open a PR for `feat/v34-event-operations-command-center-pack`.
 
-After v3.3 is merged, the recommended next implementation phase is `v3.4-event-operations-command-center-pack`.
+After v3.4 is merged, the recommended next implementation phase is `v3.5-integration-readiness-pack`.
 
-v3.3 makes merchant setup evidence real enough to gate planning, but the organizer still has to mentally connect roster readiness, plan state, event page publication, merchant-edge packages, public notices, and incident suggestions across several surfaces. The next useful product package is to make the organizer day-of command center more commercial-grade:
+v3.4 makes the organizer side operationally clearer by consolidating launch readiness, blockers, warnings, action items, and audit evidence. The next product gap is not more demo UI; it is preparing the codebase to connect real external information without corrupting the deterministic demo path or letting provider output mutate authority directly:
 
-1. Add one event operations command center that summarizes readiness across plan approval, event page publication, merchant setup, package generation, public notices, and active incidents.
-2. Add explicit pre-launch checks so organizers can see which operational steps are blocking launch or package readiness.
-3. Add event-scoped action history and operator-facing audit evidence for setup submission, mark-ready, plan generation, approval, page publish, package generation, and public notices.
-4. Add better day-of exception triage states: open, suggested, approved, resolved, and stale.
-5. Keep human approval boundaries intact: no automatic plan approval, public publication, or Qwen/QwenPaw authoritative mutation.
-6. Preserve the deterministic demo path, v2.9-v3.3 gates, and local-catalog constraints.
+1. Define connector contracts for weather, map/walking distance, merchant/POS inventory, and notification channels.
+2. Add provider configuration and capability checks that are disabled by default in local/demo mode.
+3. Add read-only adapter interfaces with sanitized evidence capture and explicit failure classification.
+4. Add a deterministic fake-provider baseline so tests remain stable without external credentials.
+5. Add one narrow end-to-end connector spike target for a later phase, likely weather or walking-distance enrichment.
+6. Keep human approval boundaries intact: no automatic plan approval, public publication, recovery approval, or provider-driven authoritative mutation.
+7. Preserve v2.9-v3.4 gates, command-center checks, and the deterministic release path.
 
 ## Do Not Do Yet
 
 - Do not treat QwenPaw advisory qualification as production orchestration.
-- Do not make QwenPaw, Qwen, or DashScope required for the deterministic demo.
-- Do not allow model or QwenPaw output to approve, publish, or mutate authoritative state.
-- Do not expose raw model/backend terms on merchant, tourist, or public H5 pages.
-- Do not add real merchant, POS, payment, hardware, map, weather, traffic, or visitor identity integrations before a new plan.
+- Do not make QwenPaw, Qwen, DashScope, map, weather, POS, payment, or notification providers required for the deterministic demo.
+- Do not allow model, QwenPaw, or external-provider output to approve, publish, recover, or mutate authoritative state.
+- Do not expose raw model/backend/provider terms on merchant, tourist, or public H5 pages.
+- Do not add public merchant onboarding, open registration, real identity administration, settlement, payment, POS, hardware, real traffic prediction, or customer incident operations before a new plan.
 - Do not use optional Qwen or QwenPaw live evidence as a business-success claim; it is only provider reachability/advisory evidence.
 - Do not run backend pytest in parallel against the default SQLite database; use serial runs or isolated database paths.
 - Do not stage historical screenshot PNG diffs unless a separate evidence-refresh task explicitly owns them.
@@ -38,4 +39,5 @@ v3.3 makes merchant setup evidence real enough to gate planning, but the organiz
 - Do not treat v3.1 as route optimization or real external planning intelligence; it is deterministic local merchant-fit ranking and evidence.
 - Do not treat v3.2 as route optimization or real map/weather/traffic intelligence; it is deterministic local route assembly and evidence.
 - Do not treat v3.3 as real merchant onboarding or identity administration; it is selected-event setup evidence for already-known local merchants.
+- Do not treat v3.4 as real external operations intelligence; it is a read-only command center over existing local state.
 - Do not assume GitHub Actions is green until the pushed workflow run is observed.

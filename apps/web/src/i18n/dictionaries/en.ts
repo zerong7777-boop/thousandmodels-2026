@@ -296,6 +296,22 @@ export const en: TranslationDictionary = {
   "organizer.workspace.setupReady": "ready",
   "organizer.workspace.setupMissing": "missing",
 
+  "organizer.operations.title": "Operations command center",
+  "organizer.operations.description":
+    "Pre-launch readiness, open blockers, advisory actions, and recent event evidence for this event.",
+  "organizer.operations.overallStatus": "Overall status",
+  "organizer.operations.overallStatusDetail": "Computed from launch-critical checks.",
+  "organizer.operations.blockers": "Blockers",
+  "organizer.operations.blockersDetail": "Must be cleared before launch.",
+  "organizer.operations.warnings": "Warnings",
+  "organizer.operations.warningsDetail": "Needs operator attention.",
+  "organizer.operations.checksTitle": "Launch checks",
+  "organizer.operations.checksEmpty": "Launch checks are not available yet.",
+  "organizer.operations.actionItemsTitle": "Action items",
+  "organizer.operations.actionItemsEmpty": "No action items are waiting.",
+  "organizer.operations.timelineTitle": "Recent action timeline",
+  "organizer.operations.timelineEmpty": "No event actions have been recorded yet.",
+
   "organizer.agentEvidence.title": "Agent evidence",
   "organizer.agentEvidence.description": "Specialist Agent runs, tool evidence, controlled drafts, and approval boundaries.",
   "organizer.agentEvidence.planningTitle": "Planning Agent evidence",

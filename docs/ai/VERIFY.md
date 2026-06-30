@@ -1378,3 +1378,57 @@ v0.6 i18n is verified. The deterministic demo remains runnable without `DASHSCOP
 - Fix: import `StatusPill` from the existing product component barrel.
 - The first full backend run exposed four v2.7 lifecycle failures because v3.3 correctly blocks non-demo planning when real-event helper rosters are organizer-ready but merchant setup evidence is missing.
 - Fix: update the v2.7 ready-roster helper to submit complete merchant setup evidence before marking organizer readiness, preserving the stricter planning gate instead of weakening it.
+
+## v3.4 Event Operations Command Center Pack Verification
+
+### Commands
+
+| Command | Working directory | Exit code | Summary |
+| --- | --- | --- | --- |
+| `python -m pytest tests/test_v34_event_operations_command_center.py -q` | `apps/api` | 0 | 5 v3.4 backend tests passed after RED/GREEN implementation for blocked readiness, ready launch chain, high-severity incident blocking, missing-event 404, and demo summary compatibility. |
+| `python -m pytest tests/test_v34_event_operations_command_center.py tests/test_v33_merchant_portal_setup.py tests/test_v29_event_operations_setup.py -q` | `apps/api` | 0 | 17 backend tests passed, covering v3.4 summary behavior plus adjacent merchant setup and roster planning gates. |
+| `npm.cmd run test -- v34-event-operations-command-center` | `apps/web` | 0 | 1 focused frontend file passed after RED/GREEN implementation for the operations command panel and workspace API loading. |
+| `npm.cmd run test -- v34-event-operations-command-center v33-merchant-portal-setup v28-organizer-event-workspace` | `apps/web` | 0 | 3 frontend files passed, 14 tests total, after adding the new operations-summary mock to legacy workspace tests. |
+| `npm.cmd run test -- v34-event-operations-command-center v12-event-interaction-pages v29-event-operations-setup v31-event-planning-eligibility v32-route-assembly-quality` | `apps/web` | 0 | 5 frontend regression files passed, 15 tests total, covering v3.4 and adjacent event/page/workspace surfaces. |
+| `python -m pytest -q` | `apps/api` | 0 | Full backend suite passed: 378 tests, with only existing FastAPI/Starlette deprecation warnings. |
+| `npm.cmd run test` | `apps/web` | 0 | Full frontend Vitest suite passed: 36 files and 122 tests after making the operations panel tolerate partial legacy test mocks. |
+| `npm.cmd run build` | `apps/web` | 0 | TypeScript and Vite production build passed; Vite reported the existing chunk-size warning for `assets/index-DwnzwKHU.js` at 897.59 kB. |
+| `python scripts\repo_hygiene.py --base origin/main` | project root | 0 | Secret, local-path, node-modules, and generated-artifact checks passed. |
+| `git diff --check` | project root | 0 | No whitespace errors; Git reported expected Windows LF-to-CRLF working-copy warnings for touched text files. |
+
+### Evidence Artifacts
+
+| Artifact | Summary |
+| --- | --- |
+| `apps/api/app/services/operations_command.py` | Read-only event operations summary builder that computes readiness checks, advisory action items, package/incident/notice summaries, and newest-first audit timeline from existing store state. |
+| `apps/api/app/schemas.py` | Operations summary, readiness check, action item, and timeline schemas. |
+| `apps/api/app/main.py` | Organizer-only `GET /api/events/{event_id}/operations-summary` endpoint. |
+| `apps/api/tests/test_v34_event_operations_command_center.py` | Backend RED/GREEN coverage for blocked/ready readiness, incident blocking, timeline evidence, missing event, and demo compatibility. |
+| `apps/web/src/pages/organizer/EventOperationsCommandPanel.tsx` | Organizer command-center panel with overall status, blocker/warning metrics, launch checks, action items, and audit timeline. |
+| `apps/web/src/pages/organizer/OrganizerEventWorkspacePage.tsx` | Loads and renders the selected event operations summary near the top of the workspace. |
+| `apps/web/tests/v34-event-operations-command-center.test.tsx` | Frontend RED/GREEN coverage for panel rendering and workspace selected-event API loading. |
+| `docs/proposal/v3.4-event-operations-command-center-pack-spec.md` | v3.4 scope, requirements, API contract, safety boundaries, and acceptance criteria. |
+| `docs/proposal/v3.4-event-operations-command-center-pack-implementation-plan.md` | v3.4 task plan and verification gates. |
+
+### Boundary Checks
+
+| Check | Result |
+| --- | --- |
+| Operations summary is organizer-only | pass. |
+| Operations summary is read-only and does not mutate event state | pass. |
+| Incomplete merchant setup blocks launch readiness | pass. |
+| Missing approved current plan blocks launch readiness | pass. |
+| Missing published visitor event page blocks launch readiness | pass. |
+| Missing active merchant packages for current-plan merchants blocks launch readiness | pass. |
+| High-severity active incidents block launch readiness | pass. |
+| Lower-severity incident and evidence gaps remain warning-only | pass. |
+| Organizer workspace renders command-center checks, actions, and timeline | pass. |
+| Existing v2.9-v3.3 gates and demo behavior remain compatible | pass. |
+| v3.4 adds real external integrations, automatic approval/publication, or production QwenPaw orchestration | no; it is a read-only operations consolidation layer over existing local state. |
+
+### Regression Notes
+
+- The first v3.4 frontend regression run exposed a test-boundary gap: existing workspace tests did not mock the new `api.getEventOperationsSummary()` method.
+- Fix: add a default `getEventOperationsSummary` mock returning `null` in legacy workspace tests so their original assertions remain scoped.
+- The first full frontend run exposed a robustness gap: partial legacy test mocks could return an operations summary without `checks`, causing the panel to crash before older workspace assertions rendered.
+- Fix: make `EventOperationsCommandPanel` default missing checks/actions/timeline/counts to empty or zero, preserving real API behavior while keeping the component resilient to partial data.
